@@ -510,7 +510,6 @@ class DXmlProcessor
 									doGettext(s);
 									break;
 								default:
-									log.trace("Do Output1");
 									doEcho(s);
 									break;
 							};
@@ -521,7 +520,6 @@ class DXmlProcessor
 						//TODO output newline?
 						break;
 					default:
-						log.trace("Do Output2");
 						doEcho(s);
 						break;
 				}
