@@ -2,6 +2,11 @@ module sendero.util.collection.ThreadSafeQueue;
 
 import tango.core.Atomic;
 
+/**
+ * Thread-Safe Queue class that uses synchronization and some atomic(non-locking) operations.
+ * Basically objects can be added and removed from the queue simultaneously.
+ * However, readers must wait for each other and writers must wait for each other.
+ */
 class ThreadSafeQueue(T)
 {	
 	private static class Node

@@ -1,11 +1,8 @@
 module sendero.util.Reflection;
 
-class FieldInfo
-{
-	char[] name;
-	size_t offset;
-	ubyte ordinal;
-}
+public import sendero.util.FieldInfo;
+
+import tango.core.Traits;
 
 template Reflector(char[] i)
 {	
@@ -18,8 +15,7 @@ template Reflector(char[] i)
 }
 
 template VisitTuple() {
-	const char[] VisitTuple = "uint i = 0;"
-							"foreach(x; t.tupleof)"
+	const char[] VisitTuple = "foreach(x; t.tupleof)"
 							"{"
 								"v.visit!(typeof(x))(x, i);"
 								"++i;"
@@ -29,31 +25,57 @@ template VisitTuple() {
 class ReflectionOf(T) {
 	static this()
 	{
-		static if(is(typeof(T.reflect)))
-		{
-			fields = T.reflect();
-		}
-		else
-		{
-			assert(T.tupleof.length <= limit, "Too many fields in class");
-			fields = reflect();
-		}
+		fields = doReflect;
 	}
 	
 	const static int limit = 64;
 	const static FieldInfo[] fields;
 	
+	private static FieldInfo[] doReflect()
+	{
+		static if(is(typeof(T.reflect)))
+		{
+			return T.reflect();
+		}
+		else
+		{
+			assert(T.tupleof.length <= limit, "Too many fields in class");
+			return reflect();
+		}
+	}
+	
 	mixin Reflect!(T);
 	
-	static void visitTuple(Visitor)(T t, Visitor v)
+	static uint visitTuple(Visitor)(T t, Visitor v, uint i = 0)
 	{
+		alias BaseTypeTupleOf!(T) BTT;
+		
+		static if(BTT.length)
+		{
+			static if(!is(BTT[0] == Object)) {
+				auto btp = cast(BTT[0])t;
+				i = ReflectionOf!(BTT[0]).visitTuple(btp, v);
+			}
+		}
+		
 		static if(is(typeof(T.visitTuple)))
 		{
-			fields = T.reflect();
+			return T.visitTuple(t, v, i);
 		}
 		else {
 			mixin(VisitTuple!());
+			return i;
 		}
+	}
+	
+	static FieldInfo opIndex(char[] name)
+	{
+		foreach(i; fields)
+		{
+			if(i.name == name)
+				return i;
+		}
+		return null;
 	}
 }
 
@@ -61,9 +83,10 @@ template Expose(T)
 {
 	mixin Reflect!(T);
 	
-	static void visitTuple(Visitor)(T t, Visitor v)
+	static uint visitTuple(Visitor)(T t, Visitor v, uint i = 0)
 	{
 		mixin(VisitTuple!());
+		return i;
 	}
 }
 
@@ -75,8 +98,18 @@ template Reflect(T)
 		FieldInfo[] info;
 		
 		uint n = 0;
-		FieldInfo i;
 		
+		alias BaseTypeTupleOf!(T) BTT;
+		
+		static if(BTT.length) {
+			static if(!is(BTT[0] == Object)) {
+				info ~= ReflectionOf!(BTT[0]).doReflect;
+				n += info.length;
+			}
+		}
+		
+		FieldInfo i;
+			
 		mixin(Reflector!("0"));
 		mixin(Reflector!("1"));
 		mixin(Reflector!("2"));
@@ -147,19 +180,19 @@ template Reflect(T)
 
 version(Unittest)
 {
-	static class A
+	static class TestSimple
 	{
 		int x;
 		uint y;
 		char[] c;
 	}
 	
-	static class B
+	static class TestExposed
 	{
 		private int x;
 		private uint y;
 		private char[] c;
-		mixin Expose!(B);
+		mixin Expose!(TestExposed);
 	}
 	
 	static class TestVisitor
@@ -171,29 +204,44 @@ version(Unittest)
 			names ~= X.stringof;
 		}
 	}
+	
+	class Base
+	{
+		int x;
+		uint y;
+	}
+	
+	class Derived : Base
+	{
+		double z;
+	}
 }
 
 unittest
 {
-	assert(ReflectionOf!(A).fields[0].name == "x", ReflectionOf!(A).fields[0].name);
-	assert(ReflectionOf!(A).fields[1].name == "y", ReflectionOf!(A).fields[1].name);
-	assert(ReflectionOf!(A).fields[2].name == "c", ReflectionOf!(A).fields[2].name);
+	assert(ReflectionOf!(TestSimple).fields[0].name == "x", ReflectionOf!(TestSimple).fields[0].name);
+	assert(ReflectionOf!(TestSimple).fields[1].name == "y", ReflectionOf!(TestSimple).fields[1].name);
+	assert(ReflectionOf!(TestSimple).fields[2].name == "c", ReflectionOf!(TestSimple).fields[2].name);
 	
 	auto testVisitorA = new TestVisitor;
-	auto a = new A;
-	ReflectionOf!(A).visitTuple(a, testVisitorA);
+	auto a = new TestSimple;
+	ReflectionOf!(TestSimple).visitTuple(a, testVisitorA);
 	assert(testVisitorA.names[0] == "int", testVisitorA.names[0]);
 	assert(testVisitorA.names[1] == "uint", testVisitorA.names[1]);
 	assert(testVisitorA.names[2] == "char[]", testVisitorA.names[2]);
 	
-	assert(ReflectionOf!(B).fields[0].name == "x", ReflectionOf!(B).fields[0].name);
-	assert(ReflectionOf!(B).fields[1].name == "y", ReflectionOf!(B).fields[1].name);
-	assert(ReflectionOf!(B).fields[2].name == "c", ReflectionOf!(B).fields[2].name);
+	assert(ReflectionOf!(TestExposed).fields[0].name == "x", ReflectionOf!(TestExposed).fields[0].name);
+	assert(ReflectionOf!(TestExposed).fields[1].name == "y", ReflectionOf!(TestExposed).fields[1].name);
+	assert(ReflectionOf!(TestExposed).fields[2].name == "c", ReflectionOf!(TestExposed).fields[2].name);
 	
 	auto testVisitorB = new TestVisitor;
-	auto b = new B;
-	ReflectionOf!(B).visitTuple(b, testVisitorB);
+	auto b = new TestExposed;
+	ReflectionOf!(TestExposed).visitTuple(b, testVisitorB);
 	assert(testVisitorB.names[0] == "int", testVisitorB.names[0]);
 	assert(testVisitorB.names[1] == "uint", testVisitorB.names[1]);
-	assert(testVisitorB.names[2] == "char[]", testVisitorB.names[2]);	
+	assert(testVisitorB.names[2] == "char[]", testVisitorB.names[2]);
+	
+	assert(ReflectionOf!(Derived).fields[0].name == "x", ReflectionOf!(Derived).fields[0].name);
+	assert(ReflectionOf!(Derived).fields[1].name == "y", ReflectionOf!(Derived).fields[1].name);
+	assert(ReflectionOf!(Derived).fields[2].name == "z", ReflectionOf!(Derived).fields[2].name);
 }

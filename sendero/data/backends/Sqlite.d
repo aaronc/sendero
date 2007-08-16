@@ -1,14 +1,26 @@
 module sendero.data.backends.Sqlite;
 
-public import sendero.data.DB;
+import sendero.data.model.IDBConnection;
 import sendero.util.Reflection;
 import sendero.data.backends.imp.sqlite;
 
 import Regex = tango.text.Regex;
 import tango.stdc.stringz;
 
+import tango.util.log.Log;
+import Integer = tango.text.convert.Integer;
+
+/**
+ * Sqlite connection class that exposes interface for creating SqlitePreparedStatement's.
+ */
 class SqliteDB : IDBConnection
 {
+	static Logger log;
+	static this()
+	{
+		log = Log.getLogger("sendero.data.backends.Sqlite.SqliteDB");
+	}
+	
 	static SqliteDB connect(char[] file)
 	{
 		auto db = new SqliteDB;
@@ -20,17 +32,21 @@ class SqliteDB : IDBConnection
 	
 	IPreparedStatement createStatement(char[] statement)
 	{
-		char** errormessage;
 		sqlite3_stmt* stmt;
+		char* pzTail;
 		int res;
-		if((res = sqlite3_prepare_v2(db_, toUtf8z(statement), statement.length, &stmt, errormessage)) != SQLITE_OK)
+		if((res = sqlite3_prepare_v2(db_, toUtf8z(statement), statement.length, &stmt, &pzTail)) != SQLITE_OK) {
+			char* errmsg = sqlite3_errmsg(db_);
+			log.error("sqlite3_prepare_v2 for statement: \"" ~ statement ~ "\" returned: " ~ Integer.toUtf8(res) ~ ", errmsg: " ~ fromUtf8z(errmsg));
+			//log.error("sqlite3_prepare_v2 errmsg:" ~ fromUtf8z(errormessage));
 			return null;
+		}
 		return new SqlitePreparedStatement(stmt, db_);
 	}
 	
 	static char[] createColumnDef(char[] name, ColumnInfo info)
-	{
-		char[] q = name ~ " ";
+	{		
+		char[] q = "`" ~ name ~ "` ";
 		
 		switch(info.type)
 		{
@@ -51,7 +67,6 @@ class SqliteDB : IDBConnection
 		case(ColT.Text):
 		case(ColT.LongText):
 		case(ColT.Date):
-		case(ColT.DateTime):
 		case(ColT.TimeStamp):
 			q ~= "TEXT";
 			break;
@@ -59,9 +74,11 @@ class SqliteDB : IDBConnection
 		case(ColT.LongBlob):
 			q ~= "BLOB";
 			break;
+		case(ColT.DateTime):
 		case(ColT.HasOne):
 			q ~= "INTEGER";
 			break;
+		case(ColT.HABTM):
 		default:
 			assert(false);
 		}
@@ -77,6 +94,8 @@ class SqliteDB : IDBConnection
 	{
 		if(!tableExists(tablename)) {
 			scope st = createStatement(createCreateSql(tablename, cols, fields));
+			if(!st)
+				return false;
 			auto res = st.execute;
 			if(res < 0) {
 				return false;
@@ -93,11 +112,14 @@ class SqliteDB : IDBConnection
 	
 	char[] createCreateSql(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
-		char[] q = "CREATE TABLE " ~ tablename ~ " (";
+		char[] q = "CREATE TABLE `" ~ tablename ~ "` (";
 		bool first = true;
 		assert(cols.length == fields.length, tablename);
 		for(uint i = 0; i < cols.length; ++i)
 		{
+			if(cols[i].skip)
+				continue;
+			
 			if(!first)
 				q ~= ", ";
 			
@@ -118,6 +140,7 @@ class SqliteDB : IDBConnection
 		if(!st)
 			return false;
 		auto res = st.execute;
+		st.reset;
 		return (res == SQLRESULT_ROW);
 	}
 	
@@ -137,9 +160,12 @@ class SqliteDB : IDBConnection
 		assert(cols.length == fields.length, tablename);
 		for(uint i = 0; i < cols.length; ++i)
 		{
-			auto rgx = Regex.Regex("(\\s|\\()" ~ fields[i].name ~ "\\s");
+			if(cols[i].skip)
+				continue;
+			
+			auto rgx = Regex.Regex("(\\s|\\()`?" ~ fields[i].name ~ "`?\\s");
 			if(rgx.find(sql) < 0) {
-				char[] q1 = "ALTER TABLE '" ~ tablename ~ "' ADD " ~ createColumnDef(fields[i].name, cols[i]);
+				char[] q1 = "ALTER TABLE `" ~ tablename ~ "` ADD " ~ createColumnDef(fields[i].name, cols[i]);
 				scope st1 = createStatement(q1);
 				if(!st1)
 					return false;
@@ -164,25 +190,10 @@ class SqliteDB : IDBConnection
 		return createStatement(q);
 	}
 	
-	IPreparedStatement createFindByIDStatement(char[] tablename)
+	IPreparedStatement createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields)
 	{
-		auto q = DBHelper.createFindByIDSql(tablename);
+		auto q = DBHelper.createFindWhereStatement(tablename, where, cols, fields);
 		return createStatement(q);
-	}
-	
-	private IDBSerializer[char[]] serializers;
-	
-	IDBSerializer getDBSerializer(char[] mangledname)
-	{
-		auto pCS = (mangledname in serializers);
-		if(pCS) 
-			return *pCS;
-		return null;
-	}
-	
-	void storeDBSerializer(IDBSerializer cs)
-	{
-		serializers[cs.mangledname] = cs;
 	}
 	
 	~this()
@@ -197,6 +208,12 @@ class SqliteDB : IDBConnection
 
 class SqlitePreparedStatement : IPreparedStatement
 {
+	static Logger log;
+	static this()
+	{
+		log = Log.getLogger("sendero.data.backends.Sqlite.SqlitePreparedStatement");
+	}
+	
 	private this(sqlite3_stmt* stmt, sqlite3* db)
 	{
 		this.stmt = stmt;
@@ -229,17 +246,13 @@ class SqlitePreparedStatement : IPreparedStatement
 		switch(ret)
 		{
 			case SQLITE_BUSY:
-				//return SqliteResult.fail;
 				return SQLRESULT_FAIL;
 			case SQLITE_ROW:
-				//return new SqliteResult(stmt);
 				return SQLRESULT_ROW;
 			case SQLITE_DONE:
 				reset;
-				//return SqliteResult.succeed;
 				return SQLRESULT_SUCCESS;
 			default:
-				//return SqliteResult.fail;
 				return SQLRESULT_FAIL;
 		}
 	}
@@ -341,7 +354,6 @@ class SqlitePreparedStatement : IPreparedStatement
 	
 	bool bindBlob(void[] x, uint index)
 	{
-		//if(sqlite3_bind_blob(stmt, index, x.dup.ptr, x.length, null) != SQLITE_OK)
 		if(sqlite3_bind_blob(stmt, index, x.ptr, x.length, null) != SQLITE_OK)
 			return false;
 		return true;
@@ -359,8 +371,7 @@ class SqlitePreparedStatement : IPreparedStatement
 	
 	bool bindDateTime(DateTime dt, uint index)
 	{
-		//Not implemented yet!
-		assert(false);
+		return bindLong(dt.ticks, index);
 	}
 	
 	bool getShort(inout short x, uint index)
@@ -450,60 +461,20 @@ class SqlitePreparedStatement : IPreparedStatement
 	
 	bool getDateTime(inout DateTime dt, uint index)
 	{
-		assert(false);
+		long ticks;
+		auto res = getLong(ticks, index);
+		dt.ticks = ticks;
+		return res;
 	}
 }
 
 version(Unittest)
 {
-	import sendero.data.Associations;
-	
-	class A
-	{
-		PrimaryKey id;
-		void[] blob;
-		char[] txt;
-	}
-	
-	class B
-	{
-		PrimaryKey id;
-		double d;
-		int x;
-		bool yes;
-		HasOne!(A) a;
-	}
+	import sendero.data.test.Tests;
 }
 
 unittest
-{
+{	
 	auto db = SqliteDB.connect("sendero_test.db");
-	assert(db);
-	
-	auto aSer = new DBSerializer!(A)(db);
-	assert(aSer);
-	
-	auto bSer = new DBSerializer!(B)(db);
-	assert(bSer);
-	
-	auto a = new A;
-	a.blob = r"sdgh*&Y#*(";
-	a.txt = "Hello World!";
-	assert(aSer.save(a));
-	assert(a.id());
-	
-	auto aCopy = aSer.findByID(a.id());
-	assert(aCopy);
-	assert(aCopy.blob == a.blob);
-	assert(aCopy.txt == a.txt, aCopy.txt);
-	
-	auto b = new B;
-	b.a = a;
-	assert(bSer.save(b));
-	auto bCopy = bSer.findByID(b.id());
-	assert(bCopy);
-	assert(bCopy.a.get.id() == a.id());
-	assert(bCopy.a.get);
-	assert(bCopy.a.get.blob == a.blob);
-	assert(bCopy.a.get.txt == a.txt);
+	runTests(db);
 }

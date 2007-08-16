@@ -5,7 +5,8 @@ import sendero.util.collection.ThreadSafeQueue;
 import tango.core.Atomic;
 
 /**
- * Class for thread safe connection pooling with variable cache size.
+ * Class for thread safe connection pooling with variable cache size.  Uses 
+ * ThreadSafeQueue class for its implementation. 
  */
 class ConnectionPool(ConnectionT, ProviderT)
 {
@@ -105,12 +106,12 @@ unittest
 		}
 	}
 	
-	const uint maxCache = 500;
+	const uint maxCache = 100;
 	Pool.setMaxCacheSize(maxCache);
 	
 	auto group = new ThreadGroup;
-	const uint n = 1000;
-	Stdout("Queueing " ~ Integer.toUtf8(n) ~ " threads").newline;
+	const uint n = 100;
+	//Stdout("Queueing " ~ Integer.toUtf8(n) ~ " threads").newline;
 	
 	TestThread[n] threads;
 	for(uint i = 0; i < n; ++i)
@@ -138,8 +139,8 @@ unittest
 	
 	//	Asserts that some connections were cached
 	assert(Pool.cacheSize > 0);
-	Stdout(Integer.toUtf8(Pool.cacheSize) ~ " connections cached").newline;
-	Stdout(Integer.toUtf8(Pool.activeConnections.length) ~ " connections still active").newline;
+	//Stdout(Integer.toUtf8(Pool.cacheSize) ~ " connections cached").newline;
+	//Stdout(Integer.toUtf8(Pool.activeConnections.length) ~ " connections still active").newline;
 	
 	//Ensures that every connection that was cached was unique
 	SqliteDB[SqliteDB] cacheMap;

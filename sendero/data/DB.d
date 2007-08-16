@@ -5,6 +5,7 @@ public import tango.util.time.Date;
 public import tango.util.time.DateTime;
 
 import sendero.util.Reflection;
+import sendero.data.model.IDBConnection;
 
 debug import tango.io.Stdout;
 
@@ -12,55 +13,18 @@ package const int SQLRESULT_FAIL = -1;
 package const int SQLRESULT_SUCCESS = 0;
 package const int SQLRESULT_ROW = 1;
 
-interface IDBConnection
-{
-	IPreparedStatement createStatement(char[] statement);
-	bool tableExists(char[] tablename);
-	bool configTable(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
-	IPreparedStatement createInsertStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
-	IPreparedStatement createUpdateStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
-	IPreparedStatement createFindByIDStatement(char[] tablename);
-	IDBSerializer getDBSerializer(char[] mangledname);
-	void storeDBSerializer(IDBSerializer cs);
-}
-
-interface IPreparedStatement
-{
-	int execute();
-	void reset();
-	ulong getLastInsertID();
-	
-	bool bindShort(short x, uint index);
-	bool bindUShort(ushort x, uint index);
-	bool bindInt(int x, uint index);
-	bool bindUInt(uint x, uint index);
-	bool bindLong(long x, uint index);
-	bool bindULong(ulong x, uint index);
-	bool bindBool(bool x, uint index);
-	bool bindFloat(float x, uint index);
-	bool bindDouble(double x, uint index);
-	bool bindString(char[] x, uint index);
-	bool bindBlob(void[] x, uint index);
-	//bool bindDate(Date dt, uint index);
-	//bool bindTime(Time dt, uint index);
-	//bool bindDateTime(DateTime dt, uint index);
-		
-	bool getShort(inout short x, uint index);
-	bool getUShort(inout ushort x, uint index);
-	bool getInt(inout int x, uint index);
-	bool getUInt(inout uint x, uint index);
-	bool getLong(inout long x, uint index);
-	bool getULong(inout ulong x, uint index);
-	bool getBool(inout bool x, uint index);
-	bool getFloat(inout float x, uint index);
-	bool getDouble(inout double x, uint index);
-	bool getString(inout char[] x, uint index);
-	bool getBlob(inout void[] x, uint index);
-	//bool getDate(inout Date dt, uint index);
-	//bool getTime(inout Time dt, uint index);
-	//bool getDateTime(inout DateTime dt, uint index);
-}
-
+/**
+ * Struct that represents the primary key in a database table.
+ * In this version of Sendero, it is expected that all database tables
+ * will contain a primary key named id;
+ * 
+ * Example:
+ * ---
+ * 	class Test
+ * 	{
+ * 		PrimaryKey id;
+ * 	}
+ */
 struct PrimaryKey
 {
 	private uint key = 0;
@@ -68,16 +32,6 @@ struct PrimaryKey
 	{
 		return key;
 	}
-}
-
-enum ColT { Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, VarChar, Text, LongText, Blob, LongBlob, Date, DateTime, TimeStamp, HasOne, HasMany, HABTM, Variant, Object};
-
-class ColumnInfo
-{
-	ColT type;
-	bool notNull;
-	bool unique;
-	bool primaryKey;
 }
 
 static class TableColumnVisitor
@@ -89,6 +43,7 @@ static class TableColumnVisitor
 	
 	char[] classname;
 	ColumnInfo[] columns;
+	bool hasAssociations = false;
 	
 	void visit(X)(X x, uint index)
 	{
@@ -132,15 +87,20 @@ static class TableColumnVisitor
 		else static if(is(X:void[]) || is(X:ubyte[])) {
 			info.type = ColT.Blob;
 		}
+		else static if(is(X == DateTime)) {
+			info.type = ColT.DateTime;
+		}
 		else static if(is(X == PrimaryKey)) {
 			info.primaryKey = true;
 			info.type = ColT.UInt;
 		}
-		else static if(X.stringof[0 .. 6] == "HasOne") {
+		else static if(X.stringof.length >= 6 && X.stringof[0 .. 6] == "HasOne") {
 			info.type = ColT.HasOne;
 		}
-		else static if(X.stringof[0 .. 5] == "HABTM") {
+		else static if(X.stringof.length >= 5 && X.stringof[0 .. 5] == "HABTM") {
 			info.type = ColT.HABTM;
+			info.skip = true;
+			hasAssociations = true;
 		}
 		else static if(is(X == class) || is(X == struct)) {
 			info.type = ColT.Object;
@@ -155,15 +115,22 @@ class TableDescriptionOf(T)
 {
 	static this()
 	{
-		tablename =  T.stringof;
+		static if(T.stringof.length >= 9 && T.stringof[0 .. 9] == "JoinTable") {
+			tablename = T.x.stringof ~ T.y.stringof;
+		}
+		else {
+			tablename =  T.stringof;
+		}
 		auto visitor = new TableColumnVisitor(T.stringof);
 		auto t = new T;
 		ReflectionOf!(T).visitTuple(t, visitor);
 		columns = visitor.columns;
+		hasAssociations = visitor.hasAssociations;
 	}
 	
 	static const char[] tablename;
 	static const ColumnInfo[] columns;
+	static bool hasAssociations;
 }
 
 class SetStatementBinder
@@ -204,11 +171,16 @@ class SetStatementBinder
 			st.bindBlob(x, i);
 		else static if(is (X == ubyte[]))
 			st.bindBlob(cast(void[])x, i);
+		else static if(is (X == DateTime))
+			st.bindDateTime(x, i);
 		else static if(is(X == PrimaryKey)) {
 			return;
 		}
-		else static if(X.stringof[0 .. 6] == "HasOne") {
-			if(x.id) st.bindULong(x.id, i);
+		else static if(X.stringof.length >= 6 && X.stringof[0 .. 6] == "HasOne") {
+			st.bindULong(x.id, i);
+		}
+		else static if(X.stringof.length >= 5 && X.stringof[0 .. 5] == "HABTM") {
+			return;
 		}
 		else assert(false, "Unhandled bind type");
 		++i;
@@ -260,32 +232,21 @@ class GetStatementBinder
 			st.getBlob(x, i);
 		else static if(is (X == ubyte[]))
 			st.getBlob(cast(void[])x, i);
+		else static if(is (X == DateTime))
+			st.getDateTime(x, i);
 		else static if(is(X == PrimaryKey)) {
 			uint id;
 			st.getUInt(id, i);
 			x.key = id;
 		}
-		else static if(X.stringof[0 .. 6] == "HasOne") {
+		else static if(X.stringof.length >= 6 && X.stringof[0 .. 6] == "HasOne") {
 			ulong id;
 			st.getULong(id, i);
 			x.id = id;
-			auto cs = db.getDBSerializer(x.type.mangleof);
-			if(cs) {
-				auto tCS = cast(DBSerializer!(x.type))cs;
-				if(tCS) {
-					x.db = tCS;
-				}
-				else {
-					tCS = new DBSerializer!(x.type)(db);
-					db.storeDBSerializer(tCS);
-					x.db = tCS;
-				}
-			}
-			else {
-				auto tCS = new DBSerializer!(x.type)(db);
-				db.storeDBSerializer(tCS);
-				x.db = tCS;
-			}
+			x.db = db;
+		}
+		else static if(X.stringof.length >= 5 && X.stringof[0 .. 5] == "HABTM") {
+			return;
 		}
 		else assert(false, "Unhandled bind type");
 		*cast(X*)(start + fields[index].offset) = x;
@@ -294,6 +255,56 @@ class GetStatementBinder
 	}
 }
 
+class SetAssociated
+{
+	this(ulong id, IDBConnection db)
+	{
+		this.id = id;
+		this.db = db;
+	}
+	ulong id;
+	IDBConnection db;
+	
+	void visit(X)(X x, uint index)
+	{
+		static if(X.stringof.length >= 5 && X.stringof[0 .. 5] == "HABTM") {
+			x.db = db;
+			x.save(id);
+		}
+	}
+}
+
+class GetAssociated
+{
+	this(ulong id, void* start, FieldInfo[] fields, IDBConnection db)
+	{
+		this.id = id;
+		this.start = start;
+		this.fields = fields;
+		this.db = db;
+	}
+	
+	IPreparedStatement st;
+	ulong id;
+	void* start;
+	FieldInfo[] fields;
+	IDBConnection db;
+	
+	
+	void visit(X)(X x_, uint index)
+	{
+		static if(X.stringof.length >= 5 && X.stringof[0 .. 5] == "HABTM") {
+			X x;
+			x.id = id;
+			x.db = db;
+			*cast(X*)(start + fields[index].offset) = x;
+		}
+	}
+}
+
+/**
+ * Represents the results returned by a select query for object T.
+ */
 class ResultSet(T)
 {
 	private this(IPreparedStatement st, DBSerializer!(T) cs)
@@ -313,8 +324,12 @@ class ResultSet(T)
 	}
 	
 	IPreparedStatement st;
-	Database.Serializer!(T) cs;
+	DBSerializer!(T) cs;
 	
+	/**
+	 * Returns the next available T object in the result set or null if
+	 * there are no more objects in the result set.
+	 */
 	T next()
 	{
 		if(st.execute == SQLRESULT_ROW) {
@@ -346,76 +361,96 @@ class ResultSet(T)
 	}
 }
 
+/**
+ * Class for finding objects with the specified prepared statement and specified bind objects.
+ * Can be reused for as many queries as necessary.  Note: Interface subject to change in future versions.
+ */
 class Finder(T, X...)
 {
-	private this(IPreparedStatement st, DBSerializer!(T) cs, X x = null)
+	private this(IPreparedStatement st, DBSerializer!(T) cs)
 	{
 		this.st = st;
 		this.cs = cs;
-		this.x_ = x;
 	}
 	IPreparedStatement st;
-	Database.Serializer!(T) cs;
-	X x_;
+	DBSerializer!(T) cs;
 	
-	ResultSet!(T) find(X x = null)
-	{
-		if(!x) {
-			if(!x_)
-				return null;
-			x = x_;
-		}
-		
+	ResultSet!(T) find(X x)
+	{		
 		st.reset;
 		auto binder = new SetStatementBinder(st);
 			
 		foreach(a; x)
 		{
-			binder.visit(a, 0);
+			binder.visit!(typeof(a))(a, 0);
 		}
 		
 		return new ResultSet!(T)(st, cs);
 	}
 }
 
-interface IDBSerializer
-{
-	char[] mangledname();
-}
-
-class DBSerializer(T) : IDBSerializer
+/**
+ * Main database serialization class in sendero.data.
+ * 
+ * If Sendero is compiled with "-version=AutoConfigDB", DBSerializer(T) will automatically
+ * create and update your database tables depending on the definition of your class.
+ * Note: Sendero will only add new columns, it will not modify or delete existing columns, nor will
+ * it check if a column type matches the field type in your class.  This leaves the user free to
+ * modify the column definitions in the database table without the serializer's interference.
+ * 
+ */
+class DBSerializer(T)
 {
 	this(IDBConnection db)
 	{
 		this.db = db;
 		this.tablename = TableDescriptionOf!(T).tablename;
+		//auto columns = TableDescriptionOf!(T).columns;
+		//auto fields = ReflectionOf!(T).fields;
 		version(AutoConfigDB)
 		{
 			if(!db.configTable(tablename, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields))
 				throw new Exception("Unable to configure table " ~ tablename);
+			setupInsert;
+			setupUpdate;
+			setupFindByID;
 		}
 		else
 		{
 			if(!db.tableExists(tablename))
 				throw new Exception("Table " ~ tablename ~ " doesn't exist.  If you compile with the compiler flag \"-version=AutoConfigDB\", sendero will automatically configure your database tables.");
 		}
-		
-		insertStatement = db.createInsertStatement(tablename, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
-		assert(insertStatement, "No insert statement for table " ~ tablename);
-		updateStatement = db.createUpdateStatement(tablename, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
-		assert(updateStatement, "No update statement for table " ~ tablename);
-		findByIDStatement = db.createFindByIDStatement(tablename);
-		assert(findByIDStatement, "No find by id statement for table " ~ tablename);
 	}
 	private IDBConnection db;
 	private IPreparedStatement insertStatement;
 	private IPreparedStatement updateStatement;
 	private IPreparedStatement findByIDStatement;
 	char[] tablename;
-	char[] mangledname() {return T.mangleof;}
+	
+	private void setupInsert()
+	{
+		insertStatement = db.createInsertStatement(tablename, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
+		assert(insertStatement, "No insert statement for table " ~ tablename);
+	}
+	
+	private void setupUpdate()
+	{
+		updateStatement = db.createUpdateStatement(tablename, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
+		assert(updateStatement, "No update statement for table " ~ tablename);
+	}
+	
+	private void setupFindByID()
+	{
+		findByIDStatement = db.createFindWhereStatement(tablename, "`id` = \?", TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
+		assert(findByIDStatement, "No find by id statement for table " ~ tablename);
+	}
 	
 	private bool insert(T t)
 	{
+		if(!insertStatement) {
+			setupInsert;
+		}
+		
 		auto inserter = new SetStatementBinder(insertStatement);
 		ReflectionOf!(T).visitTuple(t, inserter);
 		
@@ -431,13 +466,28 @@ class DBSerializer(T) : IDBSerializer
 		t.id.key = id;
 		
 		insertStatement.reset;
+		
+		if(TableDescriptionOf!(T).hasAssociations) {
+			auto setAssoc = new SetAssociated(id, this.db);
+			ReflectionOf!(T).visitTuple(t, setAssoc);
+		}
+		
 		return true;
 	}
 	
+	/**
+	 * Saves a database object to its corresponding database table either
+	 * inserting it or updating it depending on whether or not the field "PrimaryKey id"
+	 * has been set.
+	 */
 	bool save(T t)
 	{
 		if(t.id() == 0)
 			return insert(t);
+
+		if(!updateStatement) {
+			setupUpdate;
+		}
 		
 		auto updater = new SetStatementBinder(updateStatement);
 		ReflectionOf!(T).visitTuple(t, updater);
@@ -445,19 +495,46 @@ class DBSerializer(T) : IDBSerializer
 		
 		auto res = updateStatement.execute;
 		updateStatement.reset;
-		return res >= 0 ? true : false;
+		
+		if(res < 0)
+			return false;
+		
+		if(TableDescriptionOf!(T).hasAssociations) {
+			auto setAssoc = new SetAssociated(t.id(), this.db);
+			ReflectionOf!(T).visitTuple(t, setAssoc);
+		}
+		return true;
 	}
 	
+	/**
+	 * Deserializes an object of type T from the provided prepared statement.
+	 * It is expected that the order of columns in the prepared statement
+	 * correspond to those in the class's tuple.  It is safer thus to deserialize object's
+	 * using the provided findByID and findWhere methods;
+	 */
 	T deserialize(IPreparedStatement st)
 	{
 		auto t = new T;
 		auto deserializer = new GetStatementBinder(st, cast(void*)t, ReflectionOf!(T).fields, this.db);
 		ReflectionOf!(T).visitTuple(t, deserializer);
+		
+		if(TableDescriptionOf!(T).hasAssociations) {
+			auto getAssoc = new GetAssociated(t.id(), cast(void*)t, ReflectionOf!(T).fields, this.db);
+			ReflectionOf!(T).visitTuple(t, getAssoc);
+		}
+		
 		return t;
 	}
 	
+	/**
+	 * Finds and deserialized an object of type T with the specified id from the database.
+	 */
 	T findByID(ulong id)
 	{
+		if(!findByIDStatement) {
+			setupFindByID;
+		}
+		
 		findByIDStatement.reset;
 		findByIDStatement.bindULong(id, 1);
 		if(findByIDStatement.execute != SQLRESULT_ROW) {
@@ -469,12 +546,17 @@ class DBSerializer(T) : IDBSerializer
 		return t;
 	}
 	
-	ResultSet!(T) findWhere(X...)(char[] statement, X value = null)
+	/**
+	 * Creates a finder object from the specifed where clause and the specified binding types.
+	 * Note: Interface subject to change in future versions.
+	 */
+	Finder!(T, X) findWhere(X...)(char[] where)
 	{
-		auto st = db.createStatement("SELECT * FROM " ~ cs.desc.tablename ~ " WHERE " ~ statement);
+		//auto st = db.createStatement("SELECT * FROM `" ~ tablename ~ "` WHERE " ~ statement);
+		auto st = db.createFindWhereStatement(tablename, where, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
 		if(!st)
 			return null;
-		return new Finder!(T, X)(st, this, value);
+		return new Finder!(T, X)(st, this);
 	}
 }
 
@@ -482,8 +564,8 @@ package class DBHelper
 {
 	static char[] createInsertSql(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
-		char[] q = "INSERT INTO " ~ tablename;
-		q ~= "(";
+		char[] q = "INSERT INTO `" ~ tablename;
+		q ~= "` (";
 		bool first = true;
 		assert(cols.length == fields.length, tablename);
 		uint n = 0;
@@ -494,10 +576,13 @@ package class DBHelper
 				continue;
 			}
 			
+			if(cols[i].skip)
+				continue;
+			
 			if(!first) {
 				q ~= ", ";
 			}
-			q ~= fields[i].name;
+			q ~= "`" ~ fields[i].name ~ "`";
 			first = false;
 			++n;
 		}
@@ -512,13 +597,13 @@ package class DBHelper
 			q ~= "\?";
 			first = false;
 		}
-		q ~= ");";
+		q ~= ")";
 		return q;
 	}
 	
 	static char[] createUpdateSql(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{		
-		char[] q = "UPDATE " ~ tablename ~ " SET ";
+		char[] q = "UPDATE `" ~ tablename ~ "` SET ";
 		bool first = true;
 		assert(cols.length == fields.length, tablename);
 		for(uint i = 0; i < cols.length; ++i)
@@ -526,10 +611,13 @@ package class DBHelper
 			if(cols[i].primaryKey)
 				continue;
 			
+			if(cols[i].skip)
+				continue;
+			
 			if(!first)
 				q ~= ", ";
 			
-			q ~= fields[i].name ~ " = \?";
+			q ~= "`" ~ fields[i].name ~ "` = \?";
 			
 			first = false;
 		}
@@ -539,39 +627,46 @@ package class DBHelper
 		return q;
 	}
 	
-	static char[] createFindByIDSql(char[] tablename)
+	static char[] createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields)
 	{
-		char[] q = "SELECT * FROM " ~ tablename ~ " WHERE id = \?";
+		char[] q = "SELECT ";
+		bool first = true;
+		assert(cols.length == fields.length, tablename);
+		for(uint i = 0; i < cols.length; ++i)
+		{			
+			if(cols[i].skip)
+				continue;
+			
+			if(!first)
+				q ~= ", ";
+			
+			q ~= "`" ~ fields[i].name ~ "`";
+			
+			first = false;
+		}
+		
+		q ~= " FROM `"~ tablename ~ "` WHERE " ~ where;
+		
 		return q;
 	}
 }
 
 version(Unittest)
 {
+	import sendero.data.Associations;
 	import Integer = tango.text.convert.Integer;
 	
-	class TestBlob
+	class TestModel
 	{
 		PrimaryKey id;
 		void[] blob;
 		char[] txt;
 	}
-	
-	class TestModel
-	{
-		PrimaryKey id;
-		int x = 5;
-		int y = 7;
-		int z = 9;
-		double d;
-		double e;
-		int f;
-	}
 }
 
 unittest
 {
-	assert(TableDescriptionOf!(TestBlob).columns[0].type == ColT.UInt, Integer.toUtf8(TableDescriptionOf!(TestBlob).columns[0].type));
-	assert(TableDescriptionOf!(TestBlob).columns[1].type == ColT.Blob, Integer.toUtf8(TableDescriptionOf!(TestBlob).columns[1].type));
-	assert(TableDescriptionOf!(TestBlob).columns[2].type == ColT.VarChar, Integer.toUtf8(TableDescriptionOf!(TestBlob).columns[2].type));
+	assert(TableDescriptionOf!(TestModel).columns[0].type == ColT.UInt, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[0].type));
+	assert(TableDescriptionOf!(TestModel).columns[1].type == ColT.Blob, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[1].type));
+	assert(TableDescriptionOf!(TestModel).columns[2].type == ColT.VarChar, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[2].type));
 }
