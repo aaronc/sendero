@@ -10,11 +10,15 @@ import tango.util.log.Log;
  */
 class ThreadSafeQueue(T)
 {	
-	private static Logger debugLog;
+	debug static Logger debugLog;
+	
 	static this()
 	{
-		debugLog = Log.getLogger("debug.sendero.util.collection.ThreadSafeQueue!(" ~ T.stringof ~ ")");
+		qHead.store!(msync.seq)(null);
+		qTail.store!(msync.seq)(null);
+		debug debugLog = Log.getLogger("debug.sendero.util.collection.ThreadSafeQueue!(" ~ T.stringof ~ ")");
 	}
+
 	
 	private static class Node
 	{
@@ -24,12 +28,6 @@ class ThreadSafeQueue(T)
 	private static uint size = 0;
 	private static Atomic!(Node) qHead;
 	private static Atomic!(Node) qTail;
-	
-	static this()
-	{
-		qHead.store!(msync.seq)(null);
-		qTail.store!(msync.seq)(null);
-	}
 	
 	static T dequeue()
 	{
@@ -58,7 +56,7 @@ class ThreadSafeQueue(T)
 		}
 		catch(Exception ex)
 		{
-			debugLog.error("dequeue exception " ~ ex.toUtf8);
+			debug debugLog.error("dequeue exception " ~ ex.toUtf8);
 			return null;
 		}
 	}
@@ -93,7 +91,7 @@ class ThreadSafeQueue(T)
 		}
 		catch(Exception ex)
 		{
-			debugLog.error("enqueue exception " ~ ex.toUtf8);
+			debug debugLog.error("enqueue exception " ~ ex.toUtf8);
 		}
 	}
 	
