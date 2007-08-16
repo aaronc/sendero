@@ -76,10 +76,14 @@ version(Unittest)
 	import tango.core.Thread;
 	import Integer = tango.text.convert.Integer;
 	import tango.io.Stdout;
+	import tango.util.log.Log;
+	import tango.util.log.FileAppender;
 }
 
 unittest
 {
+	auto appender = new FileAppender("ConnectionPool_test.log");
+	Log.getRootLogger.addAppender(appender);
 	alias ConnectionPool!(SqliteDB, SqliteTestProvider) Pool;
 	
 	static class TestThread : Thread
@@ -152,4 +156,5 @@ unittest
 		assert(!p);
 		cacheMap[x] = x;
 	}
+	appender.close;
 }
