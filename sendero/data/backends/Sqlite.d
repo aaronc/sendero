@@ -3,6 +3,7 @@ module sendero.data.backends.Sqlite;
 import sendero.data.model.IDBConnection;
 import sendero.util.Reflection;
 import sendero.data.backends.imp.sqlite;
+import sendero.data.DB;
 
 import Regex = tango.text.Regex;
 import tango.stdc.stringz;
@@ -30,7 +31,7 @@ class SqliteDB : IDBConnection
 		return db;
 	}
 	
-	IPreparedStatement createStatement(char[] statement)
+	IPreparedStatement createStatement(char[] statement, ColumnInfo[] paramCols, ColumnInfo[] resultCols)
 	{
 		sqlite3_stmt* stmt;
 		char* pzTail;
@@ -93,7 +94,8 @@ class SqliteDB : IDBConnection
 	bool configTable(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
 		if(!tableExists(tablename)) {
-			scope st = createStatement(createCreateSql(tablename, cols, fields));
+			char[] create = createCreateSql(tablename, cols, fields);
+			scope st = createStatement(create, null, null);
 			if(!st)
 				return false;
 			auto res = st.execute;
@@ -136,7 +138,7 @@ class SqliteDB : IDBConnection
 	bool tableExists(char[] table)
 	{
 		char[] q = "SELECT name FROM sqlite_master WHERE type='table' AND name='" ~ table ~ "'";
-		scope st = createStatement(q);
+		scope st = createStatement(q, null, null);
 		if(!st)
 			return false;
 		auto res = st.execute;
@@ -147,7 +149,7 @@ class SqliteDB : IDBConnection
 	bool updateTable(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
 		char[] q = "SELECT sql FROM sqlite_master WHERE type='table' AND name='" ~ tablename ~ "'";
-		scope st = createStatement(q);
+		scope st = createStatement(q, null, null);
 		if(!st)
 			return false;
 		auto res = st.execute;
@@ -166,7 +168,7 @@ class SqliteDB : IDBConnection
 			auto rgx = Regex.Regex("(\\s|\\()`?" ~ fields[i].name ~ "`?\\s");
 			if(rgx.find(sql) < 0) {
 				char[] q1 = "ALTER TABLE `" ~ tablename ~ "` ADD " ~ createColumnDef(fields[i].name, cols[i]);
-				scope st1 = createStatement(q1);
+				scope st1 = createStatement(q1, null, null);
 				if(!st1)
 					return false;
 				auto res1 = st1.execute;
@@ -181,19 +183,19 @@ class SqliteDB : IDBConnection
 	IPreparedStatement createInsertStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
 		auto q = DBHelper.createInsertSql(tablename, cols, fields);
-		return createStatement(q);
+		return createStatement(q, null, null);
 	}
 	
 	IPreparedStatement createUpdateStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields)
 	{
 		auto q = DBHelper.createUpdateSql(tablename, cols, fields);
-		return createStatement(q);
+		return createStatement(q, null, null);
 	}
 	
-	IPreparedStatement createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields)
+	IPreparedStatement createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields, ColumnInfo[] paramCols)
 	{
 		auto q = DBHelper.createFindWhereStatement(tablename, where, cols, fields);
-		return createStatement(q);
+		return createStatement(q, null, null);
 	}
 	
 	~this()

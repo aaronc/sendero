@@ -44,6 +44,7 @@ static class TableColumnVisitor
 	char[] classname;
 	ColumnInfo[] columns;
 	bool hasAssociations = false;
+	int primaryKeyIndex = -1;
 	
 	void visit(X)(X x, uint index)
 	{
@@ -93,6 +94,7 @@ static class TableColumnVisitor
 		else static if(is(X == PrimaryKey)) {
 			info.primaryKey = true;
 			info.type = ColT.UInt;
+			primaryKeyIndex = index;
 		}
 		else static if(X.stringof.length >= 6 && X.stringof[0 .. 6] == "HasOne") {
 			info.type = ColT.HasOne;
@@ -126,11 +128,13 @@ class TableDescriptionOf(T)
 		ReflectionOf!(T).visitTuple(t, visitor);
 		columns = visitor.columns;
 		hasAssociations = visitor.hasAssociations;
+		primaryKeyIndex = visitor.primaryKeyIndex;
 	}
 	
 	static const char[] tablename;
 	static const ColumnInfo[] columns;
 	static bool hasAssociations;
+	static const int primaryKeyIndex;
 }
 
 class SetStatementBinder
@@ -441,7 +445,12 @@ class DBSerializer(T)
 	
 	private void setupFindByID()
 	{
-		findByIDStatement = db.createFindWhereStatement(tablename, "`id` = \?", TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
+		auto pKeyIdx = TableDescriptionOf!(T).primaryKeyIndex;
+		assert(pKeyIdx >= 0, "Class " ~ T.stringof ~ " has no PrimaryKey field defined");
+		assert(pKeyIdx < TableDescriptionOf!(T).columns.length, "primaryKeyIndex out of bounds for class " ~ T.stringof);
+		ColumnInfo[] paramCols;
+		paramCols ~= TableDescriptionOf!(T).columns[pKeyIdx];
+		findByIDStatement = db.createFindWhereStatement(tablename, "`id` = \?", TableDescriptionOf!(T).columns, ReflectionOf!(T).fields, paramCols);
 		assert(findByIDStatement, "No find by id statement for table " ~ tablename);
 	}
 	
@@ -553,7 +562,16 @@ class DBSerializer(T)
 	Finder!(T, X) findWhere(X...)(char[] where)
 	{
 		//auto st = db.createStatement("SELECT * FROM `" ~ tablename ~ "` WHERE " ~ statement);
-		auto st = db.createFindWhereStatement(tablename, where, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields);
+		auto visitor = new TableColumnVisitor(null);
+		X x;
+		uint i = 0;
+		foreach(t; x)
+		{
+			visitor.visit(t, i);
+			++i;
+		}
+		
+		auto st = db.createFindWhereStatement(tablename, where, TableDescriptionOf!(T).columns, ReflectionOf!(T).fields, visitor.columns);
 		if(!st)
 			return null;
 		return new Finder!(T, X)(st, this);

@@ -9,12 +9,12 @@ public import sendero.util.ColumnInfo;
 
 interface IDBConnection
 {
-	IPreparedStatement createStatement(char[] statement);
+	IPreparedStatement createStatement(char[] statement, ColumnInfo[] paramCols, ColumnInfo[] resultCols);
 	bool tableExists(char[] tablename);
 	bool configTable(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
 	IPreparedStatement createInsertStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
 	IPreparedStatement createUpdateStatement(char[] tablename, ColumnInfo[] cols, FieldInfo[] fields);
-	IPreparedStatement createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields);
+	IPreparedStatement createFindWhereStatement(char[] tablename, char[] where, ColumnInfo[] cols, FieldInfo[] fields, ColumnInfo[] paramCols);
 	//IPreparedStatement createFindByIDStatement(char[] tablename);
 }
 
