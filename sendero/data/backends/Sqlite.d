@@ -279,84 +279,84 @@ class SqlitePreparedStatement : IPreparedStatement
 	
 	bool bindShort(short x, uint index)
 	{
-		if(sqlite3_bind_int(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindUShort(ushort x, uint index)
 	{
-		if(sqlite3_bind_int(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindInt(int x, uint index)
 	{
-		if(sqlite3_bind_int(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindUInt(uint x, uint index)
 	{
-		if(sqlite3_bind_int(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindLong(long x, uint index)
 	{
-		if(sqlite3_bind_int64(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int64(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindULong(ulong x, uint index)
 	{
-		if(sqlite3_bind_int64(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int64(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindBool(bool x, uint index)
 	{
-		if(sqlite3_bind_int(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_int(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindFloat(float x, uint index)
 	{
-		if(sqlite3_bind_double(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_double(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindDouble(double x, uint index)
 	{
-		if(sqlite3_bind_double(stmt, index, x) != SQLITE_OK)
+		if(sqlite3_bind_double(stmt, index + 1, x) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindString(char[] x, uint index)
 	{
-		if(sqlite3_bind_text(stmt, index, toUtf8z(x), x.length, null) != SQLITE_OK)
+		if(sqlite3_bind_text(stmt, index + 1, toUtf8z(x), x.length, null) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindWString(wchar[] x, uint index)
 	{
-		if(sqlite3_bind_text16(stmt, index, toUtf16z(x), x.length, null) != SQLITE_OK)
+		if(sqlite3_bind_text16(stmt, index + 1, toUtf16z(x), x.length, null) != SQLITE_OK)
 			return false;
 		return true;
 	}
 	
 	bool bindBlob(void[] x, uint index)
 	{
-		if(sqlite3_bind_blob(stmt, index, x.ptr, x.length, null) != SQLITE_OK)
+		if(sqlite3_bind_blob(stmt, index + 1, x.ptr, x.length, null) != SQLITE_OK)
 			return false;
 		return true;
 	}
@@ -373,7 +373,7 @@ class SqlitePreparedStatement : IPreparedStatement
 	
 	bool bindDateTime(DateTime dt, uint index)
 	{
-		return bindLong(dt.ticks, index);
+		return bindLong(dt.ticks, index + 1);
 	}
 	
 	bool getShort(inout short x, uint index)

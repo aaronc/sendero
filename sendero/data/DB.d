@@ -145,7 +145,7 @@ class SetStatementBinder
 	}
 	
 	IPreparedStatement st;
-	uint i = 1;
+	uint i = 0;
 	
 	void visit(X)(X x, uint index)
 	{
@@ -545,7 +545,7 @@ class DBSerializer(T)
 		}
 		
 		findByIDStatement.reset;
-		findByIDStatement.bindULong(id, 1);
+		findByIDStatement.bindULong(id, 0);
 		if(findByIDStatement.execute != SQLRESULT_ROW) {
 			findByIDStatement.reset;
 			return null;
