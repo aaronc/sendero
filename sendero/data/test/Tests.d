@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.data.test.Tests;
 
 version(Unittest)
@@ -7,6 +12,7 @@ version(Unittest)
 	import tango.util.log.Log;
 	import tango.util.log.FileAppender;
 	import tango.util.log.DateLayout;
+	debug import tango.io.Stdout;
 	
 	class A
 	{
@@ -62,6 +68,7 @@ version(Unittest)
 		auto a = new A;
 		a.blob = r"sdgh*&Y#*(";
 		a.txt = "Hello World!";
+		debug Stdout("before aSer save").newline;
 		assert(aSer.save(a), dbStr);
 		assert(a.id(), dbStr);
 		

@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.data.backends.Sqlite;
 
 import sendero.data.model.IDBConnection;

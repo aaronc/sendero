@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.data.DB;
 
 public import tango.core.Type;
@@ -7,6 +12,7 @@ public import tango.util.time.DateTime;
 import sendero.util.Reflection;
 import sendero.data.model.IDBConnection;
 
+import tango.util.log.Log;
 debug import tango.io.Stdout;
 
 package const int SQLRESULT_FAIL = -1;
@@ -405,6 +411,11 @@ class Finder(T, X...)
  */
 class DBSerializer(T)
 {
+	this()
+	{
+		log = Log.getLogger("sendero.data.DB.DBSerializer!(" ~ T.stringof ~ ")"); 
+	}
+	
 	this(IDBConnection db)
 	{
 		this.db = db;
@@ -429,6 +440,7 @@ class DBSerializer(T)
 	private IPreparedStatement insertStatement;
 	private IPreparedStatement updateStatement;
 	private IPreparedStatement findByIDStatement;
+	private Logger log;
 	char[] tablename;
 	
 	private void setupInsert()
@@ -456,21 +468,32 @@ class DBSerializer(T)
 	
 	private bool insert(T t)
 	{
+		debug Stdout("before setup insert").newline;
+		
 		if(!insertStatement) {
 			setupInsert;
 		}
 		
+		debug Stdout("begin insert").newline;
+		
 		auto inserter = new SetStatementBinder(insertStatement);
 		ReflectionOf!(T).visitTuple(t, inserter);
 		
+		debug Stdout("insert set").newline;
+		
 		if(insertStatement.execute < 0) {
+			debug Stdout("insert fail").newline;
 			insertStatement.reset;
 			return false;
 		}
 		
+		debug Stdout("insert succeed").newline;
+		
 		auto id = insertStatement.getLastInsertID();
 		if(id == 0)
 			return false;
+		
+		debug Stdout("got id").newline;
 		
 		t.id.key = id;
 		
@@ -480,6 +503,8 @@ class DBSerializer(T)
 			auto setAssoc = new SetAssociated(id, this.db);
 			ReflectionOf!(T).visitTuple(t, setAssoc);
 		}
+		
+		debug Stdout("true").newline;
 		
 		return true;
 	}
@@ -491,6 +516,7 @@ class DBSerializer(T)
 	 */
 	bool save(T t)
 	{
+		debug Stdout("before save").newline;
 		if(t.id() == 0)
 			return insert(t);
 
