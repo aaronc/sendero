@@ -48,13 +48,15 @@ class ReflectionOf(T) {
 	
 	static uint visitTuple(Visitor)(T t, Visitor v, uint i = 0)
 	{
-		alias BaseTypeTupleOf!(T) BTT;
+		static if(is(T == class)) {
+			alias BaseTypeTupleOf!(T) BTT;
 		
-		static if(BTT.length)
-		{
-			static if(!is(BTT[0] == Object)) {
-				auto btp = cast(BTT[0])t;
-				i = ReflectionOf!(BTT[0]).visitTuple(btp, v);
+			static if(BTT.length)
+			{
+				static if(!is(BTT[0] == Object)) {
+					auto btp = cast(BTT[0])t;
+					i = ReflectionOf!(BTT[0]).visitTuple(btp, v);
+				}
 			}
 		}
 		
@@ -99,12 +101,14 @@ template Reflect(T)
 		
 		uint n = 0;
 		
-		alias BaseTypeTupleOf!(T) BTT;
-		
-		static if(BTT.length) {
-			static if(!is(BTT[0] == Object)) {
-				info ~= ReflectionOf!(BTT[0]).doReflect;
-				n += info.length;
+		static if(is(T == class)) {
+			alias BaseTypeTupleOf!(T) BTT;
+			
+			static if(BTT.length) {
+				static if(!is(BTT[0] == Object)) {
+					info ~= ReflectionOf!(BTT[0]).doReflect;
+					n += info.length;
+				}
 			}
 		}
 		
