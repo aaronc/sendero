@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.util.collection.ThreadSafeQueue;
 
 import tango.core.Atomic;
