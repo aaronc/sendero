@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.xml.IForwardNodeIterator;
 
 enum XmlNodeType { Element, Data, CData, Comment, PI, Attribute };
