@@ -368,6 +368,7 @@ unittest
         "}"
     "}"
 	"}";
+	
 	auto text = new StringCharIterator!(char)(json); 
 	auto p = new JSONParser!(char)(text);
 	assert(p);

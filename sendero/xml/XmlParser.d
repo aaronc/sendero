@@ -148,10 +148,10 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLoc = text.location;
 		
 		if(quote == '\'') {
-			while(text[0] && text[0] != '\'') ++ text;
+			while(text[0] && text[0] != '\'') ++text;
 		}
 		else if (quote == '\"') {	
-			while(text[0] && text[0] != '\"') ++ text;
+			while(text[0] && text[0] != '\"') ++text;
 		}
 		else {
 			return doUnexpected;
@@ -550,7 +550,9 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		case XmlTokenType.StartElement, XmlTokenType.StartNSElement:
 			curType = XmlNodeType.Element;
 			break;
-		case XmlTokenType.EndElement, XmlTokenType.EndNSElement, XmlTokenType.EndEmptyElement, XmlTokenType.AttrName, XmlTokenType.AttrNSName, XmlTokenType.AttrValue, XmlTokenType.Declaration, XmlTokenType.Doctype:
+		case XmlTokenType.EndElement, XmlTokenType.EndNSElement, XmlTokenType.EndEmptyElement, 
+			XmlTokenType.AttrName, XmlTokenType.AttrNSName, XmlTokenType.AttrValue, 
+			XmlTokenType.Declaration, XmlTokenType.Doctype:
 			return false;
 			break;
 		case XmlTokenType.Data:
@@ -586,7 +588,9 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 			if(parser.depth == depth) {
 				if(processNode) return true;
 			}
-			else if(parser.depth < depth && (parser.type == XmlTokenType.EndElement || parser.type == XmlTokenType.EndNSElement || parser.type == XmlTokenType.EndEmptyElement))
+			else if(parser.depth < depth && (parser.type == XmlTokenType.EndElement || 
+					parser.type == XmlTokenType.EndNSElement || 
+					parser.type == XmlTokenType.EndEmptyElement))
 			{
 				parser.retainCurrent;
 				return false;
@@ -930,7 +934,10 @@ import tango.io.File;
 
 void doTests(Ch)()
 {
-	Ch[] t = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = '3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
+	Ch[] t = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element "
+		"attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = "
+		"'3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
+	
 	auto text = new StringCharIterator!(Ch)(t);
 	auto itr = new XmlParser!(Ch)(text);
 	assert(itr.next);
