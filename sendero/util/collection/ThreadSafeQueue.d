@@ -1,5 +1,6 @@
 /** 
  * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * License:   BSD Style
  * Authors:   Aaron Craelius
  */
 

@@ -1,21 +1,26 @@
 /** 
  * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * License:   BSD Style
  * Authors:   Aaron Craelius
  */
 
 module sendero.json.JsonParser;
 
 public import sendero.util.ICharIterator;
+import sendero.util.StringCharIterator;
 
 enum JSONTokenType { Name, String, Number, BeginObject, EndObject, BeginArray, EndArray, True, False, Null, Empty };
 
 class JSONParser(Ch, Int = uint)
 {
+	this(Ch[] text)
+	{
+		this.itr = new StringCharIterator!(Ch)(text);
+	}
+	
 	this(ICharIterator!(Ch) itr)
 	{
 		this.itr = itr;
-		
-		this.curDepth = 0;
 	}
 	
 	private ICharIterator!(Ch) itr;
@@ -251,6 +256,8 @@ class JSONParser(Ch, Int = uint)
 		case JSONTokenType.EndObject:
 		case JSONTokenType.BeginObject:
 		case JSONTokenType.EndArray:
+		case JSONTokenType.True:
+		case JSONTokenType.False:
 		case JSONTokenType.Null:
 		default:		
 			return parseMemberName;
@@ -342,39 +349,43 @@ private class Lookup
 
 version(Unittest)
 {
-	import sendero.util.StringCharIterator;
+	class TestCase
+	{
+		const static char[] one = 
+		"{"
+			"\"glossary\": {"
+		        "\"title\": \"example glossary\","
+				"\"GlossDiv\": {"
+				" 	\"title\": \"S\","
+				"	\"GlossList\": {"
+				"       \"GlossEntry\": {"
+				"           \"ID\": \"SGML\","
+				"			\"SortAs\": \"SGML\","
+				"			\"GlossTerm\": \"Standard Generalized Markup Language\","
+				"			\"Acronym\": \"SGML\","
+				"			\"Abbrev\": \"ISO 8879:1986\","
+				"			\"GlossDef\": {"
+		        "                \"para\": \"A meta-markup language, used to create markup languages such as DocBook.\","
+				"				\"GlossSeeAlso\": [\"GML\", \"XML\"]"
+		        "            },"
+				"			\"GlossSee\": \"markup\","
+				"			\"ANumber\": 12345.6e7"
+				"			\"True\": true"
+				"			\"False\": false"
+				"			\"Null\": null"
+		        "        }"
+				"    }"
+		        "}"
+		    "}"
+		"}";
+	}
 }
 
 unittest
 {
-	char[] json = "{"
-		"\"glossary\": {"
-        "\"title\": \"example glossary\","
-		"\"GlossDiv\": {"
-		" \"title\": \"S\","
-		"	\"GlossList\": {"
-		"       \"GlossEntry\": {"
-		"           \"ID\": \"SGML\","
-		"			\"SortAs\": \"SGML\","
-		"			\"GlossTerm\": \"Standard Generalized Markup Language\","
-		"			\"Acronym\": \"SGML\","
-		"			\"Abbrev\": \"ISO 8879:1986\","
-		"			\"GlossDef\": {"
-        "                \"para\": \"A meta-markup language, used to create markup languages such as DocBook.\","
-		"				\"GlossSeeAlso\": [\"GML\", \"XML\"]"
-        "            },"
-		"			\"GlossSee\": \"markup\","
-		"			\"ANumber\": 12345.6e7"
-		"			\"True\": true"
-		"			\"False\": false"
-		"			\"Null\": null"
-        "        }"
-		"    }"
-        "}"
-    "}"
-	"}";
 	
-	auto text = new StringCharIterator!(char)(json); 
+	
+	auto text = new StringCharIterator!(char)(TestCase.one); 
 	auto p = new JSONParser!(char)(text);
 	assert(p);
 	assert(p.next);
