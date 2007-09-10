@@ -4,10 +4,11 @@
  * Authors:   Aaron Craelius
  */
 
-
 module sendero.util.StringCharIterator;
 
 public import sendero.util.ICharIterator;
+
+import tango.text.Util;
 
 class StringViewer(Ch) : IStringViewer!(Ch)
 {
@@ -123,6 +124,14 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 		this.len = newText.length;
 		this.index = 0;
 		this.viewer.text = newText;
+	}
+	
+	bool forwardLocate(Ch ch)
+	{
+		auto l = indexOf!(Ch)(text.ptr + index, ch, length - index);
+		if(l == length - index) return false;
+		index += l;
+		return true;		
 	}
 }
 

@@ -34,6 +34,11 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 {
 	private static Logger log;
 	
+	static this()
+	{
+		log = Log.getLogger("sendero.xml.XmlParser!(" ~ Ch.stringof ~ ")");
+	}
+	
 	this(Ch[] text)
 	{
 		this.text = new StringCharIterator!(Ch)(text);	
@@ -175,7 +180,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	{
 		curType = XmlTokenType.Data;
 		curLoc = text.location;
-		while(Lookup.text[text[0]]) ++text;
+		if(!text.forwardLocate('<')) return false;
 		curLen = text.location - curLoc;
 		curQLen = 0;
 		return true;
@@ -313,13 +318,13 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doUnexpected()
 	{
-		//TODO Log
+		log.warn("Unexpected event");
 		return false;
 	}
 	
 	final private bool doUnexpectedEOF()
 	{
-		//TODO Log
+		log.warn("Unexpected EOF");
 		return false;
 	}
 	
@@ -372,9 +377,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doMain()
 	{
-		switch(text[0])
-		{
-		case '<':
+		if(text[0] == '<') {
 			switch(text[1])
 			{
 			case '!':
@@ -412,22 +415,13 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 				return doStartElement();
 				break;
 			}
-			break;
-		case '/':
-			if(text[1] == '>') {
-				text += 2;
-				return doEndEmptyElement();
-			}
-			else {
-				return doData();
-			}
-			break;
-		default:
+		}
+		else {
 			return doData();
 		}
 	}
 	
-	bool next()
+	final bool next()
 	{	
 		if(retain) {
 			retain = false;

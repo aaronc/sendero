@@ -27,4 +27,5 @@ interface ICharIterator(Ch) : IStringViewer!(Ch)
 	Ch[] randomAccessSlice(size_t x, size_t y);
 	bool seek(size_t location);
 	IStringViewer!(Ch) src();
+	bool forwardLocate(Ch ch);
 }
