@@ -492,14 +492,40 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		return curDepth;
 	}
 	
-	bool reset()
-	{
-		return text.seek(0);
-	}
-	
 	void retainCurrent()
 	{
 		retain = true;
+	}
+	
+	bool reset()
+	{
+		if(!text.seek(0)) return false;
+		reset_;
+		return true;
+	}
+	
+	void reset(Ch[] newText)
+	{
+		text = new StringCharIterator!(Ch)(newText);
+		reset_;
+	}
+	
+	void reset(ICharIterator!(Ch) newText)
+	{
+		text = newText;
+		reset_;
+	}
+	
+	final private void reset_()
+	{
+		curDepth = 0;
+		curLoc = 0;
+		curLen = 0;
+		curQLen = 0;
+		inDeclaration = false;
+		inElement = false;
+		inPI = false;
+		retain = false;
 	}
 }
 
@@ -511,6 +537,16 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 	this(XmlParser!(Ch) parser)
 	{
 		this.parser = parser;
+	}
+	
+	this(ICharIterator!(Ch) text)
+	{
+		this.parser = new XmlParser!(Ch)(text);
+	}
+	
+	this(Ch[] text)
+	{
+		this.parser = new XmlParser!(Ch)(text);
 	}
 	
 	private XmlParser!(Ch) parser;
@@ -547,7 +583,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return false;
 	}
 	
-	private bool processNode()
+	final private bool processNode()
 	{
 		if(parser.type == XmlTokenType.AttrName || parser.type == XmlTokenType.AttrNSName || parser.type == XmlTokenType.AttrValue)
 			return false;;
@@ -605,7 +641,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		}
 	}
 	
-	private void doPI()
+	final private void doPI()
 	{
 		curType = XmlNodeType.PI;
 		attrLoc = parser.loc;
@@ -698,6 +734,21 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 	ushort depth()
 	{
 		return parser.depth;
+	}
+	
+	bool reset()
+	{
+		return parser.reset;
+	}
+	
+	void reset(Ch[] newText)
+	{
+		return parser.reset(newText);
+	}
+	
+	void reset(ICharIterator!(Ch) newText)
+	{
+		return parser.reset(newText);
 	}
 }
 
@@ -947,6 +998,7 @@ void doTests(Ch)()
 	
 	auto text = new StringCharIterator!(Ch)(t);
 	auto itr = new XmlParser!(Ch)(text);
+	
 	assert(itr.next);
 	assert(itr.value == "");
 	assert(itr.type == XmlTokenType.Declaration);

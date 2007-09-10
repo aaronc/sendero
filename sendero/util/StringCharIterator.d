@@ -38,8 +38,8 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 		this.viewer = new StringViewer!(Ch)(text);
 	}
 	
-	private const Ch[] text;
-	private const size_t len;
+	private Ch[] text;
+	private size_t len;
 	private size_t index;
 	private StringViewer!(Ch) viewer;
 	
@@ -115,6 +115,14 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 	IStringViewer!(Ch) src()
 	{
 		return viewer;
+	}
+	
+	void reset(Ch[] newText)
+	{
+		this.text = newText;
+		this.len = newText.length;
+		this.index = 0;
+		this.viewer.text = newText;
 	}
 }
 
