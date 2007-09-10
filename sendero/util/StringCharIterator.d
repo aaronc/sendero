@@ -82,10 +82,10 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 	
 	Ch[] opSlice(size_t x, size_t y)
 	{
-		if(index + x >= len)
+		/*if(index + x >= len)
 			return "\0";
 		if(index + y >= len)
-			return text[index + x .. $];
+			return text[index + x .. $];*/
 		return text[index + x .. index + y];
 	}
 	
@@ -131,7 +131,7 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 		auto l = indexOf!(Ch)(text.ptr + index, ch, length - index);
 		if(l == length - index) return false;
 		index += l;
-		return true;		
+		return true;
 	}
 }
 

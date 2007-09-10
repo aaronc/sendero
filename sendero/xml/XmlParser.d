@@ -51,19 +51,20 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	private ICharIterator!(Ch) text;
 	
-	private XmlTokenType curType;
+	private XmlTokenType curType = XmlTokenType.None;
 	private Int curLoc;
 	private Int curLen;
 	private Int curQLen;
 	private ushort curDepth = 0;
-	private bool inElement = false;
-	private bool inPI = false;
+	//private bool inElement = false;
+	//private bool inPI = false;
 	private bool inDeclaration = false;
 	private bool retain = false;
 	
 	final private void eatWhitespace()
 	{
-		while(text.good && Lookup.whitespace[text[0]]) ++text;
+		//while(text.good && Lookup.whitespace[text[0]]) ++text;
+		while(Lookup.whitespace[text[0]]) ++text;
 	}
 	
 	final private bool doStartElement()
@@ -82,7 +83,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			curQLen = 0;
 		}
 		
-		inElement = true;
+//		inElement = true;
 		return true;
 	}
 	
@@ -114,7 +115,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doEndEmptyElement()
 	{
-		inElement = false;
+//		inElement = false;
 		if(text[0..2] != "/>")
 			return doUnexpected();
 		
@@ -160,10 +161,12 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLoc = text.location;
 		
 		if(quote == '\'') {
-			while(text[0] && text[0] != '\'') ++text;
+			//while(text[0] && text[0] != '\'') ++text;
+			if(!text.forwardLocate('\'')) return doUnexpectedEOF();
 		}
 		else if (quote == '\"') {	
-			while(text[0] && text[0] != '\"') ++text;
+			//while(text[0] && text[0] != '\"') ++text;
+			if(!text.forwardLocate('\"')) return doUnexpectedEOF();
 		}
 		else {
 			return doUnexpected;
@@ -180,7 +183,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	{
 		curType = XmlTokenType.Data;
 		curLoc = text.location;
-		if(!text.forwardLocate('<')) return false;
+		if(!text.forwardLocate('<')) return doUnexpectedEOF();
 		curLen = text.location - curLoc;
 		curQLen = 0;
 		return true;
@@ -193,15 +196,16 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		
 		while(text.good)
 		{
-			if(text[0] == '-')
-			{
-				if(text[0..3] == "-->") {
-					curLen = text.location - curLoc;
-					text += 3;
-					curQLen = 0;
-					return true;
-				}
+			//if(text[0] == '-')
+			//{
+			if(!text.forwardLocate('-')) return doUnexpectedEOF();
+			if(text[0..3] == "-->") {
+				curLen = text.location - curLoc;
+				text += 3;
+				curQLen = 0;
+				return true;
 			}
+			//}
 			++text;
 		}
 		return doUnexpectedEOF();
@@ -214,15 +218,16 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		
 		while(text.good)
 		{
-			if(text[0] == ']')
-			{
-				if(text[0..3] == "]]>") {
-					curLen = text.location - curLoc;
-					curQLen = 0;
-					text += 3;			
-					return true;
-				}
+			if(!text.forwardLocate(']')) return doUnexpectedEOF();
+			//if(text[0] == ']')
+			//{
+			if(text[0..3] == "]]>") {
+				curLen = text.location - curLoc;
+				curQLen = 0;
+				text += 3;			
+				return true;
 			}
+			//}
 			++text;
 		}
 		return doUnexpectedEOF();
@@ -230,7 +235,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doPIName()
 	{
-		inPI = true;
+//		inPI = true;
 		curType = XmlTokenType.PIName;
 		curLoc = text.location;
 		while(Lookup.name[text[0]]) ++text;
@@ -244,14 +249,15 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doPIValue()
 	{
-		inPI = false;
+//		inPI = false;
 		
 		curType = XmlTokenType.PIValue;
 		curLoc = text.location;
 		
 		while(text.good)
 		{
-			if(text[0..2] == "?>") {
+			if(!text.forwardLocate('\?')) return doUnexpectedEOF();
+			if(text[0..2] == "\?>") {
 				curLen = text.location - curLoc;
 				curQLen = 0;
 				text += 2;
@@ -288,13 +294,16 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		
 		void skipInternalSubset()
 		{
-			while(text.good) {
+			/*while(text.good) {
 				if(text[0] == ']') {
 					++text;
 					return;
 				}
 				else ++text;
-			}
+			}*/
+			text.forwardLocate(']');
+			++text;
+			return;
 		}
 		
         while(text.good) {
@@ -345,7 +354,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			break;
 		case '>':
 			++curDepth;
-			inElement = false;
+//			inElement = false;
 			++text;
 			return doMain();
 			break;
@@ -428,15 +437,15 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			return true;
 		}
 		
-		if(!text.good)
-			return doEndOfStream();
+		//if(!text.good)
+		//	return doEndOfStream();
 		
 		eatWhitespace;
 		
 		if(!text.good)
 			return doEndOfStream();
 		
-		if(inElement)
+		/*if(inElement)
 			return doInElement();
 		
 		if(inPI)
@@ -445,20 +454,40 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		if(inDeclaration)
 			return doInDeclaration();
 		
-		return doMain();	
+		return doMain();*/
+		
+		if(inDeclaration)
+			return doInDeclaration();
+		
+		switch(curType)
+		{
+		case XmlTokenType.StartElement:
+		case XmlTokenType.StartNSElement:
+		case XmlTokenType.AttrName:
+		case XmlTokenType.AttrNSName:
+		case XmlTokenType.AttrValue:
+			return doInElement();
+			break;
+		case XmlTokenType.PIName:
+			return doPIValue();
+			break;
+		default:
+			return doMain();
+			break;
+		}
 	}
 	
-	XmlTokenType type()
+	final XmlTokenType type()
 	{
 		return curType;
 	}
 	
-	Ch[] qvalue()
+	final Ch[] qvalue()
 	{
 		return text.randomAccessSlice(loc, loc + qlen);
 	}
 	
-	Ch[] value()
+	final Ch[] value()
 	{
 		if(qlen) {
 			return text.randomAccessSlice(loc + qlen + 1, loc + qlen + 1 + len);
@@ -466,45 +495,45 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		return text.randomAccessSlice(loc, loc + len);
 	}
 	
-	Int loc()
+	final Int loc()
 	{
 		return curLoc;
 	}
 	
-	Int qlen()
+	final Int qlen()
 	{
 		return curQLen;
 	}
 	
-	Int len()
+	final Int len()
 	{
 		return curLen;
 	}
 	
-	ushort depth()
+	final ushort depth()
 	{
 		return curDepth;
 	}
 	
-	void retainCurrent()
+	final void retainCurrent()
 	{
 		retain = true;
 	}
 	
-	bool reset()
+	final bool reset()
 	{
 		if(!text.seek(0)) return false;
 		reset_;
 		return true;
 	}
 	
-	void reset(Ch[] newText)
+	final void reset(Ch[] newText)
 	{
 		text = new StringCharIterator!(Ch)(newText);
 		reset_;
 	}
 	
-	void reset(ICharIterator!(Ch) newText)
+	final void reset(ICharIterator!(Ch) newText)
 	{
 		text = newText;
 		reset_;
@@ -516,9 +545,10 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLoc = 0;
 		curLen = 0;
 		curQLen = 0;
+		curType = XmlTokenType.None;
 		inDeclaration = false;
-		inElement = false;
-		inPI = false;
+		//inElement = false;
+		//inPI = false;
 		retain = false;
 	}
 }
@@ -551,7 +581,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 	private uint attrLen = 0;
 	private uint attrQLen = 0;
 	
-	bool nextElement() {
+	final bool nextElement() {
 		while(nextNode) {
 			if(this.type == XmlNodeType.Element)
 				return true;
@@ -559,7 +589,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return false;
 	}
 	
-	bool nextElement(ushort depth)
+	final bool nextElement(ushort depth)
 	{
 		while(nextNode(depth)) {
 			if(this.type == XmlNodeType.Element)
@@ -568,7 +598,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return false;
 	}
 	
-	bool nextElement(ushort depth, Ch[] name)
+	final bool nextElement(ushort depth, Ch[] name)
 	{
 		while(nextElement(depth)) {
 			if(this.nodeName == name)
@@ -611,7 +641,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return true;
 	}
 	
-	bool nextNode()
+	final bool nextNode()
 	{
 		while(parser.next) {
 			if(processNode) return true;
@@ -619,7 +649,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return false;
 	}
 	
-	bool nextNode(ushort depth)
+	final bool nextNode(ushort depth)
 	{
 		while(parser.next) {
 			if(parser.depth == depth) {
@@ -649,7 +679,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		}
 	}
 	
-	bool nextAttribute()
+	final bool nextAttribute()
 	{
 		if(parser.type == XmlNodeType.Element || parser.type == XmlNodeType.Attribute)
 		{
@@ -676,12 +706,12 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		else return false;
 	}
 	
-	XmlNodeType type()
+	final XmlNodeType type()
 	{
 		return curType;
 	}
 	
-	Ch[] prefix()
+	final Ch[] prefix()
 	{
 		if(curType == XmlNodeType.Attribute || curType == XmlNodeType.PI) {
 			return parser.text.randomAccessSlice(attrLoc, attrLoc + attrQLen);
@@ -690,7 +720,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return parser.qvalue;
 	}
 	
-	Ch[] localName()
+	final Ch[] localName()
 	{
 		if(curType == XmlNodeType.Attribute || curType == XmlNodeType.PI) {
 			if(attrQLen) return parser.text.randomAccessSlice(attrLoc + attrQLen + 1, attrLoc + attrQLen + attrLen + 1);
@@ -700,7 +730,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return parser.value;
 	}
 	
-	Ch[] nodeName()
+	final Ch[] nodeName()
 	{
 		if(curType == XmlNodeType.Attribute || curType == XmlNodeType.PI) {
 			if(attrQLen) return parser.text.randomAccessSlice(attrLoc, attrLoc + attrQLen + attrLen + 1);
@@ -713,34 +743,34 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return parser.value;
 	}
 	
-	Ch[] nodeValue()
+	final Ch[] nodeValue()
 	{
 		if(parser.type == XmlTokenType.Data)
 			return EntityDecoder!(Ch).decodeBuiltIn(parser.value);
 		else return parser.value;
 	}
 	
-	Ch[] nodeRawValue()
+	final Ch[] nodeRawValue()
 	{
 		return parser.value;
 	}
 	
-	ushort depth()
+	final ushort depth()
 	{
 		return parser.depth;
 	}
 	
-	bool reset()
+	final bool reset()
 	{
 		return parser.reset;
 	}
 	
-	void reset(Ch[] newText)
+	final void reset(Ch[] newText)
 	{
 		return parser.reset(newText);
 	}
 	
-	void reset(ICharIterator!(Ch) newText)
+	final void reset(ICharIterator!(Ch) newText)
 	{
 		return parser.reset(newText);
 	}
@@ -920,28 +950,6 @@ private class Lookup
          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 1
          0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  // 2
          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  1,  1,  0,  0,  // 3
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 4
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 5
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 6
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 7
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 8
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 9
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // A
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // B
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // C
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // D
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // E
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1   // F
-    ];
-
-    // Everything except < \0
-    const ubyte text[256] =
-    [
-      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-         0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 0
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 1
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 2
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  1,  1,  // 3
          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 4
          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 5
          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 6
