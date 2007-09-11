@@ -63,7 +63,8 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	final private void eatWhitespace()
 	{
 		//while(Lookup.whitespace[text[0]]) ++text;
-		text.forwardLookup(Lookup.whitespace);
+		//text.forwardLookup(Lookup.whitespace);
+		text.eatSpace;
 	}
 	
 	final private bool doStartElement()
@@ -71,12 +72,14 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curType = XmlTokenType.StartElement;
 		curLoc = text.location;
 		//while(Lookup.name[text[0]]) ++text;
-		text.forwardLookup(Lookup.name);
-		if(text[0] == ':') {
+		//text.forwardLookup(Lookup.name);
+		text.eatElemName;
+		if(text.cur == ':') {
 			curQLen = text.location - curLoc;
 			++text;
 			//while(Lookup.attributeName[text[0]]) ++text;
-			text.forwardLookup(Lookup.attributeName);
+			//text.forwardLookup(Lookup.attributeName);
+			text.eatAttrName;
 			curLen = text.location - curLoc - curQLen - 1;
 		}
 		else {
@@ -92,12 +95,14 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curType = XmlTokenType.EndElement;
 		curLoc = text.location;
 		//while(Lookup.name[text[0]]) ++text;
-		text.forwardLookup(Lookup.name);
-		if(text[0] == ':') {
+		//text.forwardLookup(Lookup.name);
+		text.eatElemName;
+		if(text.cur == ':') {
 			curQLen = text.location - curLoc;
 			++text;
 			//while(Lookup.attributeName[text[0]]) ++text;
-			text.forwardLookup(Lookup.attributeName);
+			//text.forwardLookup(Lookup.attributeName);
+			text.eatAttrName;
 			curLen = text.location - curLoc - curQLen - 1;
 		}
 		else {
@@ -105,8 +110,9 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			curQLen = 0;
 		}
 		
-		eatWhitespace;
-		if(text[0] != '>')
+		//eatWhitespace;
+		text.eatSpace;
+		if(text.cur != '>')
 			return doUnexpected();
 		++text;
 		
@@ -135,12 +141,14 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLoc = text.location;
 		++text;
 		//while(Lookup.attributeName[text[0]]) ++text;
-		text.forwardLookup(Lookup.attributeName);
-		if(text[0] == ':') {
+		//text.forwardLookup(Lookup.attributeName);
+		text.eatAttrName;
+		if(text.cur == ':') {
 			curQLen = text.location - curLoc;
 			++text;
 			//while(Lookup.attributeName[text[0]]) ++text;
-			text.forwardLookup(Lookup.attributeName);
+			//text.forwardLookup(Lookup.attributeName);
+			text.eatAttrName;
 			curLen = text.location - curLoc - curQLen - 1;
 		}
 		else {
@@ -157,8 +165,9 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	{
 		curType = XmlTokenType.AttrValue;
 		++text;
-		eatWhitespace;
-		Ch quote = text[0];
+		//eatWhitespace;
+		text.eatSpace;
+		Ch quote = text.cur;
 		++text;
 		
 		curLoc = text.location;
@@ -233,7 +242,8 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curType = XmlTokenType.PIName;
 		curLoc = text.location;
 		//while(Lookup.name[text[0]]) ++text;
-		text.forwardLookup(Lookup.name);
+		//text.forwardLookup(Lookup.name);
+		text.eatElemName;
 		
 		curLen = text.location - curLoc;
 		curQLen = 0;
@@ -263,7 +273,8 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doDeclaration()
 	{
-		eatWhitespace;
+		//eatWhitespace;
+		text.eatSpace;
 		
 		if(!text.good)
 			return doEndOfStream();
@@ -279,7 +290,8 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doDoctype()
 	{
-		eatWhitespace;
+		//eatWhitespace;
+		text.eatSpace;
 		
 		curType = XmlTokenType.Doctype;
 		curLoc = text.location;
@@ -293,12 +305,12 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		}
 		
         while(text.good) {
-        	if(text[0] == '>') {
+        	if(text.cur == '>') {
         		curLen = text.location - curLoc;
         		++text;
         		return true;
         	}
-        	else if(text[0] == '[') {
+        	else if(text.cur == '[') {
         		++text;
         		skipInternalSubset;
         	}
@@ -332,7 +344,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doInElement()
 	{
-		switch(text[0])
+		switch(text.cur)
 		{
 		case '=':
 			return doAttributeValue();
@@ -353,7 +365,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doInDeclaration()
 	{
-		switch(text[0])
+		switch(text.cur)
 		{
 		case '=':
 			return doAttributeValue();
@@ -373,7 +385,7 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final private bool doMain()
 	{
-		if(text[0] == '<') {
+		if(text.cur == '<') {
 			switch(text[1])
 			{
 			case '!':
@@ -424,7 +436,8 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			return true;
 		}
 		
-		eatWhitespace;
+		//eatWhitespace;
+		text.eatSpace;
 		
 		if(!text.good)
 			return doEndOfStream();

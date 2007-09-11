@@ -17,11 +17,12 @@ public import sendero.util.IStringViewer;
 interface ICharIterator(Ch) : IStringViewer!(Ch)
 {
 	bool good();
+	Ch cur();
 	Ch opIndex(size_t);
 	ICharIterator!(Ch) opAddAssign(size_t i);
 	ICharIterator!(Ch) opPostInc();
-	ICharIterator!(Ch) opSubAssign(size_t i);
-	ICharIterator!(Ch) opPostDec();
+	//ICharIterator!(Ch) opSubAssign(size_t i);
+	//ICharIterator!(Ch) opPostDec();
 	Ch[] opSlice(size_t x, size_t y);
 	size_t location();
 	Ch[] randomAccessSlice(size_t x, size_t y);
@@ -29,4 +30,14 @@ interface ICharIterator(Ch) : IStringViewer!(Ch)
 	IStringViewer!(Ch) src();
 	bool forwardLocate(Ch ch);
 	void forwardLookup(ubyte[256] lookupTable);
+	bool eatElemName();
+	bool eatAttrName();
+	bool eatSpace();
+}
+
+public enum Flags: ubyte
+{
+Attr  = 0x01,
+Elem  = 0x02,
+Both  = 0x03,
 }
