@@ -28,4 +28,5 @@ interface ICharIterator(Ch) : IStringViewer!(Ch)
 	bool seek(size_t location);
 	IStringViewer!(Ch) src();
 	bool forwardLocate(Ch ch);
+	void forwardLookup(ubyte[256] lookupTable);
 }
