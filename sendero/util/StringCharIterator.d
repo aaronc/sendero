@@ -359,7 +359,7 @@ class StringCharIterator(Ch) : ICharIterator!(Ch)
 	                while (p < end)
 	                      {
 	                      Ch c = *p;
-	                      if (c > 63 || name[c])
+	                      if (c > 63 || attributeName[c])
 	                          ++p;
 	                      else
 	                         {
@@ -783,7 +783,7 @@ class StringCharIterator2(Ch) : ICharIterator!(Ch)
 	               while (itr < end)
 	                      {
 	                      Ch c = *itr;
-	                      if (c > 63 || name[c])
+	                      if (c > 63 || attributeName[c])
 	                          ++itr;
 	                      else
 	                         {
@@ -793,7 +793,12 @@ class StringCharIterator2(Ch) : ICharIterator!(Ch)
 	                return false;
 	    }
 	
-	 
+	 const static ubyte whitespace[33] = 
+		    [
+		      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+		         0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  1,  0,  0,  // 0
+		         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 1
+		         1];
 
 	    final bool eatSpace()
 	    {      

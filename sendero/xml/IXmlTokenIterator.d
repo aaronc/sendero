@@ -22,4 +22,5 @@ interface IXmlTokenIterator(Ch, Int)
 	Int len();
 	bool reset();
 	void retainCurrent();
+	ushort depth();
 }

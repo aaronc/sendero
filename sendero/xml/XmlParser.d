@@ -15,6 +15,7 @@ import sendero.util.StringCharIterator;
 import tango.util.log.Log;
 import Integer = tango.text.convert.Integer;
 import Unicode = tango.text.convert.Utf;
+import tango.text.Util;
 
 /* Acknowledgements:
  * 
@@ -543,6 +544,758 @@ class XmlParser(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	}
 }
 
+class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
+{
+	private static Logger log;
+	
+	static this()
+	{
+		log = Log.getLogger("sendero.xml.XmlParser2!(" ~ Ch.stringof ~ ")");
+	}
+	
+	this(Ch[] text)
+	{
+		this.text = text;
+		this.p = text.ptr;
+		this.length = text.length;
+	}
+	
+	private Ch[] text;
+	private Ch* p;
+	private size_t length;
+	private size_t itr = 0;
+	
+	private XmlTokenType curType = XmlTokenType.None;
+	private Int curLoc;
+	private Int curLen;
+	private Int curQLen;
+	private ushort curDepth = 0;
+	private bool inDeclaration = false;
+	private bool retain = false;
+	private bool err = false;
+	
+	
+	final private bool locate(Ch ch)
+	{
+		auto l = indexOf!(Ch)(p + itr, ch, length - itr);
+		if(l == length - itr) return false;
+		itr += l;
+		return true;
+	}
+	
+	/+final private void lookup(ubyte[256] lookupTable)
+	{
+		version(D_InlineAsm_X86)
+		{
+			static if (Ch.sizeof == 1)
+			{
+				void* this_ = cast(void*)this;
+				ubyte* lookup_ = lookupTable.ptr;
+				asm
+				{
+					mov EBX, this_;
+					mov ECX, [EBX + length];
+					mov EAX, [EBX + itr];
+					sub ECX, EAX;
+                	jng end;
+                	
+                	add EAX, [EBX + p];           	
+                	
+                	mov EDI, lookup_;
+                	test:;
+                		movzx EBX, byte ptr [EAX];
+                		add EDI, EBX;
+                		mov DL, byte ptr[EDI];
+	                	and DL, DL;
+	                	jz finish;
+	                	sub EDI, EBX;
+	                	inc EAX;
+	                	loop test;
+	                	
+	                finish:;
+	                	mov EBX, this_;
+	                	sub EAX, [EBX + p];
+	                	mov [EBX + itr], EAX;
+	                
+	                end:;	
+				}
+			}
+			else
+			{
+				//while(itr < end && lookupTable[itr[0]]) ++this;
+				while(itr < length && lookupTable[text[itr]]) ++itr;
+			}
+		}
+		else
+		{
+			//while(itr < end && lookupTable[itr[0]]) ++this;
+			while(itr < length && lookupTable[text[itr]]) ++itr;
+		}			
+	}+/
+	
+	const static ubyte name[64] =
+	    [
+	      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+	         0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  1,  1,  0,  1,  1,  // 0
+	         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 1
+	         0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  // 2
+	         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  1,  1,  0,  0,];  // 3
+	
+	 const static ubyte attributeName[64] =
+		    [
+		      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+		         0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  1,  1,  0,  1,  1,  // 0
+		         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  // 1
+		         0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  // 2
+		         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0,  0];  // 3
+	
+	final bool eatElemName()
+	{      
+	              while (itr < length)
+	                      {
+	                      Ch c = p[itr];
+	                      if (c > 63 || name[c])
+	                          ++itr;
+	                      else
+	                         {
+	                         return true;
+	                         }
+	                      }
+	                return false;
+	    }
+	
+	final bool eatAttrName()
+	{      
+	               while (itr < length)
+	                      {
+	                      Ch c = p[itr];
+	                      if (c > 63 || attributeName[c])
+	                          ++itr;
+	                      else
+	                         {
+	                        return true;
+	                         }
+	                      }
+	                return false;
+	    }
+	
+	 
+
+	 const static ubyte whitespace[33] = 
+		    [
+		      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+		         0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  1,  0,  0,  // 0
+		         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 1
+		         1];
+	
+	    final bool eatWhitespace()
+	    {      
+	                while (itr < length)
+	                      {
+	                	  Ch c = p[itr];
+	                      if (c <= 32 && whitespace[c]) {
+	                          ++itr;
+	                      }
+	                      else
+	                         {
+	                         return true;
+	                         }
+	                      }
+	                return false;
+	    }
+	
+	final private Ch getChar(uint i = 0)
+	{
+		version(D_InlineAsm_X86)
+		{
+			static if (Ch.sizeof == 1)
+			{
+				void* this_ = cast(void*)this;
+                asm
+                {
+                	mov EBX, this_;
+                	mov ECX, [EBX + itr];
+                    add ECX, i;
+                    
+                    mov EAX, [EBX + length];
+                    sub EAX, ECX;
+                    jng fail;
+                    
+                    add ECX, [EBX + p];
+                    
+                    mov AL, [ECX];
+                    
+                    jmp end;
+                    
+                    fail:;
+                    	xor EAX, EAX;
+                    	
+                    end:;
+                }
+            }
+            else
+            {
+            	if(itr + i < length) return text[itr + i];
+            	else return '\0';
+            }
+		}
+		else
+		{
+			if(itr + i < length) return text[itr + i];
+        	else return '\0';
+		}
+	}
+	
+	final private Ch[] getSlice(uint x, uint y)
+	{
+		if(itr + x >= length)
+			return "\0";
+		if(itr + y >= length)
+			return text[itr + x .. $];
+		return text[itr + x .. itr + y];
+	}
+	
+	final private bool doUnexpected(char[] expected = null)
+	{
+		log.warn("Unexpected event, expected: " ~ expected);
+		err = true;
+		return false;
+	}
+	
+	final private bool doUnexpectedEOF()
+	{
+		log.warn("Unexpected EOF");
+		err = true;
+		return false;
+	}
+	
+	final private bool doEndOfStream()
+	{
+		return false;
+	}
+	
+	final private bool doStartElement()
+	{
+		curType = XmlTokenType.StartElement;
+		curLoc = itr;
+		eatElemName;
+		if(getChar == ':') {
+			curQLen = itr - curLoc;
+			++itr;
+			eatAttrName;
+			curLen = itr - curLoc - curQLen - 1;
+		}
+		else {
+			curLen = itr - curLoc;
+			curQLen = 0;
+		}
+		
+		return true;
+	}
+	
+	final private bool doEndElement()
+	{
+		curType = XmlTokenType.EndElement;
+		curLoc = itr;
+		eatElemName;
+		if(getChar == ':') {
+			curQLen = itr - curLoc;
+			++itr;
+			eatAttrName;
+			curLen = itr - curLoc - curQLen - 1;
+		}
+		else {
+			curLen = itr - curLoc;
+			curQLen = 0;
+		}
+		
+		eatWhitespace;
+		if(getChar != '>')
+			return doUnexpected();
+		++itr;
+		
+		--curDepth;
+		
+		return true;
+	}
+	
+	final private bool doEndEmptyElement()
+	{
+		if(getSlice(0, 2) != "/>")
+			return doUnexpected();
+		
+		curType = XmlTokenType.EndEmptyElement;
+		curLoc = itr;
+		itr += 2;
+		curLen = 0;
+		curQLen = 0;
+		
+		return true;
+	}
+	
+	final private bool doAttributeName()
+	{
+		curType = XmlTokenType.AttrName;
+		curLoc = itr;
+		++itr;
+		eatAttrName;
+		if(getChar == ':') {
+			curQLen = itr - curLoc;
+			++itr;
+			eatAttrName;
+			curLen = itr - curLoc - curQLen - 1;
+		}
+		else {
+			curLen = itr - curLoc;
+			curQLen = 0;
+		}
+		
+		if(itr >= length)
+			return doUnexpectedEOF();		
+		return true;
+	}
+	
+	final private bool doAttributeValue()
+	{
+		curType = XmlTokenType.AttrValue;
+		++itr;
+		eatWhitespace;
+		Ch quote = getChar;
+		++itr;
+		
+		curLoc = itr;
+		
+		if(quote == '\'') {
+			if(!locate('\'')) return doUnexpectedEOF();
+		}
+		else if (quote == '\"') {	
+			if(!locate('\"')) return doUnexpectedEOF();
+		}
+		else {
+			return doUnexpected;
+		}
+		curLen = itr - curLoc;
+		curQLen = 0;
+		
+		++itr; //Skip end quote
+		
+		return true;
+	}
+	
+	final private bool doData()
+	{
+		curType = XmlTokenType.Data;
+		curLoc = itr;
+		if(!locate('<')) return doUnexpectedEOF();
+		curLen = itr - curLoc;
+		curQLen = 0;
+		return true;
+	}
+	
+	final private bool doComment()
+	{
+		curType = XmlTokenType.Comment;
+		curLoc = itr;
+		
+		while(itr < length)
+		{
+			if(!locate('-')) return doUnexpectedEOF();
+			if(getSlice(0,3) == "-->") {
+				curLen = itr - curLoc;
+				itr += 3;
+				curQLen = 0;
+				return true;
+			}
+			++itr;
+		}
+		return doUnexpectedEOF();
+	}
+	
+	final private bool doCData()
+	{
+		curType = XmlTokenType.CData;
+		curLoc = itr;
+		
+		while(itr < length)
+		{
+			if(!locate(']')) return doUnexpectedEOF();
+			if(getSlice(0,3) == "]]>") {
+				curLen = itr - curLoc;
+				curQLen = 0;
+				itr += 3;
+				return true;
+			}
+			++itr;
+		}
+		return doUnexpectedEOF();
+	}
+	
+	final private bool doPIName()
+	{
+		curType = XmlTokenType.PIName;
+		curLoc = itr;
+		eatElemName;
+		
+		curLen = itr - curLoc;
+		curQLen = 0;
+		if(itr >= length)
+			return doUnexpectedEOF();		
+		return true;
+	}
+	
+	final private bool doPIValue()
+	{		
+		curType = XmlTokenType.PIValue;
+		curLoc = itr;
+		
+		while(itr < length)
+		{
+			if(!locate('\?')) return doUnexpectedEOF();
+			if(getSlice(0,2) == "\?>") {
+				curLen = itr - curLoc;
+				curQLen = 0;
+				itr += 2;
+				return true;
+			}
+			++itr;
+		}
+		return doUnexpectedEOF();
+	}
+	
+	final private bool doDeclaration()
+	{
+		eatWhitespace;
+		
+		if(itr >= length)
+			return doEndOfStream();
+		
+		curType = XmlTokenType.Declaration;
+		curLoc = itr;
+		curQLen = 0;
+		
+		inDeclaration = true;
+		
+		return true;
+	}
+	
+	final private bool doDoctype()
+	{
+		eatWhitespace;
+		
+		curType = XmlTokenType.Doctype;
+		curLoc = itr;
+		curQLen = 0;
+		
+		void skipInternalSubset()
+		{
+			locate(']');
+			++itr;
+			return;
+		}
+		
+		while(itr < length) {
+			if(getChar == '>') {
+				curLen = itr - curLoc;
+				++itr;
+        		return true;
+        	}
+			else if(getChar == '[') {
+        		//++text;
+				++itr;
+        		skipInternalSubset;
+        	}
+			else ++itr;
+        }
+		
+		if(itr >= length)
+			return doUnexpectedEOF();
+		
+		return true;
+	}
+	
+	final private bool doMain()
+	{
+		if(getChar == '<') {
+			switch(getChar(1))
+			{
+			case '!':
+				if(getSlice(2,4) == "--") {
+					itr += 4;
+					return doComment();
+				}
+				else if(getSlice(2,9) == "[CDATA[") {
+					itr += 9;
+					return doCData();
+				}
+				else if(getSlice(2,9) == "DOCTYPE") {
+					itr += 9;
+					return doDoctype();
+				}
+				else {
+					return doUnexpected();
+				}
+				break;
+			case '\?':
+				if(getSlice(2,5)  == "xml") {
+					itr += 5;
+					return doDeclaration();
+				}
+				else {
+					itr += 2;
+					return doPIName();
+				}
+				break;
+			case '/':
+				itr += 2;
+				return doEndElement();
+			default:
+				++itr;
+				return doStartElement();
+				break;
+			}
+		}
+		else {
+			return doData();
+		}
+	}
+	
+	final private bool doInDeclaration()
+	{
+		switch(getChar)
+		{
+		case '=':
+			return doAttributeValue();
+			break;
+		case '\?':
+			if(getChar(1) != '>')
+				return false;
+			inDeclaration = false;
+			itr += 2;
+			return doMain();
+			break;
+		default:
+			return doAttributeName();
+			break;
+		}
+	}
+	
+	final private bool doInElement()
+	{
+		switch(getChar)
+		{
+		case '=':
+			return doAttributeValue();
+			break;
+		case '/':
+			return doEndEmptyElement();
+			break;
+		case '>':
+			++curDepth;
+			++itr;
+			return doMain();
+			break;
+		default:
+			return doAttributeName();
+			break;
+		}
+	}
+	
+	public static struct Token
+	{
+		size_t loc;
+		uint len;
+		ushort qlen;
+		ubyte depth;
+		XmlTokenType type;
+	}
+	
+	public static class Index
+	{
+		Token[] tokens;
+		uint[] first;
+		uint[] second;
+		uint[] third;
+	}
+	
+	Index parse()
+	{
+		Token[] res;
+		auto i = 0;
+		auto l = 1000;
+		res.length = l;
+		while(itr < length)
+		{
+			eatWhitespace;
+			
+			if(itr >= length)
+				break;
+			
+			if(inDeclaration)
+				doInDeclaration();
+			
+			switch(curType)
+			{
+			case XmlTokenType.StartElement:
+			case XmlTokenType.StartNSElement:
+			case XmlTokenType.AttrName:
+			case XmlTokenType.AttrNSName:
+			case XmlTokenType.AttrValue:
+				doInElement();
+				break;
+			case XmlTokenType.PIName:
+				doPIValue();
+				break;
+			default:
+				doMain();
+				break;
+			}
+			
+			res[i].loc = loc;
+			res[i].len = len;
+			res[i].qlen = qlen;
+			res[i].type = type;
+			res[i].depth = depth;
+			++i;
+			if(i >= l) {
+				l += 1000;
+				res.length = l;
+			}
+		}
+		auto index = new Index;
+		index.tokens = res[0 .. i];
+		i = 0;
+		foreach(t; index.tokens)
+		{
+			if(t.type == XmlTokenType.StartElement || t.type == XmlTokenType.StartNSElement)
+			{
+				switch(t.depth)
+				{
+				case 1:
+					index.first ~= i;
+					break;
+				case 2:
+					index.second ~= i;
+					break;
+				case 3:
+					index.third ~= i;
+					break;
+				default:
+					break;
+				}
+			}
+			++i;
+		}
+		return index;
+	}
+
+	bool next() {
+		if(retain) {
+			retain = false;
+			return true;
+		}
+		
+		eatWhitespace;
+		
+		if(itr >= length)
+			return doEndOfStream();
+		
+		if(inDeclaration)
+			return doInDeclaration();
+		
+		switch(curType)
+		{
+		case XmlTokenType.StartElement:
+		case XmlTokenType.StartNSElement:
+		case XmlTokenType.AttrName:
+		case XmlTokenType.AttrNSName:
+		case XmlTokenType.AttrValue:
+			return doInElement();
+			break;
+		case XmlTokenType.PIName:
+			return doPIValue();
+			break;
+		default:
+			return doMain();
+			break;
+		}
+	}
+	
+	final XmlTokenType type()
+	{
+		return curType;
+	}
+	
+	final Ch[] qvalue()
+	{
+		return text[loc .. loc + qlen];
+	}
+	
+	final Ch[] value()
+	{
+		if(qlen) {
+			return text[loc + qlen + 1 .. loc + qlen + 1 + len];
+		}
+		return text[loc .. loc + len];
+	}
+	
+	final Int loc()
+	{
+		return curLoc;
+	}
+	
+	final Int qlen()
+	{
+		return curQLen;
+	}
+	
+	final Int len()
+	{
+		return curLen;
+	}
+	
+	final ushort depth()
+	{
+		return curDepth;
+	}
+	
+	final bool error()
+	{
+		return err;
+	}
+	
+	final void retainCurrent()
+	{
+		retain = true;
+	}
+	
+	final bool reset()
+	{
+		reset_;
+		return true;
+	}
+	
+	final void reset(Ch[] newText)
+	{
+		text = newText;
+		p = newText.ptr;
+		length = newText.length;
+		reset_;
+	}
+	
+	final private void reset_()
+	{
+		itr = 0;
+		curDepth = 0;
+		curLoc = 0;
+		curLen = 0;
+		curQLen = 0;
+		curType = XmlTokenType.None;
+		inDeclaration = false;
+		err = false;
+		retain = false;
+	}
+}
+
 /**
  * Forward reading node based Xml Parser.
  */
@@ -982,18 +1735,11 @@ version(Unittest)
 import tango.io.Stdout;
 import tango.io.File;
 
-void doTests(Ch)()
+void testParser(Ch)(IXmlTokenIterator!(Ch, uint) itr)
 {
-	Ch[] t = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element "
-		"attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = "
-		"'3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
-	
-	auto text = new StringCharIterator!(Ch)(t);
-	auto itr = new XmlParser!(Ch)(text);
-	
 	assert(itr.next);
 	assert(itr.value == "");
-	assert(itr.type == XmlTokenType.Declaration);
+	assert(itr.type == XmlTokenType.Declaration, Integer.toUtf8(itr.type));
 	assert(itr.next);
 	assert(itr.value == "version");
 	assert(itr.next);
@@ -1046,6 +1792,18 @@ void doTests(Ch)()
 	assert(itr.next);
 	assert(itr.value == "element");
 	assert(!itr.next);
+}
+
+void doTests(Ch)()
+{
+	Ch[] t = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element "
+		"attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = "
+		"'3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
+	
+	auto text = new StringCharIterator!(Ch)(t);
+	auto itr = new XmlParser!(Ch)(text);
+	
+	testParser!(Ch)(itr);
 	
 	itr.reset;
 	auto fitr = new XmlForwardNodeParser!(Ch)(itr);
@@ -1073,6 +1831,9 @@ void doTests(Ch)()
 	assert(fitr.type == XmlNodeType.PI);
 	assert(fitr.nodeName == "pi");
 	assert(fitr.nodeValue == "test");
+	
+	auto itr2 = new XmlParser2!(Ch)(t);
+	testParser!(Ch)(itr2);
 }
 
 }
