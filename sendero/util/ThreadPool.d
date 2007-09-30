@@ -1,3 +1,8 @@
+/**
+ * Copyright: Copyright (C) 2007 Rick Richardson.  All rights reserved.
+ * License:   BSD Style
+ * Authors:   Rick Richardson
+ */
 
 // ThreadPool class offers the ability to queue up Runnable tasks to be 
 // executed by a free thread if one is available. If the queue is empty
@@ -9,17 +14,19 @@ module sendero.util.ThreadPool;
 import tango.core.Thread;
 public import sendero.util.WorkQueue;
 import tango.core.Exception;
-import tango.io.Console;
-import tango.io.Stdout;
-
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 class ThreadPool
 {
   private WorkQueue wqueue;
 	private PoolWorker[] workers;
 	private int num_workers;
   bool running;
+	private Logger logger;
 	this(int nthreads)
 	{ 
+		logger = Log.getLogger("sendero.util.Threadpool");
 		running = true;
 		num_workers = nthreads;
 		wqueue = new WorkQueue;
@@ -32,7 +39,7 @@ class ThreadPool
 		}
 	}
 
-	public void add_task(Task t)
+	public void add_task(WQFunctor t)
 	{
 		wqueue.pushBack(t);
 	}
@@ -60,20 +67,20 @@ class ThreadPool
 		private
 		void run() 
 		{
-			Stdout.formatln("Starting thread");
+			logger.info("Starting thread");
 			while(running)
 			{
 				//WorkQueue is built for threaded access and will block on empty
 				//so this thread simply needs to request a task and will block(sleep)
 				//until one becomes available
-				Task task = wqueue.popFront();
+				WQFunctor task = wqueue.popFront();
 				try
    			{
 					task();
 				}
 				catch(Exception e)
 				{
-					Cout(e);
+					logger.error("Exception: " ~ e.toUtf8);
 				}
 			}
 		}	

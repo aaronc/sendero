@@ -1,3 +1,10 @@
+/**
+ * Copyright: Copyright (C) 2007 Rick Richardson.  All rights reserved.
+ * License:   BSD Style
+ * Authors:   Rick Richardson
+ */
+
+
 
 // Queue class built to be accessed by a thread pool. Offers thread safe 
 // access to standard queue features as well as the ability for threads to
@@ -10,10 +17,11 @@ module sendero.util.WorkQueue;
 import tango.core.sync.Mutex;
 import tango.core.sync.Condition;
 import tango.core.Atomic;
-import tango.io.Stdout;
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 
 typedef void function() Task;
-//struct WorkNode;
 
 class WorkQueue
 {
@@ -26,10 +34,10 @@ class WorkQueue
 	}
 
 	//TODO refactor this, has to be a cleaner way
-	void pushBack(Task t)
+	void pushBack(WQFunctor t)
 	{
 		backmtx.lock();
-		bool empty = false;
+		bool wasempty = false;
 		WorkNode* n = new WorkNode;
 		switch (_size.load())
 		{
@@ -38,7 +46,7 @@ class WorkQueue
 				n.prev = null;
 				back = n;
 				front = n;
-				empty = true;
+				wasempty = true;
 				break;
 			case 1:
 				front.next = n;
@@ -52,7 +60,7 @@ class WorkQueue
 		n.next = null;
 		_size.increment();
 
-		if (empty)
+		if (wasempty)
 		{
 			frontmtx.unlock();
 		}
@@ -61,7 +69,7 @@ class WorkQueue
 		backmtx.unlock();
 	}
 
-  Task popFront()
+  WQFunctor popFront()
 	{
 		frontmtx.lock();
 		while(_size.load() < 1)
@@ -91,9 +99,14 @@ class WorkQueue
 	private Condition emptycond;
 }
 
+class WQFunctor
+{
+  void opCall() {}
+}
+
 struct WorkNode
 {
 	WorkNode* next;
 	WorkNode* prev;
-	Task task;
+	WQFunctor task;
 }
