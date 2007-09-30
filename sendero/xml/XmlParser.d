@@ -570,17 +570,68 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	private Int curLen;
 	private Int curQLen;
 	private ushort curDepth = 0;
-	private bool inDeclaration = false;
-	private bool retain = false;
+	//private bool inDeclaration = false;
+	//private bool retain = false;
 	private bool err = false;
+	
+	private static const ubyte ST_NORMAL = 0x0;
+	private static const ST_RETAIN = 0x1;
+	private static const ST_DECLARATION = 0x2;
+	private ubyte state = ST_NORMAL;
 	
 	
 	final private bool locate(Ch ch)
 	{
-		auto l = indexOf!(Ch)(p + itr, ch, length - itr);
-		if(l == length - itr) return false;
-		itr += l;
-		return true;
+		version(D_InlineAsm_X86)
+		{
+			static if(Ch.sizeof == 1)
+			{
+				XmlParser2!(Ch, Int) this_ = this;
+				
+				asm
+				{
+					 mov   EBX, this_;
+					 
+					 mov   EDI, [EBX + p];
+					 mov   EAX, EDI;
+					 mov   EDX, [EBX + itr];
+	                 mov   ECX, [EBX + length];
+	                 sub   ECX, EDX;
+	                 jz    fail;
+	                 add   EDI, EDX;
+	                 mov   EDX, EAX;
+	                 movzx   EAX, ch;           
+
+	                 cld;
+	                 repnz;
+	                 scasb;
+	                 jnz   fail;
+	                 
+	                 sub   EDI, EDX;
+	                 dec   EDI;
+	                 mov   [EBX + itr], EDI;
+	                 mov   EAX, 1;
+	                 jmp   end;
+	             fail:;
+	                 xor   EAX, EAX;
+	             end:;
+				}
+			}
+			else
+			{
+				auto l = indexOf!(Ch)(p + itr, ch, length - itr);
+				if(l == length - itr) return false;
+				itr += l;
+				return true;
+			}
+		}
+		else
+		{
+			auto l = indexOf!(Ch)(p + itr, ch, length - itr);
+			if(l == length - itr) return false;
+			itr += l;
+			return true;
+		}
 	}
 	
 	/+final private void lookup(ubyte[256] lookupTable)
@@ -651,49 +702,177 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final bool eatElemName()
 	{      
-	              while (itr < length)
-	                      {
-	                      Ch c = p[itr];
-	                      if (c > 63 || name[c])
-	                          ++itr;
-	                      else
-	                         {
-	                         return true;
-	                         }
-	                      }
-	                return false;
+		version(D_InlineAsm_X86)
+		{
+			static if(Ch.sizeof == 1)
+			{
+				XmlParser2!(Ch, Int) this_ = this;
+				ubyte* lookup_ = name.ptr;
+				
+				asm
+				{
+					 mov   EBX, this_;
+					 
+					 mov   EDX, [EBX + p];
+					 mov   ESI, EDX;
+					 mov   EAX, [EBX + itr];
+					 add   EDX, EAX;
+	                 mov   ECX, [EBX + length];
+	                 sub   ECX, EAX;
+	                 jng end_;
+	                 
+	                 mov EDI, lookup_;
+	                	test:;
+	                		movzx EAX, byte ptr [EDX];
+	                		cmp EAX, 0x40; 
+	                		jge cont;
+	                		
+	                		add EDI, EAX;
+	                		mov BL, byte ptr[EDI];
+		                	and BL, BL;
+		                	jz finish;
+		                	sub EDI, EAX;
+		                	
+		                	cont:;
+		                	inc EDX;
+		                	loop test;
+		                	
+		                xor EAX, EAX;
+		                jmp end_;
+		                	
+		                finish:;
+		                	mov EBX, this_;
+		                	sub EDX, ESI;
+		                	mov [EBX + itr], EDX;
+		                	mov EAX, 1;
+		                end_:;	                 
+				}
+			}
+			else
+			{
+				while (itr < length)
+                {
+                Ch c = p[itr];
+                if (c > 63 || name[c])
+                    ++itr;
+                else
+                   {
+                   return true;
+                   }
+                }
+          return false;
+			}
+		}
+		else
+		{
+			while (itr < length)
+            {
+            Ch c = p[itr];
+            if (c > 63 || name[c])
+                ++itr;
+            else
+               {
+               return true;
+               }
+            }
+			return false;
 	    }
+	}
 	
 	final bool eatAttrName()
 	{      
-	               while (itr < length)
-	                      {
-	                      Ch c = p[itr];
-	                      if (c > 63 || attributeName[c])
-	                          ++itr;
-	                      else
-	                         {
-	                        return true;
-	                         }
-	                      }
-	                return false;
+		version(D_InlineAsm_X86)
+		{
+			static if(Ch.sizeof == 1)
+			{
+				XmlParser2!(Ch, Int) this_ = this;
+				ubyte* lookup_ = attributeName.ptr;
+				
+				asm
+				{
+					 mov   EBX, this_;
+					 
+					 mov   EDX, [EBX + p];
+					 mov   ESI, EDX;
+					 mov   EAX, [EBX + itr];
+					 add   EDX, EAX;
+	                 mov   ECX, [EBX + length];
+	                 sub   ECX, EAX;
+	                 jng end_;
+	                 
+	                 mov EDI, lookup_;
+	                	test:;
+	                		movzx EAX, byte ptr [EDX];
+	                		cmp EAX, 0x40; 
+	                		jge cont;
+	                		
+	                		add EDI, EAX;
+	                		mov BL, byte ptr[EDI];
+		                	and BL, BL;
+		                	jz finish;
+		                	sub EDI, EAX;
+		                	
+		                	cont:;
+		                	inc EDX;
+		                	loop test;
+		                	
+		                xor EAX, EAX;
+		                jmp end_;
+		                	
+		                finish:;
+		                	mov EBX, this_;
+		                	sub EDX, ESI;
+		                	mov [EBX + itr], EDX;
+		                	mov EAX, 1;
+		                end_:;	                 
+				}
+			}
+			else
+			{
+				while (itr < length)
+                {
+                Ch c = p[itr];
+                if (c > 63 || attributeName[c])
+                    ++itr;
+                else
+                   {
+                   return true;
+                   }
+                }
+          return false;
+			}
+		}
+		else
+		{
+			while (itr < length)
+            {
+            Ch c = p[itr];
+            if (c > 63 || attributeName[c])
+                ++itr;
+            else
+               {
+               return true;
+               }
+            }
+			return false;
+	    }
 	    }
 	
 	 
 
-	 const static ubyte whitespace[33] = 
+	 /+const static ubyte whitespace[33] = 
 		    [
 		      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
 		         0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  1,  0,  0,  // 0
 		         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 1
-		         1];
+		         1];+/
 	
 	    final bool eatWhitespace()
 	    {      
 	                while (itr < length)
 	                      {
 	                	  Ch c = p[itr];
-	                      if (c <= 32 && whitespace[c]) {
+	                      if (c <= 32) {
 	                          ++itr;
 	                      }
 	                      else
@@ -886,7 +1065,55 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	{
 		curType = XmlTokenType.Data;
 		curLoc = itr;
-		if(!locate('<')) return doUnexpectedEOF();
+		version(D_InlineAsm_X86)
+		{
+			static if(Ch.sizeof == 1)
+			{
+				XmlParser2!(Ch, Int) this_ = this;
+				ubyte res;
+				
+				asm
+				{
+					 mov   EBX, this_;
+					 
+					 mov   EDI, [EBX + p];
+					 mov   EDX, [EBX + itr];
+	                 mov   ECX, [EBX + length];
+	                 sub   ECX, EDX;
+	                 jz    fail;
+	                 add   EDI, EDX;
+	                 mov   EAX, 0x3c;           
+
+	                 cld;
+	                 repnz;
+	                 scasb;
+	                 jnz   fail;
+	                 
+	                 mov   EAX, [EBX + p];
+	                 sub   EDI, EAX;
+	                 dec   EDI;
+	                 mov   [EBX + itr], EDI;
+	                 mov   res, 1;
+	                 jmp   end;
+	             fail:;
+	                 xor   AL, AL;
+	                 mov   res, AL;
+	             end:;
+				}
+				if(!res) return doUnexpectedEOF();
+				curLen = itr - curLoc;
+				curQLen = 0;
+				return true;
+			}
+			else
+			{
+				if(!locate('<')) return doUnexpectedEOF();
+			}
+		}
+		else
+		{
+			if(!locate('<')) return doUnexpectedEOF();
+		}
 		curLen = itr - curLoc;
 		curQLen = 0;
 		return true;
@@ -973,7 +1200,8 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLoc = itr;
 		curQLen = 0;
 		
-		inDeclaration = true;
+		//inDeclaration = true;
+		state |= 0x2;
 		
 		return true;
 	}
@@ -1016,7 +1244,8 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	final private bool doMain()
 	{
 		if(getChar == '<') {
-			switch(getChar(1))
+			Ch ch = getChar(1);
+			switch(ch)
 			{
 			case '!':
 				if(getSlice(2,4) == "--") {
@@ -1069,7 +1298,8 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		case '\?':
 			if(getChar(1) != '>')
 				return false;
-			inDeclaration = false;
+			//inDeclaration = false;
+			state &= 0xfd;
 			itr += 2;
 			return doMain();
 			break;
@@ -1130,7 +1360,8 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 			if(itr >= length)
 				break;
 			
-			if(inDeclaration)
+			//if(inDeclaration)
+			if(state & 0x2)
 				doInDeclaration();
 			
 			switch(curType)
@@ -1189,35 +1420,73 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	}
 
 	bool next() {
-		if(retain) {
-			retain = false;
-			return true;
-		}
-		
-		eatWhitespace;
-		
-		if(itr >= length)
-			return doEndOfStream();
-		
-		if(inDeclaration)
-			return doInDeclaration();
-		
-		switch(curType)
+		/+version(D_InlineAsm_X86)
 		{
-		case XmlTokenType.StartElement:
-		case XmlTokenType.StartNSElement:
-		case XmlTokenType.AttrName:
-		case XmlTokenType.AttrNSName:
-		case XmlTokenType.AttrValue:
-			return doInElement();
-			break;
-		case XmlTokenType.PIName:
-			return doPIValue();
-			break;
-		default:
-			return doMain();
-			break;
+			XmlParser!(Ch, Int) this_ = this;
+			asm
+			{
+				mov EBX, this_;
+				mov EAX, [EBX + state];
+				jz normal_;
+				
+				
+				
+				retain_:;
+					xor EAX, EAX;
+					mov [EBX + retain], EAX;
+					mov EAX, 1;
+				end:;
+					
+				normal_:;
+			}
 		}
+		else
+		{+/
+			if(!(state & 0x1)) {
+				eatWhitespace;
+				
+				if(itr >= length)
+					return doEndOfStream();
+				
+				//if(inDeclaration)
+				if(state & 0x2)
+					return doInDeclaration();
+				
+				/*switch(curType)
+				{
+				case XmlTokenType.StartElement:
+				case XmlTokenType.StartNSElement:
+				case XmlTokenType.AttrName:
+				case XmlTokenType.AttrNSName:
+				case XmlTokenType.AttrValue:
+					return doInElement();
+					break;
+				case XmlTokenType.PIName:
+					return doPIValue();
+					break;
+				default:
+					return doMain();
+					break;
+				}*/
+				
+				if(curType <= 4) {
+					return doInElement();
+				}
+				else if(curType <= 13) {
+					return doMain();
+				}
+				else if(curType == 14) {
+					return doPIValue();
+				}
+				else {
+					return doMain();
+				}
+			}
+			else {
+				state &= 0x7f;
+				return true;
+			}
+		//}
 	}
 	
 	final XmlTokenType type()
@@ -1265,7 +1534,8 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 	
 	final void retainCurrent()
 	{
-		retain = true;
+//		retain = true;
+		state |= 0x1;
 	}
 	
 	final bool reset()
@@ -1290,9 +1560,10 @@ class XmlParser2(Ch = char, Int = uint) : IXmlTokenIterator!(Ch, Int)
 		curLen = 0;
 		curQLen = 0;
 		curType = XmlTokenType.None;
-		inDeclaration = false;
+//		inDeclaration = false;
 		err = false;
-		retain = false;
+//		retain = false;
+		state = 0x0;
 	}
 }
 
@@ -1352,13 +1623,14 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 	
 	final private bool processNode()
 	{
-		if(parser.type == XmlTokenType.AttrName || parser.type == XmlTokenType.AttrNSName || parser.type == XmlTokenType.AttrValue)
-			return false;;
+		//if(parser.type == XmlTokenType.AttrName || parser.type == XmlTokenType.AttrNSName || parser.type == XmlTokenType.AttrValue)
+//			return false;
 		
 		switch(parser.type)
 		{
 		case XmlTokenType.StartElement, XmlTokenType.StartNSElement:
 			curType = XmlNodeType.Element;
+			return true;
 			break;
 		case XmlTokenType.EndElement, XmlTokenType.EndNSElement, XmlTokenType.EndEmptyElement, 
 			XmlTokenType.AttrName, XmlTokenType.AttrNSName, XmlTokenType.AttrValue, 
@@ -1432,6 +1704,10 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 					attrLen = parser.len;
 					attrQLen = parser.qlen;
 				}
+				else {
+					parser.retainCurrent;
+					return false;
+				}
 				
 				if(!parser.next) return false;
 				
@@ -1503,7 +1779,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return parser.depth;
 	}
 	
-	final bool reset()
+	final void reset()
 	{
 		return parser.reset;
 	}
@@ -1741,12 +2017,16 @@ void testParser(Ch)(IXmlTokenIterator!(Ch, uint) itr)
 	assert(itr.value == "");
 	assert(itr.type == XmlTokenType.Declaration, Integer.toUtf8(itr.type));
 	assert(itr.next);
+	assert(itr.type == XmlTokenType.AttrName, Integer.toUtf8(itr.type));
 	assert(itr.value == "version");
 	assert(itr.next);
+	assert(itr.type == XmlTokenType.AttrValue, Integer.toUtf8(itr.type));
 	assert(itr.value == "1.0");
 	assert(itr.next);
+	assert(itr.type == XmlTokenType.Doctype, Integer.toUtf8(itr.type));
 	assert(itr.value == "element [ <!ELEMENT element (#PCDATA)>]");
 	assert(itr.next);
+	assert(itr.type == XmlTokenType.StartElement, Integer.toUtf8(itr.type));
 	assert(itr.value == "element");
 	assert(itr.depth == 0);
 	assert(itr.next);
@@ -1803,7 +2083,7 @@ void doTests(Ch)()
 	auto text = new StringCharIterator!(Ch)(t);
 	auto itr = new XmlParser!(Ch)(text);
 	
-	testParser!(Ch)(itr);
+	//testParser!(Ch)(itr);
 	
 	itr.reset;
 	auto fitr = new XmlForwardNodeParser!(Ch)(itr);

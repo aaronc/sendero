@@ -9,7 +9,7 @@ module sendero.xml.IXmlTokenIterator;
 
 public import sendero.xml.NodeType;
 
-enum XmlTokenType {StartElement, StartNSElement, EndElement, EndNSElement, EndEmptyElement, AttrName, AttrNSName, AttrValue, Data, Comment, CData, PIName, PIValue, Declaration, Doctype, None};
+enum XmlTokenType : ubyte {StartElement = 0, StartNSElement = 1, AttrName = 2, AttrNSName = 3, AttrValue = 4, EndElement = 5, EndNSElement = 6, EndEmptyElement = 7, Data = 8, Comment = 9, CData = 10, Declaration = 11, Doctype = 12, PIValue = 13, PIName = 14, None  = 15};
 
 interface IXmlTokenIterator(Ch, Int)
 {
@@ -23,4 +23,6 @@ interface IXmlTokenIterator(Ch, Int)
 	bool reset();
 	void retainCurrent();
 	ushort depth();
+	//bool error();
+	//char[] errorMsg();
 }

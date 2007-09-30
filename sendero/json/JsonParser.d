@@ -30,11 +30,31 @@ class JSONParser(Ch, Int = uint)
 	private JSONTokenType curType = JSONTokenType.Empty;
 	private ushort arrayDepth = 0;
 	private ushort curDepth = 0;
-	private bool retain = false;	
+	private bool retain = false;
+	private bool err = false;
+	private char[] errMsg;
 	
 	private void eatWhitespace()
 	{
 		while(itr.good && Lookup.whitespace[itr[0]]) ++itr;
+	}
+	
+	public bool error() {return err;}
+	public char[] errorMsg() {return errMsg;}
+	public bool eof() {return !itr.good;}
+	
+	private bool expected(char[] token)
+	{
+		err = true;
+		errMsg = "Expected " ~ token;
+		return false;
+	}
+	
+	private bool unexpectedEOF(char[] msg)
+	{
+		err = true;
+		errMsg = "Unxpected EOF " ~ msg;
+		return false;
 	}
 	
 	private bool parseMemberName()
@@ -45,7 +65,7 @@ class JSONParser(Ch, Int = uint)
 		
 		eatWhitespace;
 
-		if(itr[0] != '"') return false;
+		if(itr[0] != '"') return expected("\" in member name");
 		++itr;
 		
 		curType = JSONTokenType.Name;
@@ -58,7 +78,7 @@ class JSONParser(Ch, Int = uint)
 			}
 			++itr;
 		}
-		if(!itr.good) return false;
+		if(!itr.good) return unexpectedEOF("in member name");
 		curLen = itr.location - curLoc;
 		++itr;
 			
@@ -67,7 +87,7 @@ class JSONParser(Ch, Int = uint)
 	
 	private bool doString()
 	{
-		if(itr[0] != '"') return false;
+		if(itr[0] != '"') return expected("\" in string");
 		++itr;
 		
 		curType = JSONTokenType.String;
@@ -80,7 +100,7 @@ class JSONParser(Ch, Int = uint)
 			}
 			++itr;
 		}
-		if(!itr.good) return false;
+		if(!itr.good) return unexpectedEOF("in string");
 		curLen = itr.location - curLoc;
 		++itr;
 		
@@ -117,7 +137,7 @@ class JSONParser(Ch, Int = uint)
 	
 	private bool parseMemberValue()
 	{
-		if(itr[0] != ':') return false;
+		if(itr[0] != ':') return expected(": before member value");
 		++itr;
 		eatWhitespace;
 		
@@ -130,7 +150,7 @@ class JSONParser(Ch, Int = uint)
 		curType = JSONTokenType.Number;
 		
 		while(itr.good && Lookup.number[itr[0]]) ++itr;
-		if(!itr.good) return false;
+		if(!itr.good) return unexpectedEOF("after number");
 		
 		curLen = itr.location - curLoc;
 		++itr;
@@ -141,7 +161,7 @@ class JSONParser(Ch, Int = uint)
 	private bool doTrue()
 	{
 		if(itr[0..4] != "true")
-			return false;
+			return expected("true");
 		curLoc = itr.location;
 		itr += 4;
 		curLen = 4;
@@ -152,7 +172,7 @@ class JSONParser(Ch, Int = uint)
 	private bool doFalse()
 	{
 		if(itr[0..5] != "false")
-			return false;
+			return expected("false");
 		curLoc = itr.location;
 		itr += 5;
 		curLen = 5;
@@ -163,7 +183,7 @@ class JSONParser(Ch, Int = uint)
 	private bool doNull()
 	{
 		if(itr[0..4] != "null")
-			return false;
+			return expected("null");
 		curLoc = itr.location;
 		itr += 4;
 		curLen = 4;
@@ -173,7 +193,7 @@ class JSONParser(Ch, Int = uint)
 	
 	private bool parseObject()
 	{
-		if(itr[0] != '{') return false;
+		if(itr[0] != '{') return expected("{ at start of object");
 		return beginObject;
 	}
 	
