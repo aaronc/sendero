@@ -1,32 +1,43 @@
-
+/**
+ * Copyright: Copyright (C) 2007 Rick Richardson.  All rights reserved.
+ * License:   BSD Style
+ * Authors:   Rick Richardson
+ */
 
 module sendero.util.AsyncServer;
 
-import sendero.util.event;
 import tango.net.Socket;
 import tango.io.Stdout;
 import tango.io.Console;
 import tango.stdc.stdio;
 import tango.core.Memory;
 import tango.net.InternetAddress;
+import tango.core.Exception;
+
+import sendero.util.event;
+import sendero.util.ThreadPool;
 
 const int MAX_CONN = 512; // this will likely be overridden to 128 or whatever the max is
+const int NUM_THREADS = 20;
 
+typedef int function(SocketEvent*) Handler;
 
 alias _BCD_func__388 EventCallback;
 
-
 struct SocketEvent
 {
-	AsyncServer* asock;
+	AsyncServer asock;
 	Socket sock;
 	event evt;
 }
 
 class AsyncServer
 {
+  //todo, take port, addr, etc as params
 	this()
-	{}
+	{
+		pool = new ThreadPool(NUM_THREADS);
+	}
 	~this()
 	{}
 
@@ -35,14 +46,22 @@ class AsyncServer
 		EventCallback fp = &handle_connection;  //bcd alias for a function ptr
 		chevt = new SocketEvent();
 		Stdout.formatln("run chevt = {}", chevt);
-    chevt.asock = &this;
+    chevt.asock = this;
 		chevt.sock = new Socket(AddressFamily.INET, 
 														SocketType.STREAM, 
 														ProtocolType.TCP, 
 														true);
 
-  	chevt.sock.bind(new InternetAddress("127.0.0.1", 3456));
-  	chevt.sock.listen(MAX_CONN);
+		try 
+		{
+  		chevt.sock.bind(new InternetAddress("127.0.0.1", 3456));
+  		chevt.sock.listen(MAX_CONN);
+		}
+		catch(SocketException e)
+		{
+			Stdout.formatln(e.toUtf8);
+			throw new Exception("Try to die");
+		}
   	chevt.sock.blocking(false);
 
 		void* ebase = event_init();
@@ -56,26 +75,26 @@ class AsyncServer
 
 	static void handle_data_event(int fd, short event, void* arg)
 	{
+		SocketEvent* sevt = cast(SocketEvent*) arg;
+		/*
+		Stdout.formatln("in handle_data_event");
+    AsyncServer self = sevt.asock;
+		if (self.dataFN)
+		{
+			auto df = new DataFunctor(self.dataFN, sevt);
+			pool.add_task(df);
+		}
+		Stdout.formatln("done with handle_data_event");
+		*/
 		char buf[1024];
-	  SocketEvent* sevt = cast(SocketEvent*) arg;
 		int rec = sevt.sock.receive(buf);
 
-    Stdout.formatln("received {} bytes", rec);
 		if (rec > 0) 
 		{
 			Stdout.formatln("handle_data received {} bytes", rec);
-			if (sevt.asock.eventDG)
-				sevt.asock.eventDG(buf[0..(rec-1)]);
-			else if (sevt.asock.eventFN)
-				sevt.asock.eventFN(buf[0..(rec-1)]);
+			Stdout.formatln(buf[0 .. rec]);
 		}
-		else
-		{
-			if (sevt.asock.errorDG)
-				sevt.asock.errorDG("Error received from receive");
-			else if (sevt.asock.errorFN)
-				sevt.asock.errorFN("Error received from receive");
-		}	
+		
 	}
 
 	static void handle_connection(int fd, short event, void* arg)
@@ -100,19 +119,11 @@ class AsyncServer
 		chevt.sock.shutdown(SocketShutdown.BOTH);
 	}
 
-	public void setEventCallback(int delegate(char[]) cb)
+	public void setDataCallback(Handler cb)
 	{
-		eventDG = cb;
+		dataFN = cb;
 	}
-	public void setEventCallback(int function(char[]) cb)
-	{
-		eventFN = cb;
-	}
-	public void setErrorCallback(int delegate(char[]) cb)
-	{
-		errorDG = cb;
-	}
-	public void setErrorCallback(int function(char[]) cb)
+	public void setErrorCallback(Handler cb)
 	{
 		errorFN = cb;
 	}
@@ -120,14 +131,25 @@ class AsyncServer
 	{
 		sockflags = sf;
 	}
-	private static int delegate(char[]) eventDG;
-	private static int function(char[]) eventFN;
-	private static int delegate(char[]) errorDG;
-	private static int function(char[]) errorFN;	
+	private static Handler dataFN;
+	private static Handler errorFN;	
 	private static SocketFlags sockflags;
 
 	private SocketEvent* chevt;
 	private SocketEvent* devent;
+	private static ThreadPool pool;
 }
 
+class DataFunctor : WQFunctor
+{
+	this(Handler f, SocketEvent* e) 
+	{
+		evt = e; 
+		myFunc = f; 
+	}
+	void opCall() { result = myFunc(evt); }
+	SocketEvent* evt;
+	int result;
+	Handler myFunc;	
+}
 

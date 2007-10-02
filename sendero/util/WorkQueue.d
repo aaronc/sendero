@@ -13,15 +13,13 @@
 // interface
 
 module sendero.util.WorkQueue;
-
+import tango.core.Thread;
 import tango.core.sync.Mutex;
 import tango.core.sync.Condition;
 import tango.core.Atomic;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
-
-typedef void function() Task;
 
 class WorkQueue
 {
@@ -31,6 +29,7 @@ class WorkQueue
 		backmtx = new Mutex;
 		emptycond = new Condition(frontmtx);
 		_size.store(cast(uint)0);
+		logger = Log.getLogger("sendero.util.WorkQueue");
 	}
 
 	//TODO refactor this, has to be a cleaner way
@@ -71,6 +70,8 @@ class WorkQueue
 
   WQFunctor popFront()
 	{
+		auto sprint = new Sprint!(char);
+		logger.info("top of popFront");
 		frontmtx.lock();
 		while(_size.load() < 1)
 		{
@@ -78,10 +79,13 @@ class WorkQueue
 		}
 		if (_size.load() > 1)
 		  front.next.prev = null;
+		_size.decrement();
+		logger.info(sprint("_size is now {}", _size.load()));
 		WorkNode* n = front;
 	  front = front.next;
-		_size.decrement();
 		frontmtx.unlock();
+		logger.info(sprint("Thread ID {}", Thread.getThis().name()));
+		logger.info("done with popFront");
 		return n.task;
 	}
 
@@ -97,6 +101,7 @@ class WorkQueue
 	private Mutex frontmtx;	
 	private Mutex backmtx;
 	private Condition emptycond;
+  Logger logger;
 }
 
 class WQFunctor
