@@ -260,7 +260,7 @@ class SimpleBinaryOutArchiver
 		}
 		else static if(isPointerType!(T))
 		{
-			static if(is(T == class))
+			static if(is(T == class) || is(T == interface))
 			{
 				assert(false, "Serialization of class pointers not supported in this version, type " ~ T.stringof ~ "*");
 				//put (*t);
@@ -351,7 +351,7 @@ class SimpleBinaryInArchiver
     
     void getPtr(T)(inout T* t)
     {
-    	static if(is(T == class))
+    	static if(is(T == class) || is(T == interface))
 		{
     		assert(false, "Serialization of class pointers not supported in this version, type " ~ T.stringof ~ "*");
     	/*	T x;
@@ -451,10 +451,10 @@ class SimpleBinaryInArchiver
 		}
 		else static if(isAssocArrayType!(T))
 		{
-			size_t len;
+			uint len;
 			reader (len);
 			
-			for(size_t i = 0; i < len; ++i)
+			for(uint i = 0; i < len; ++i)
 			{
 				typeof(t.keys[0]) k;
 				get (k);
@@ -471,10 +471,10 @@ class SimpleBinaryInArchiver
 			}
 			else
 			{
-				size_t len;
+				uint len;
 				reader(len);
 				t.length = len;
-				for(size_t i = 0; i < len; ++i)
+				for(uint i = 0; i < len; ++i)
 				{
 					get(t[i]);
 				}

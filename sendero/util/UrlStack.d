@@ -31,11 +31,15 @@ class UrlStack : Stack!(char[])
 		}
 	}
 	
+	char[] origUrl;
+	
 	static UrlStack parse(char[] url)
 	{
 		uint i = 0;
 		uint len = url.length;
 		auto p = new UrlStack;
+		p.origUrl = url;
+		
 		char[] cur;
 		if(url[i] == '/')
 			++i;
