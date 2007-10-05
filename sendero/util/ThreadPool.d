@@ -19,6 +19,8 @@ import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import Integer = tango.text.convert.Integer;
 
+typedef void delegate(Object) TaskHandler;
+
 class ThreadPool
 {
   private WorkQueue wqueue;
@@ -26,6 +28,7 @@ class ThreadPool
 	private int num_workers;
   bool running;
 	private Logger logger;
+  TaskHandler task_handler;
 	this(int nthreads)
 	{ 
 		logger = Log.getLogger("sendero.util.Threadpool");
@@ -43,11 +46,16 @@ class ThreadPool
 		}
 	}
 
-	public void add_task(WQFunctor t)
+	public void add_task(Object obj)
 	{
 		auto sprint = new Sprint!(char);
-		wqueue.pushBack(t);
+		wqueue.pushBack(obj);
 		logger.info(sprint("added task size - {}", wqueue.size()));
+	}
+
+	public void set_task_handler(TaskHandler fun)
+	{
+		task_handler = fun;
 	}
 
 	public void wait()
@@ -80,11 +88,11 @@ class ThreadPool
 				//WorkQueue is built for threaded access and will block on empty
 				//so this thread simply needs to request a task and will block(sleep)
 				//until one becomes available
-				WQFunctor task = wqueue.popFront();
+			  Object obj = wqueue.popFront();
 				logger.info(sprint("popped task size - {}", wqueue.size()));
 				try
    			{
-					task();
+					task_handler(obj);
 				}
 				catch(Exception e)
 				{

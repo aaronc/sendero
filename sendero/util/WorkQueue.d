@@ -33,7 +33,7 @@ class WorkQueue
 	}
 
 	//TODO refactor this, has to be a cleaner way
-	void pushBack(WQFunctor t)
+	void pushBack(Object obj)
 	{
 		backmtx.lock();
 		bool wasempty = false;
@@ -55,7 +55,7 @@ class WorkQueue
 				n.prev = back;
 				back = n;
 		}	
-		n.task = t;
+		n.task = obj;
 		n.next = null;
 		_size.increment();
 
@@ -68,7 +68,7 @@ class WorkQueue
 		backmtx.unlock();
 	}
 
-  WQFunctor popFront()
+  Object popFront()
 	{
 		auto sprint = new Sprint!(char);
 		logger.info("top of popFront");
@@ -104,14 +104,9 @@ class WorkQueue
   Logger logger;
 }
 
-class WQFunctor
-{
-  void opCall() {}
-}
-
 struct WorkNode
 {
 	WorkNode* next;
 	WorkNode* prev;
-	WQFunctor task;
+	Object task;
 }

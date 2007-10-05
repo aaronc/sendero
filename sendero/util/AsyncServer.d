@@ -6,150 +6,148 @@
 
 module sendero.util.AsyncServer;
 
-import tango.net.Socket;
+import tango.io.selector.EpollSelector;
+import tango.sys.linux.epoll;
+import tango.net.SocketConduit;
+import tango.net.ServerSocket;
+import tango.net.InternetAddress;
 import tango.io.Stdout;
 import tango.io.Console;
-import tango.stdc.stdio;
-import tango.core.Memory;
 import tango.net.InternetAddress;
 import tango.core.Exception;
+import tango.io.selector.EpollSelector;
+import tango.io.selector.model.ISelector;
 
-import sendero.util.event;
 import sendero.util.ThreadPool;
 
-const int MAX_CONN = 512; // this will likely be overridden to 128 or whatever the max is
-const int NUM_THREADS = 20;
+const char BIND_ADDR[] = "127.0.0.1";
 
-typedef int function(SocketEvent*) Handler;
-
-alias _BCD_func__388 EventCallback;
-
-struct SocketEvent
+version (linux)
 {
-	AsyncServer asock;
-	Socket sock;
-	event evt;
+const uint EvtOneReadEt = EPOLLIN | EPOLLET;   // maybe EPOLLONESHOT 
+const uint EvtOneWriteEt = EPOLLOUT | EPOLLET; // maybe EPOLLONESHOT
+const uint EvtPersistReadEt = EPOLLIN;
 }
 
 class AsyncServer
 {
-  //todo, take port, addr, etc as params
+	private
+	TaskHandler read_handler;
+	ServerSocket listener;
+	EpollSelector selector;
+	ThreadPool pool;
+  uint listenerHandle;
+  bool running;
+
+	public
 	this()
 	{
-		pool = new ThreadPool(NUM_THREADS);
+		selector = new EpollSelector();
+		pool = new ThreadPool(20);
 	}
-	~this()
-	{}
 
 	void run()
 	{
-		EventCallback fp = &handle_connection;  //bcd alias for a function ptr
-		chevt = new SocketEvent();
-		Stdout.formatln("run chevt = {}", chevt);
-    chevt.asock = this;
-		chevt.sock = new Socket(AddressFamily.INET, 
-														SocketType.STREAM, 
-														ProtocolType.TCP, 
-														true);
+		listener = new ServerSocket(new InternetAddress(BIND_ADDR, 3456), 32, true);
+		pool.set_task_handler(read_handler);
+		listener.socket().blocking(false);
+		running = true;
+		selector.open();
+		selector.register(listener, cast(Event)EvtPersistReadEt);
+		event_loop();
+	  selector.close();
+	}
 
-		try 
+	void event_loop()
+	{
+		while (running)
 		{
-  		chevt.sock.bind(new InternetAddress("127.0.0.1", 3456));
-  		chevt.sock.listen(MAX_CONN);
+			int eventCount = selector.select();
+
+			if (eventCount < 0)
+			{
+				//handle error
+				continue;
+			}
+
+			foreach (SelectionKey key; selector.selectedSet())
+			{
+				SocketConduit sock = cast(SocketConduit) key.conduit();
+				if (key.isReadable())
+				{
+					// new connection case
+					if (sock.socket().fileHandle() == listenerHandle)
+					{
+						handle_connection(sock);
+					}
+					else
+					{
+						handle_read_event(sock);
+						selector.reregister(sock, cast(Event)EvtOneWriteEt);
+					}
+				}
+
+				if (key.isWritable())
+				{
+					handle_write_event(sock);
+					selector.reregister(sock, cast(Event)EvtOneReadEt);
+				}
+
+				if (key.isError() || key.isHangup() || key.isInvalidHandle())
+				{
+					selector.unregister(sock);
+					sock.close();
+				}
+			}
 		}
-		catch(SocketException e)
-		{
-			Stdout.formatln(e.toUtf8);
-			throw new Exception("Try to die");
-		}
-  	chevt.sock.blocking(false);
-
-		void* ebase = event_init();
-		event_set(&chevt.evt, chevt.sock.fileHandle(), EV_READ | EV_PERSIST, fp, chevt);
-  	event_add(&chevt.evt, null);
-
-		int err = event_dispatch();
-		if (err != 0)
-			Stdout.formatln("event_dispatch ended with error {}", err);
 	}
 
-	static void handle_data_event(int fd, short event, void* arg)
+	void handle_connection(SocketConduit conduit)
 	{
-		SocketEvent* sevt = cast(SocketEvent*) arg;
-		/*
-		Stdout.formatln("in handle_data_event");
-    AsyncServer self = sevt.asock;
-		if (self.dataFN)
-		{
-			auto df = new DataFunctor(self.dataFN, sevt);
-			pool.add_task(df);
-		}
-		Stdout.formatln("done with handle_data_event");
-		*/
-		char buf[1024];
-		int rec = sevt.sock.receive(buf);
+		ServerSocket server = cast(ServerSocket) conduit;
+		SocketConduit cond = server.accept();
+		//cond.socket().blocking(false);  not sure if we want this
+		//it would probably be best to go blocking with a really short timeout
+    selector.register(cond, cast(Event)EvtOneWriteEt);
 
-		if (rec > 0) 
-		{
-			Stdout.formatln("handle_data received {} bytes", rec);
-			Stdout.formatln(buf[0 .. rec]);
-		}
-		
+		// if there is a connection, there should be data right away
+		pool.add_task(cond);
 	}
 
-	static void handle_connection(int fd, short event, void* arg)
+	void handle_read_event(SocketConduit conduit)
 	{
-		SocketEvent* cevt = cast(SocketEvent*)(arg);
-    Stdout.formatln("handle_connection cevt = {}", cevt);
-		SocketEvent* sevt = new SocketEvent();
-    cevt.asock.devent = sevt;
-		sevt.sock = cevt.sock.accept();
-
-		EventCallback fp = &handle_data_event;
-		sevt.sock.blocking(false);
-
-		// set up an event for the new socket
-		event_set(&sevt.evt, sevt.sock.fileHandle(), EV_READ | EV_PERSIST, fp, sevt);
-		// event add to begin handling data events for that socket
-		event_add(&sevt.evt, null);
+		pool.add_task(conduit);
 	}
 
-	public void shutdown()
+	void handle_write_event(SocketConduit conduit)
 	{
-		chevt.sock.shutdown(SocketShutdown.BOTH);
+		// in the future, this may be used to indicate that a 
+		// socket is idle
 	}
 
-	public void setDataCallback(Handler cb)
+	void register_read_handler(TaskHandler handler)
 	{
-		dataFN = cb;
+		read_handler = handler;
 	}
-	public void setErrorCallback(Handler cb)
-	{
-		errorFN = cb;
-	}
-	public void setSockFlags(SocketFlags sf)
-	{
-		sockflags = sf;
-	}
-	private static Handler dataFN;
-	private static Handler errorFN;	
-	private static SocketFlags sockflags;
-
-	private SocketEvent* chevt;
-	private SocketEvent* devent;
-	private static ThreadPool pool;
 }
 
-class DataFunctor : WQFunctor
+version (TestMain)
 {
-	this(Handler f, SocketEvent* e) 
+	void main()
 	{
-		evt = e; 
-		myFunc = f; 
-	}
-	void opCall() { result = myFunc(evt); }
-	SocketEvent* evt;
-	int result;
-	Handler myFunc;	
-}
+		void handler(SocketConduit cond)
+		{
+			char buffer[1024];
+			int rec;
 
+			rec = cond.read(buffer);
+			assert(rec != IConduit.Eof);
+			Stdout.formatln("Received {} bytes", rec);
+			Stdout.formatln(buffer);
+		}
+
+		srv = new AsyncServer();
+		srv.register_read_handler(&handler);
+    srv.run();
+	}
+}
