@@ -17,6 +17,9 @@ import tango.net.InternetAddress;
 import tango.core.Exception;
 import tango.io.selector.EpollSelector;
 import tango.io.selector.model.ISelector;
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 
 import sendero.util.ThreadPool;
 
@@ -24,8 +27,8 @@ const char BIND_ADDR[] = "127.0.0.1";
 
 version (linux)
 {
-const uint EvtOneReadEt = EPOLLIN | EPOLLET;   // maybe EPOLLONESHOT 
-const uint EvtOneWriteEt = EPOLLOUT | EPOLLET; // maybe EPOLLONESHOT
+const uint EvtOneReadEt = EPOLLIN | EPOLLET | EPOLLONESHOT;
+const uint EvtOneWriteEt = EPOLLOUT | EPOLLET | EPOLLONESHOT;
 const uint EvtPersistReadEt = EPOLLIN;
 }
 
@@ -37,12 +40,14 @@ class AsyncServer
 	ServerSocket listener;
 	EpollSelector selector;
 	ThreadPool pool;
+	Logger logger;
   uint listenerHandle;
   bool running;
 
 	public
 	this()
-	{
+	{ 
+	  logger = Log.getLogger("AsyncServer");
 		selector = new EpollSelector();
 		pool = new ThreadPool(20);
 	}
@@ -64,7 +69,9 @@ class AsyncServer
 		while (running)
 		{
 			int eventCount = selector.select();
-
+      
+			//TODO every iteration, empty a queue
+			// of file descriptors that need to be re-added as read events
 			if (eventCount < 0)
 			{
 				//handle error
@@ -82,16 +89,15 @@ class AsyncServer
 					}
 					else
 					{
+						logger.info("isreadable was triggered");
 						handle_read_event(key.conduit());
-						selector.reregister(key.conduit(), cast(Event)EvtOneWriteEt);
 					}
 				}
 
 				if (key.isWritable())
 				{
-					Stdout.formatln("iswriteable was triggered");
+					logger.info("iswriteable was triggered");
 					handle_write_event(key.conduit());
-					selector.reregister(key.conduit(), cast(Event)EvtOneReadEt);
 				}
 
 				if (key.isError() || key.isHangup() || key.isInvalidHandle())
@@ -107,7 +113,7 @@ class AsyncServer
 	{
 		ServerSocket server = cast(ServerSocket) conduit;
 		SocketConduit cond = server.accept();
-		//cond.socket().blocking(false);  not sure if we want this
+		cond.socket().blocking(false);  //not sure if we want this
 		//it would probably be best to go blocking with a really short timeout
     selector.register(cond, cast(Event)EvtOneWriteEt);
 
