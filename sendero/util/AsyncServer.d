@@ -29,6 +29,7 @@ const uint EvtOneWriteEt = EPOLLOUT | EPOLLET; // maybe EPOLLONESHOT
 const uint EvtPersistReadEt = EPOLLIN;
 }
 
+
 class AsyncServer
 {
 	private
@@ -53,7 +54,7 @@ class AsyncServer
 		listener.socket().blocking(false);
 		running = true;
 		selector.open();
-		selector.register(listener, cast(Event)EvtPersistReadEt);
+		selector.register(listener, cast(Event)EvtPersistReadEt, new Token);
 		event_loop();
 	  selector.close();
 	}
@@ -72,37 +73,37 @@ class AsyncServer
 
 			foreach (SelectionKey key; selector.selectedSet())
 			{
-				SocketConduit sock = cast(SocketConduit) key.conduit();
 				if (key.isReadable())
 				{
 					// new connection case
-					if (sock.socket().fileHandle() == listenerHandle)
+					if (key.attachment())
 					{
-						handle_connection(sock);
+						handle_connection(key.conduit());
 					}
 					else
 					{
-						handle_read_event(sock);
-						selector.reregister(sock, cast(Event)EvtOneWriteEt);
+						handle_read_event(key.conduit());
+						selector.reregister(key.conduit(), cast(Event)EvtOneWriteEt);
 					}
 				}
 
 				if (key.isWritable())
 				{
-					handle_write_event(sock);
-					selector.reregister(sock, cast(Event)EvtOneReadEt);
+					Stdout.formatln("iswriteable was triggered");
+					handle_write_event(key.conduit());
+					selector.reregister(key.conduit(), cast(Event)EvtOneReadEt);
 				}
 
 				if (key.isError() || key.isHangup() || key.isInvalidHandle())
 				{
-					selector.unregister(sock);
-					sock.close();
+					selector.unregister(key.conduit());
+				  (cast(SocketConduit)key.conduit()).close();
 				}
 			}
 		}
 	}
 
-	void handle_connection(SocketConduit conduit)
+	void handle_connection(ISelectable conduit)
 	{
 		ServerSocket server = cast(ServerSocket) conduit;
 		SocketConduit cond = server.accept();
@@ -114,12 +115,13 @@ class AsyncServer
 		pool.add_task(cond);
 	}
 
-	void handle_read_event(SocketConduit conduit)
+	void handle_read_event(ISelectable conduit)
 	{
-		pool.add_task(conduit);
+		SocketConduit cond = cast(SocketConduit) conduit;
+		pool.add_task(cond);
 	}
 
-	void handle_write_event(SocketConduit conduit)
+	void handle_write_event(ISelectable conduit)
 	{
 		// in the future, this may be used to indicate that a 
 		// socket is idle
@@ -129,6 +131,11 @@ class AsyncServer
 	{
 		read_handler = handler;
 	}
+}
+
+class Token
+{
+	bool opCall() {return true;}
 }
 
 version (TestMain)
