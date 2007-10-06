@@ -25,10 +25,10 @@ class WorkQueue
 {
 	this()
 	{
+		sprint = new Sprint!(char);
 		frontmtx = new Mutex;
 		backmtx = new Mutex;
 		emptycond = new Condition(frontmtx);
-		_size.store(cast(uint)0);
 		logger = Log.getLogger("sendero.util.WorkQueue");
 	}
 
@@ -58,7 +58,7 @@ class WorkQueue
 		n.task = obj;
 		n.next = null;
 		_size.increment();
-
+    logger.info(sprint("blah {}", _size.load()));
 		if (wasempty)
 		{
 			frontmtx.unlock();
@@ -70,7 +70,6 @@ class WorkQueue
 
   Object popFront()
 	{
-		auto sprint = new Sprint!(char);
 		logger.info("top of popFront");
 		frontmtx.lock();
 		while(_size.load() < 1)
@@ -89,6 +88,28 @@ class WorkQueue
 		return n.task;
 	}
 
+	Object tryPopFront()
+	{
+		if (_size.load() == 0)
+		{
+			logger.info("queue empty, returning null");
+			return null;
+		}
+		frontmtx.lock();
+		if (_size.load() > 1)
+		  front.next.prev = null;
+		_size.decrement();
+		WorkNode* n = front;
+	  front = front.next;
+		frontmtx.unlock();
+		
+		logger.info("CHECKING NULL");
+		if (n.task is null)
+			logger.info("tryPopFront task is null");
+		
+		return n.task;
+	}
+
 	uint size()
 	{
 		return _size.load();
@@ -96,7 +117,7 @@ class WorkQueue
 
 	private WorkNode* front;
 	private WorkNode* back;
-
+  private Sprint!(char) sprint;
 	private Atomic!(uint) _size;
 	private Mutex frontmtx;	
 	private Mutex backmtx;

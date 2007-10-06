@@ -10,6 +10,7 @@ import tango.io.selector.EpollSelector;
 import tango.sys.linux.epoll;
 import tango.net.SocketConduit;
 import tango.net.ServerSocket;
+import tango.net.Socket;
 import tango.net.InternetAddress;
 import tango.io.Stdout;
 import tango.io.Console;
@@ -41,15 +42,19 @@ class AsyncServer
 	EpollSelector selector;
 	ThreadPool pool;
 	Logger logger;
+	Sprint!(char) sprint;
+	WorkQueue doneque;
   uint listenerHandle;
   bool running;
 
 	public
 	this()
 	{ 
+		sprint = new Sprint!(char);
 	  logger = Log.getLogger("AsyncServer");
 		selector = new EpollSelector();
-		pool = new ThreadPool(20);
+		doneque = new WorkQueue();
+		pool = new ThreadPool(20, doneque);
 	}
 
 	void run()
@@ -102,9 +107,17 @@ class AsyncServer
 
 				if (key.isError() || key.isHangup() || key.isInvalidHandle())
 				{
+					logger.info("closing socket");
 					selector.unregister(key.conduit());
 				  (cast(SocketConduit)key.conduit()).close();
 				}
+			}
+			
+			SocketConduit dsc = cast(SocketConduit) doneque.tryPopFront();
+			while (dsc !is null)
+			{
+				selector.reregister(dsc, cast(Event)EvtOneReadEt);
+				dsc = cast(SocketConduit) doneque.tryPopFront();
 			}
 		}
 	}
@@ -114,8 +127,9 @@ class AsyncServer
 		ServerSocket server = cast(ServerSocket) conduit;
 		SocketConduit cond = server.accept();
 		cond.socket().blocking(false);  //not sure if we want this
+		
 		//it would probably be best to go blocking with a really short timeout
-    selector.register(cond, cast(Event)EvtOneWriteEt);
+    selector.register(cond, cast(Event)EvtOneReadEt);
 
 		// if there is a connection, there should be data right away
 		pool.add_task(cond);
@@ -136,6 +150,10 @@ class AsyncServer
 	void register_read_handler(TaskHandler handler)
 	{
 		read_handler = handler;
+	}
+
+	char[] handle_request(char[] buf)
+	{
 	}
 }
 

@@ -19,7 +19,7 @@ import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import Integer = tango.text.convert.Integer;
 
-typedef void delegate(Object) TaskHandler;
+typedef void delegate(Object, Object) TaskHandler;
 
 class ThreadPool
 {
@@ -29,18 +29,20 @@ class ThreadPool
   bool running;
 	private Logger logger;
   TaskHandler task_handler;
-	this(int nthreads)
+	
+	this(int nthreads, Object arg1 = null)
 	{ 
 		logger = Log.getLogger("sendero.util.Threadpool");
 		running = true;
 		num_workers = nthreads;
 		wqueue = new WorkQueue;
 		workers = new PoolWorker[nthreads];
-    
+    Object arg = arg1;
+
 		int i = 0;
 		foreach (wk; workers)
 		{
-			wk = new PoolWorker();
+			wk = new PoolWorker(arg);
 			wk.name(Integer.toUtf8(++i));
 			wk.start();
 		}
@@ -73,8 +75,10 @@ class ThreadPool
 
 	class PoolWorker : Thread 
 	{
-		this ()
+		Object arg;
+		this (Object arg1)
 		{
+			arg = arg1;
 			super(&run);
 		}
 
@@ -92,7 +96,7 @@ class ThreadPool
 				logger.info(sprint("popped task size - {}", wqueue.size()));
 				try
    			{
-					task_handler(obj);
+					task_handler(obj, arg);
 				}
 				catch(Exception e)
 				{
