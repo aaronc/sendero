@@ -11,7 +11,6 @@
 
 module sendero.util.ThreadPool;
 
-import tango.core.Thread;
 public import sendero.util.WorkQueue;
 import tango.core.Exception;
 import tango.util.log.Log;
@@ -19,45 +18,37 @@ import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import Integer = tango.text.convert.Integer;
 
-typedef void delegate(Object, Object) TaskHandler;
 
-class ThreadPool
+class ThreadPool(THREAD, OBJ)
 {
-  private WorkQueue wqueue;
-	private PoolWorker[] workers;
+  private WorkQueue!(OBJ) wqueue;
+	private THREAD[] workers;
 	private int num_workers;
   bool running;
 	private Logger logger;
-  TaskHandler task_handler;
 	
-	this(int nthreads, Object arg1 = null)
+	this(int nthreads)
 	{ 
 		logger = Log.getLogger("sendero.util.Threadpool");
 		running = true;
 		num_workers = nthreads;
-		wqueue = new WorkQueue;
-		workers = new PoolWorker[nthreads];
-    Object arg = arg1;
+		wqueue = new WorkQueue!(OBJ);
+		workers = new THREAD[nthreads];
 
 		int i = 0;
 		foreach (wk; workers)
 		{
-			wk = new PoolWorker(arg);
+			wk = new THREAD(wqueue);
 			wk.name(Integer.toUtf8(++i));
 			wk.start();
 		}
 	}
 
-	public void add_task(Object obj)
+	public void add_task(OBJ* obj)
 	{
 		auto sprint = new Sprint!(char);
 		wqueue.pushBack(obj);
 		logger.info(sprint("added task size - {}", wqueue.size()));
-	}
-
-	public void set_task_handler(TaskHandler fun)
-	{
-		task_handler = fun;
 	}
 
 	public void wait()
@@ -73,36 +64,4 @@ class ThreadPool
 		running = false;
 	}
 
-	class PoolWorker : Thread 
-	{
-		Object arg;
-		this (Object arg1)
-		{
-			arg = arg1;
-			super(&run);
-		}
-
-		private
-		void run() 
-		{
-			auto sprint = new Sprint!(char);
-			logger.info("Starting thread");
-			while(running)
-			{
-				//WorkQueue is built for threaded access and will block on empty
-				//so this thread simply needs to request a task and will block(sleep)
-				//until one becomes available
-			  Object obj = wqueue.popFront();
-				logger.info(sprint("popped task size - {}", wqueue.size()));
-				try
-   			{
-					task_handler(obj, arg);
-				}
-				catch(Exception e)
-				{
-					logger.error("Exception: " ~ e.toUtf8);
-				}
-			}
-		}
-	}
 }

@@ -21,8 +21,10 @@ import tango.io.selector.model.ISelector;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
+import tango.core.sync.Mutex;
 
 import sendero.util.ThreadPool;
+import sendero.util.HttpThread;
 
 const char BIND_ADDR[] = "127.0.0.1";
 
@@ -33,34 +35,36 @@ const uint EvtOneWriteEt = EPOLLOUT | EPOLLET | EPOLLONESHOT;
 const uint EvtPersistReadEt = EPOLLIN;
 }
 
+typedef char[] delegate(char[], int, int*) RequestHandler;
+//typedef ThreadPool!(HttpThread, SocketConduit) SrvThreadPool;
 
 class AsyncServer
 {
 	private
-	TaskHandler read_handler;
 	ServerSocket listener;
 	EpollSelector selector;
-	ThreadPool pool;
+	ThreadPool!(HttpThread, SocketConduit) pool;
 	Logger logger;
 	Sprint!(char) sprint;
-	WorkQueue doneque;
-  uint listenerHandle;
+  Mutex selMutex;
+	RequestHandler reqhandler;
+	uint listenerHandle;
   bool running;
-
+  
 	public
 	this()
 	{ 
 		sprint = new Sprint!(char);
 	  logger = Log.getLogger("AsyncServer");
 		selector = new EpollSelector();
-		doneque = new WorkQueue();
-		pool = new ThreadPool(20, doneque);
+		pool = new ThreadPool!(HttpThread, SocketConduit)(20);
+		selMutex = new Mutex;
+		HttpThread.register_after_response_write(&rereg_socket);
 	}
 
 	void run()
 	{
 		listener = new ServerSocket(new InternetAddress(BIND_ADDR, 3456), 32, true);
-		pool.set_task_handler(read_handler);
 		listener.socket().blocking(false);
 		running = true;
 		selector.open();
@@ -112,13 +116,6 @@ class AsyncServer
 				  (cast(SocketConduit)key.conduit()).close();
 				}
 			}
-			
-			SocketConduit dsc = cast(SocketConduit) doneque.tryPopFront();
-			while (dsc !is null)
-			{
-				selector.reregister(dsc, cast(Event)EvtOneReadEt);
-				dsc = cast(SocketConduit) doneque.tryPopFront();
-			}
 		}
 	}
 
@@ -130,15 +127,12 @@ class AsyncServer
 		
 		//it would probably be best to go blocking with a really short timeout
     selector.register(cond, cast(Event)EvtOneReadEt);
-
-		// if there is a connection, there should be data right away
-		pool.add_task(cond);
 	}
 
 	void handle_read_event(ISelectable conduit)
 	{
 		SocketConduit cond = cast(SocketConduit) conduit;
-		pool.add_task(cond);
+		pool.add_task(&cond);
 	}
 
 	void handle_write_event(ISelectable conduit)
@@ -147,14 +141,21 @@ class AsyncServer
 		// socket is idle
 	}
 
-	void register_read_handler(TaskHandler handler)
+	void register_req_handler(RequestHandler handler)
 	{
-		read_handler = handler;
+		reqhandler = handler;
 	}
 
-	char[] handle_request(char[] buf)
+  bool rereg_socket(SocketConduit* sock)
 	{
+		//once we've emptied the socket, we
+		// re-add the event notification
+		selMutex.lock();
+		scope(exit) selMutex.unlock();
+		selector.reregister(*sock, cast(Event)EvtOneReadEt);
+		return true;
 	}
+
 }
 
 class Token

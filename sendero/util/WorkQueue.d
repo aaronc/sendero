@@ -21,7 +21,7 @@ import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 
-class WorkQueue
+class WorkQueue(T)
 {
 	this()
 	{
@@ -33,7 +33,7 @@ class WorkQueue
 	}
 
 	//TODO refactor this, has to be a cleaner way
-	void pushBack(Object obj)
+	void pushBack(T* obj)
 	{
 		backmtx.lock();
 		bool wasempty = false;
@@ -55,7 +55,7 @@ class WorkQueue
 				n.prev = back;
 				back = n;
 		}	
-		n.task = obj;
+		n.data = obj;
 		n.next = null;
 		_size.increment();
     logger.info(sprint("blah {}", _size.load()));
@@ -68,7 +68,7 @@ class WorkQueue
 		backmtx.unlock();
 	}
 
-  Object popFront()
+  T* popFront()
 	{
 		logger.info("top of popFront");
 		frontmtx.lock();
@@ -85,10 +85,10 @@ class WorkQueue
 		frontmtx.unlock();
 		logger.info(sprint("Thread ID {}", Thread.getThis().name()));
 		logger.info("done with popFront");
-		return n.task;
+		return n.data;
 	}
 
-	Object tryPopFront()
+	T* tryPopFront()
 	{
 		if (_size.load() == 0)
 		{
@@ -104,10 +104,10 @@ class WorkQueue
 		frontmtx.unlock();
 		
 		logger.info("CHECKING NULL");
-		if (n.task is null)
+		if (n.data is null)
 			logger.info("tryPopFront task is null");
 		
-		return n.task;
+		return n.data;
 	}
 
 	uint size()
@@ -123,11 +123,13 @@ class WorkQueue
 	private Mutex backmtx;
 	private Condition emptycond;
   Logger logger;
+
+	struct WorkNode
+	{
+		WorkNode* next;
+		WorkNode* prev;
+		T* data;
+	}
 }
 
-struct WorkNode
-{
-	WorkNode* next;
-	WorkNode* prev;
-	Object task;
-}
+
