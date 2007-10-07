@@ -29,7 +29,7 @@ class ThreadPool(THREAD, OBJ)
 	
 	this(int nthreads)
 	{ 
-		logger = Log.getLogger("sendero.util.Threadpool");
+		logger = Log.getLogger("Threadpool");
 		running = true;
 		num_workers = nthreads;
 		wqueue = new WorkQueue!(OBJ);
@@ -44,7 +44,7 @@ class ThreadPool(THREAD, OBJ)
 		}
 	}
 
-	public void add_task(OBJ* obj)
+	public void add_task(OBJ obj)
 	{
 		auto sprint = new Sprint!(char);
 		wqueue.pushBack(obj);

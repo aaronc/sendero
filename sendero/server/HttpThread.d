@@ -1,4 +1,4 @@
-module sendero.util.HttpThread;
+module sendero.server.HttpThread;
 
 import tango.util.log.Log;
 import tango.util.log.Configurator;
@@ -6,8 +6,8 @@ import tango.text.convert.Sprint;
 import tango.net.SocketConduit;
 import tango.io.model.IConduit;
 import tango.core.Thread;
-import mango.http.server.HttpBridge;
-
+import sendero.server.HttpBridge;
+import mango.net.http.server.HttpProvider;
 import sendero.util.WorkQueue;
 
 
@@ -18,11 +18,11 @@ template safecall(char[] handler)
 }
 
 alias WorkQueue!(SocketConduit) SocketQueue;
-typedef bool delegate(SocketConduit*) Handler;
+typedef bool delegate(SocketConduit) Handler;
 
 class HttpThread : Thread 
 {
-	HttpBridge bridge;
+	//HttpBridge bridge;
 	SocketQueue wqueue;
 	Logger logger;
 	Sprint!(char) sprint;
@@ -32,7 +32,7 @@ class HttpThread : Thread
 		sprint = new Sprint!(char);
 		wqueue = wq;
 		logger = Log.getLogger("HttpThread");
-		bridge = new HttpBridge (provider, this);
+		//bridge = new HttpBridge (provider, this);
 		super(&run);
 	}
 
@@ -46,7 +46,7 @@ class HttpThread : Thread
 			//WorkQueue is built for threaded access and will block on empty
 			//so this thread simply needs to request a task and will block(sleep)
 			//until one becomes available
-			SocketConduit* sock = wqueue.popFront();
+			SocketConduit sock = wqueue.popFront();
 			logger.info(sprint("popped task size - {}", wqueue.size()));
 			try
 			{
@@ -59,29 +59,19 @@ class HttpThread : Thread
 		}
 	}
 
-	void task_handler(SocketConduit* cond)
+	void task_handler(SocketConduit cond)
 	{
-		char buffer[1024];
-		int rec = 0;
-    int ttl = 0;
+		//bridge.cross(*cond);
+	  char[] buf = new char[1024];
+		int rec;
 
-		mixin(safecall!("before_request_read"));
-		rec = cond.read(buffer);
-		while (rec != IConduit.Eof)
-		{
-			ttl += rec;
-			rec = cond.read(buffer);
-		}
-		mixin(safecall!("after_request_read"));
+		logger.info(sprint("cond -> {}", cond));
+		
+		rec = cond.read(buf);
 
-		mixin(safecall!("before_response_write"));
-
-		if (ttl > 0)
-		{
-			logger.info(sprint("{} bytes received", ttl));
-			logger.info(buffer[0 .. ttl]);
-			bridge.cross(cond);
-		}
+		logger.info(sprint("received {} bytes", rec));
+		logger.info(buf[0 .. rec]);
+		
 		mixin(safecall!("after_response_write"));
 	}
 
@@ -102,6 +92,7 @@ class HttpThread : Thread
 	{
 		after_response_write = h;
 	}
+
 	static void set_provider(HttpProvider p)
 	{
 		provider = p;

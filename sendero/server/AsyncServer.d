@@ -4,7 +4,7 @@
  * Authors:   Rick Richardson
  */
 
-module sendero.util.AsyncServer;
+module sendero.server.AsyncServer;
 
 import tango.io.selector.EpollSelector;
 import tango.sys.linux.epoll;
@@ -131,7 +131,7 @@ class AsyncServer(THREAD)
 	void handle_read_event(ISelectable conduit)
 	{
 		SocketConduit cond = cast(SocketConduit) conduit;
-		pool.add_task(&cond);
+		pool.add_task(cond);
 	}
 
 	void handle_write_event(ISelectable conduit)
@@ -140,18 +140,13 @@ class AsyncServer(THREAD)
 		// socket is idle
 	}
 
-	void register_req_handler(RequestHandler handler)
-	{
-		reqhandler = handler;
-	}
-
-  bool rereg_socket(SocketConduit* sock)
+  bool rereg_socket(SocketConduit sock)
 	{
 		//once we've emptied the socket, we
 		// re-add the event notification
 		selMutex.lock();
 		scope(exit) selMutex.unlock();
-		selector.reregister(*sock, cast(Event)EvtOneReadEt);
+		selector.reregister(sock, cast(Event)EvtOneReadEt);
 		return true;
 	}
 
@@ -162,23 +157,3 @@ class Token
 	bool opCall() {return true;}
 }
 
-version (TestMain)
-{
-	void main()
-	{
-		void handler(SocketConduit cond)
-		{
-			char buffer[1024];
-			int rec;
-
-			rec = cond.read(buffer);
-			assert(rec != IConduit.Eof);
-			Stdout.formatln("Received {} bytes", rec);
-			Stdout.formatln(buffer);
-		}
-
-		srv = new AsyncServer();
-		srv.register_read_handler(&handler);
-    srv.run();
-	}
-}

@@ -29,15 +29,17 @@ class WorkQueue(T)
 		frontmtx = new Mutex;
 		backmtx = new Mutex;
 		emptycond = new Condition(frontmtx);
-		logger = Log.getLogger("sendero.util.WorkQueue");
+		logger = Log.getLogger("WorkQueue");
 	}
 
 	//TODO refactor this, has to be a cleaner way
-	void pushBack(T* obj)
+	void pushBack(T obj)
 	{
-		backmtx.lock();
 		bool wasempty = false;
 		WorkNode* n = new WorkNode;
+		
+		backmtx.lock();
+
 		switch (_size.load())
 		{
 			case 0:
@@ -58,7 +60,7 @@ class WorkQueue(T)
 		n.data = obj;
 		n.next = null;
 		_size.increment();
-    logger.info(sprint("blah {}", _size.load()));
+    logger.info(sprint("obj -> {}", obj));
 		if (wasempty)
 		{
 			frontmtx.unlock();
@@ -68,7 +70,7 @@ class WorkQueue(T)
 		backmtx.unlock();
 	}
 
-  T* popFront()
+  T popFront()
 	{
 		logger.info("top of popFront");
 		frontmtx.lock();
@@ -76,19 +78,25 @@ class WorkQueue(T)
 		{
 			emptycond.wait();
 		}
+
 		if (_size.load() > 1)
 		  front.next.prev = null;
+
 		_size.decrement();
+
 		logger.info(sprint("_size is now {}", _size.load()));
+		
 		WorkNode* n = front;
 	  front = front.next;
 		frontmtx.unlock();
+		
 		logger.info(sprint("Thread ID {}", Thread.getThis().name()));
 		logger.info("done with popFront");
+		
 		return n.data;
 	}
 
-	T* tryPopFront()
+	T tryPopFront()
 	{
 		if (_size.load() == 0)
 		{
@@ -128,7 +136,7 @@ class WorkQueue(T)
 	{
 		WorkNode* next;
 		WorkNode* prev;
-		T* data;
+		T data;
 	}
 }
 

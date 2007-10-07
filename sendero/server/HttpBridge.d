@@ -1,60 +1,33 @@
 /*******************************************************************************
 
-        @file HttpBridge.d
+        copyright:      Copyright (c) 2004 Kris Bell. All rights reserved
+
+        license:        BSD style: $(LICENSE)
+
+        version:        Initial release: April 2004      
         
-        Copyright (c) 2004 Kris Bell
-        
-        This software is provided 'as-is', without any express or implied
-        warranty. In no event will the authors be held liable for damages
-        of any kind arising from the use of this software.
-        
-        Permission is hereby granted to anyone to use this software for any 
-        purpose, including commercial applications, and to alter it and/or 
-        redistribute it freely, subject to the following restrictions:
-        
-        1. The origin of this software must not be misrepresented; you must 
-           not claim that you wrote the original software. If you use this 
-           software in a product, an acknowledgment within documentation of 
-           said product would be appreciated but is not required.
-
-        2. Altered source versions must be plainly marked as such, and must 
-           not be misrepresented as being the original software.
-
-        3. This notice may not be removed or altered from any distribution
-           of the source.
-
-        4. Derivative works are permitted, but they must carry this notice
-           in full and credit the original source.
-
-
-                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-        @version        Initial version, April 2004      
-        @author         Kris
-
+        author:         Kris
 
 *******************************************************************************/
 
-module mango.http.server.HttpBridge;
+module sendero.server.HttpBridge;
 
-private import  mango.io.Socket;
+private import  tango.net.Socket;
 
-private import  mango.io.model.IConduit;
+private import  tango.io.model.IConduit;
 
-private import  mango.utils.model.IServer;
+private import  tango.core.Thread;
 
-private import  mango.http.server.HttpThread,
-                mango.http.server.HttpServer,
-                mango.http.server.HttpRequest,
-                mango.http.server.HttpResponse;
+private import  mango.net.util.model.IServer;
 
-private import  mango.http.server.model.IProvider,
-                mango.http.server.model.IProviderBridge;
+private import  mango.net.http.server.HttpRequest,
+                mango.net.http.server.HttpResponse,
+                mango.net.http.server.ServiceBridge,
+                mango.net.http.server.ServiceProvider;
 
 /******************************************************************************
 
-        Bridges between an IProvider and an IServer, and contains a set of
+        Bridges between an ServiceProvider and an IServer, and contains a set of
         data specific to each thread. There is only one instance of server
         and provider, but multiple live instances of HttpBridge (one per 
         server-thread).
@@ -64,12 +37,11 @@ private import  mango.http.server.model.IProvider,
 
 ******************************************************************************/
 
-class HttpBridge : IProviderBridge
+class HttpBridge : ServiceBridge
 {
-        private IServer         server;
-        private IProvider       provider;
+        private ServiceProvider provider;
 
-        private HttpThread      thread;
+        private Thread      thread;
         private HttpRequest     request;
         private HttpResponse    response;
         
@@ -81,14 +53,13 @@ class HttpBridge : IProviderBridge
 
         **********************************************************************/
 
-        this (IServer server, IProvider provider, HttpThread thread)
+        this (ServiceProvider provider, Thread thread)
         {
                 this.thread = thread;
-                this.server = server;
                 this.provider = provider;
 
-                request = provider.createRequest(this);
-                response = provider.createResponse(this);
+                request = provider.createRequest (this);
+                response = provider.createResponse (this);
         }
 
         /**********************************************************************
@@ -99,23 +70,12 @@ class HttpBridge : IProviderBridge
 
         IServer getServer()
         {
-                return server;
+					return null;
         }
 
         /**********************************************************************
 
-                Return the provider from the other side of the bridge
-
-        **********************************************************************/
-
-        IProvider getProvider()
-        {
-                return provider;
-        }
-
-        /**********************************************************************
-
-                Bridge the divide between IServer and IProvider instances.
+                Bridge the divide between IServer and ServiceProvider instances.
                 Note that there is one instance of this class per thread.
 
                 Note also that this is probably the right place to implement 
@@ -130,20 +90,15 @@ class HttpBridge : IProviderBridge
                 request.setConduit (conduit);
                 response.setConduit (conduit);
 
-                try {
-                    // reset the (probably overridden) input and output
-                    request.reset();
-                    response.reset();
+                // reset the (probably overridden) input and output
+                request.reset();
+                response.reset();
 
-                    // first, extract HTTP headers from input
-                    request.readHeaders ();
+                // first, extract HTTP headers from input
+                request.readHeaders ();
 
-                    // pass request off to the provider. It is the provider's 
-                    // responsibility to flush the output!
-                    provider.service (request, response);
-                    } finally {
-                              // close and destroy this conduit (socket)
-                              conduit.close();
-                              }
+                // pass request off to the provider. It is the provider's 
+                // responsibility to flush the output!
+                provider.service (request, response);
         }
 }
