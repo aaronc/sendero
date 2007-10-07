@@ -24,7 +24,6 @@ import tango.text.convert.Sprint;
 import tango.core.sync.Mutex;
 
 import sendero.util.ThreadPool;
-import sendero.util.HttpThread;
 
 const char BIND_ADDR[] = "127.0.0.1";
 
@@ -36,14 +35,14 @@ const uint EvtPersistReadEt = EPOLLIN;
 }
 
 typedef char[] delegate(char[], int, int*) RequestHandler;
-//typedef ThreadPool!(HttpThread, SocketConduit) SrvThreadPool;
 
-class AsyncServer
+class AsyncServer(THREAD)
 {
+  alias ThreadPool!(THREAD, SocketConduit) SrvThreadPool; 
 	private
 	ServerSocket listener;
 	EpollSelector selector;
-	ThreadPool!(HttpThread, SocketConduit) pool;
+	SrvThreadPool pool;
 	Logger logger;
 	Sprint!(char) sprint;
   Mutex selMutex;
@@ -57,9 +56,9 @@ class AsyncServer
 		sprint = new Sprint!(char);
 	  logger = Log.getLogger("AsyncServer");
 		selector = new EpollSelector();
-		pool = new ThreadPool!(HttpThread, SocketConduit)(20);
+		pool = new SrvThreadPool(20);
 		selMutex = new Mutex;
-		HttpThread.register_after_response_write(&rereg_socket);
+		THREAD.register_after_response_write(&rereg_socket);
 	}
 
 	void run()

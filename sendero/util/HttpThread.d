@@ -6,7 +6,10 @@ import tango.text.convert.Sprint;
 import tango.net.SocketConduit;
 import tango.io.model.IConduit;
 import tango.core.Thread;
+import mango.http.server.HttpBridge;
+
 import sendero.util.WorkQueue;
+
 
 template safecall(char[] handler)
 {
@@ -19,6 +22,7 @@ typedef bool delegate(SocketConduit*) Handler;
 
 class HttpThread : Thread 
 {
+	HttpBridge bridge;
 	SocketQueue wqueue;
 	Logger logger;
 	Sprint!(char) sprint;
@@ -28,6 +32,7 @@ class HttpThread : Thread
 		sprint = new Sprint!(char);
 		wqueue = wq;
 		logger = Log.getLogger("HttpThread");
+		bridge = new HttpBridge (provider, this);
 		super(&run);
 	}
 
@@ -75,7 +80,7 @@ class HttpThread : Thread
 		{
 			logger.info(sprint("{} bytes received", ttl));
 			logger.info(buffer[0 .. ttl]);
-			//cond.write(reqhandler(buffer[0 .. ttl], ttl, &rec));
+			bridge.cross(cond);
 		}
 		mixin(safecall!("after_response_write"));
 	}
@@ -97,10 +102,15 @@ class HttpThread : Thread
 	{
 		after_response_write = h;
 	}
+	static void set_provider(HttpProvider p)
+	{
+		provider = p;
+	}
 	private
 	static Handler before_request_read;
 	static Handler after_request_read;
 	static Handler before_response_write;
   static Handler after_response_write;
+  static HttpProvider provider;
 }
 
