@@ -22,7 +22,7 @@ typedef bool delegate(SocketConduit) Handler;
 
 class HttpThread : Thread 
 {
-	//HttpBridge bridge;
+	HttpBridge bridge;
 	SocketQueue wqueue;
 	Logger logger;
 	Sprint!(char) sprint;
@@ -32,7 +32,7 @@ class HttpThread : Thread
 		sprint = new Sprint!(char);
 		wqueue = wq;
 		logger = Log.getLogger("HttpThread");
-		//bridge = new HttpBridge (provider, this);
+		bridge = new HttpBridge (provider, this);
 		super(&run);
 	}
 
@@ -61,7 +61,8 @@ class HttpThread : Thread
 
 	void task_handler(SocketConduit cond)
 	{
-		//bridge.cross(*cond);
+		bridge.cross(cond);
+		/*
 	  char[] buf = new char[1024];
 		int rec;
 
@@ -71,7 +72,7 @@ class HttpThread : Thread
 
 		logger.info(sprint("received {} bytes", rec));
 		logger.info(buf[0 .. rec]);
-		
+		*/
 		mixin(safecall!("after_response_write"));
 	}
 
