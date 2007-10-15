@@ -17,11 +17,12 @@ enum XmlTemplateActionType { If, For, Def, Content };
  * Elements/Attributes:
  * d:if test, d:if
  * d:for each, d:for
+ * 
+ * TODO:
  * d:choose, d:when, d:otherwise (elem or attr)
  * d:def function, d:def
  * d:plaintext or d:texttemplate or d:text (root element for text template)
  * 
- * TODO: d:match
  */
 
 /*
@@ -428,23 +429,27 @@ class XmlTemplate
 version(Unittest)
 {
 	import tango.io.Stdout;
+	//import tango.text.locale.Convert, tango.text.locale.Core;
 	
 	static class Name
 	{
+		uint somenumber;
 		char[] first;
 		char[] last;
+		DateTime date;
 	}
 }
 
 unittest
 {
 	char[] templ = "<div><h1 d:if=\"$heading\" /><ul><li d:for=\"$x in $items\">{$x}</li></ul>"
-		"<ul><li d:for=\"$n in $names\">{$n.first} {$n.last}</li></ul>"
+		"<ul><li d:for=\"$n in $names\">{$n.first} {$n.last}, {$n.somenumber}, {$n.date, datetime, long}</li></ul>"
 		"</div>";
 	
 	auto ctempl = XmlTemplate.compile(templ);
 	
 	auto ctxt = new ExecutionContext;
+	//ctxt.locale = ULocale.Italian;
 	
 	char[][] items;
 	items ~= "hello";
@@ -458,13 +463,30 @@ unittest
 	auto n = new Name;
 	n.first = "John";
 	n.last = "Doe";
+	n.somenumber = 1234567;
+	n.date = DateTime(1976, 3, 17);
 	names ~= n;
 	n = new Name;
 	n.first = "Jackie";
 	n.last = "Smith";
+	n.somenumber = 7654321;
+	n.date = DateTime(1942, 10, 14);
 	names ~= n;
 	
 	ctxt.addVar("names", names);
 	
 	Stdout(ctempl.render(ctxt)).newline;
+	
+	/*DateTime now = DateTime.now;
+	char[] res;
+	res.length = 100;
+	Stdout(formatDateTime(res, now, "D",Culture.getCulture("es-ES"))).newline;
+	auto culture = Culture.getCulture("es-ES");
+	Stdout(formatDateTime(res, now, "EEEE d 'de' MMMM 'de' yyyy",culture)).newline;
+	Stdout(formatDateTime(res, now, "d 'de' MMMM 'de' yyyy",culture)).newline;
+	Stdout(formatDateTime(res, now, "dd/MM/yyyy",culture)).newline;
+	Stdout(formatDateTime(res, now, "hh:mm:ss a v",culture)).newline;
+	Stdout(formatDateTime(res, now, "yyQQQQ",culture)).newline;
+	Stdout(formatDateTime(res, now, "HH:mm:ss z",culture)).newline;	
+	Stdout(formatDateTime(res, now, "hh 'o''clock' a, zzzz",culture)).newline;*/	
 }

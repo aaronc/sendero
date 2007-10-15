@@ -1,14 +1,18 @@
 module sendero.util.LocalText;
 
 import sendero.util.ExecutionContext;
+import sendero.util.StringCharIterator;
+
+public import mango.icu.ULocale;
 
 import mango.icu.UMessageFormat;
 import mango.icu.UCalendar;
 import mango.icu.UString;
 import mango.icu.UNumberFormat;
-import sendero.util.StringCharIterator;
-import Integer = tango.text.convert.Integer;
+import mango.icu.UDateFormat;
 
+import Integer = tango.text.convert.Integer;
+import Utf = tango.text.convert.Utf;
 import tango.core.Traits;
 
 const ubyte FORMAT_TIME = 0;
@@ -19,7 +23,7 @@ const ubyte FORMAT_SPELLOUT = 4;
 const ubyte FORMAT_ORDINAL = 5;
 const ubyte FORMAT_DURATION = 6;
 const ubyte FORMAT_STRING = 7;
-//const ubyte FORMAT_UNKNOWN = 8;
+const ubyte FORMAT_DATETIME = 8;
 
 const ubyte DATE_STYLE_SHORT = 0;
 const ubyte DATE_STYLE_MEDIUM = 1;
@@ -68,6 +72,7 @@ package class Message : IMessage
 			
 			auto var = ctxt.getVar(p.varPath);
 			auto lcl = ctxt.locale;
+			auto tz = ctxt.timezone;
 			
 			switch(var.type)
 			{
@@ -119,15 +124,22 @@ package class Message : IMessage
 				auto x = var.data.get!(char[]);
 				o ~= x;
 				break;
-			/*case(VarT.DateTime):
-				var.data = *cast(bool*)ptr;
+			case(VarT.DateTime):
+				auto x = var.data.get!(DateTime);
+				o ~= renderDateTime(x, p, lcl, tz);
 				break;
 			case(VarT.Date):
-				var.data = *cast(bool*)ptr;
+				auto x = var.data.get!(Date);
+				auto dt = DateTime(x.year, x.month, x.day);
+				dt.addHours(x.hour);
+				dt.addMinutes(x.min);
+				dt.addSeconds(x.sec);
+				o ~= renderDateTime(dt, p, lcl, tz);
 				break;
 			case(VarT.Time):
-				var.data = *cast(bool*)ptr;
-				break;*/
+				auto x = var.data.get!(Time);
+				o ~= renderDateTime(DateTime(x), p, lcl, tz);
+				break;
 			default:
 				break;
 			}
@@ -138,7 +150,7 @@ package class Message : IMessage
 		return o;
 	}
 	
-	static char[] renderLong(long x, Param p, ULocale lcl = ULocale.US)
+	static char[] renderLong(long x, inout Param p, ULocale lcl = ULocale.US)
 	{
 		UNumberFormat fmt;
 		
@@ -148,7 +160,7 @@ package class Message : IMessage
 			fmt = new USpelloutFormat(lcl);
 			break;
 		case FORMAT_ORDINAL:
-		//	fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
+			fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
 			break;
 		case FORMAT_DURATION:
 			fmt = new UDurationFormat(lcl);
@@ -177,7 +189,7 @@ package class Message : IMessage
 		return dst.toUtf8;
 	}
 	
-	static char[] renderDouble(double x, Param p, ULocale lcl = ULocale.US)
+	static char[] renderDouble(double x, inout Param p, ULocale lcl = ULocale.US)
 	{
 		UNumberFormat fmt;
 		
@@ -190,6 +202,88 @@ package class Message : IMessage
 		
 		auto dst = new UString(100);
 		fmt.format(dst, x);
+		return dst.toUtf8;
+	}
+	
+	static char[] renderDateTime(inout DateTime dt, inout Param p, ULocale lcl = ULocale.US, UTimeZone tz = UTimeZone.Default)
+	{
+		UDateFormat udf;
+		switch(p.elementFormat)
+		{
+		case FORMAT_DATE:
+			switch(p.secondaryFormat)
+			{
+			case DATE_STYLE_SHORT:
+				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Short, lcl, tz);
+				break;
+			case DATE_STYLE_LONG:
+				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Long, lcl, tz);
+				break;
+			case DATE_STYLE_FULL:
+				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Full, lcl, tz);
+				break;
+			case DATE_STYLE_CUSTOM:
+				auto pat = new UString(Utf.toUtf16(p.formatString));
+				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Default, lcl, tz, pat);
+				break;
+			case DATE_STYLE_MEDIUM:
+			default:
+				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Medium, lcl, tz);
+				break;
+			}
+			break;
+			
+		case FORMAT_TIME:
+			switch(p.secondaryFormat)
+			{
+			case DATE_STYLE_SHORT:
+				udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.None, lcl, tz);
+				break;
+			case DATE_STYLE_LONG:
+				udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.None, lcl, tz);
+				break;
+			case DATE_STYLE_FULL:
+				udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.None, lcl, tz);
+				break;
+			case DATE_STYLE_CUSTOM:
+				auto pat = new UString(Utf.toUtf16(p.formatString));
+				udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.None, lcl, tz, pat);
+				break;
+			case DATE_STYLE_MEDIUM:
+			default:
+				udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.None, lcl, tz);
+				break;
+			}
+			break;
+		
+		case FORMAT_DATETIME:
+		default:
+			switch(p.secondaryFormat)
+			{
+			case DATE_STYLE_SHORT:
+				udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.Short, lcl, tz);
+				break;
+			case DATE_STYLE_LONG:
+				udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.Long, lcl, tz);
+				break;
+			case DATE_STYLE_FULL:
+				udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.Full, lcl, tz);
+				break;
+			case DATE_STYLE_CUSTOM:
+				auto pat = new UString(Utf.toUtf16(p.formatString));
+				udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.Default, lcl, tz, pat);
+				break;
+			case DATE_STYLE_MEDIUM:
+			default:
+				udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.Medium, lcl, tz);
+				break;
+			}
+			break;
+		}
+		
+		auto dst = new UString(100);
+		UCalendar.UDate udat = cast(UCalendar.UDate)((dt.ticks - 621355788e9) / 1e4);
+		udf.format(dst, udat);
 		return dst.toUtf8;
 	}
 }
@@ -217,6 +311,7 @@ package class PluralMessage : IMessage
  * 
  *  elementFormat := "time" { "," datetimeStyle }
                       | "date" { "," datetimeStyle }
+                      | "datetime" { "," datetimeStyle }
                       | "number" { "," numberStyle }
                       | "choice" "," choiceStyle
                       | "spellout"
@@ -268,8 +363,7 @@ public Message parseMessage(char[] msg)
 			var ~= itr[0];
 			++itr;
 		}
-		//ushort idx = Integer.toInt!(char, ushort)(num);
-		//p.idx = idx;
+
 		p.varPath = VarPath(var);
 		
 		if(!itr.good)
@@ -294,19 +388,23 @@ public Message parseMessage(char[] msg)
 			else return unexpectedFormat();
 			break;
 		case 'd':
-			if(itr[0 .. 4] == "data") {
+			if(itr[0 .. 4] == "date") {
 				itr += 4;
-				p.elementFormat = FORMAT_TIME;
+				if(itr[0 .. 4] == "time") {
+					itr += 4;
+					p.elementFormat = FORMAT_DATETIME;
+				}
+				else p.elementFormat = FORMAT_DATE;
 			}
-			else if(itr[0 .. 7] == "duration") {
+			else if(itr[0 .. 8] == "duration") {
 				itr += 7;
 				p.elementFormat = FORMAT_DURATION;
 			}
 			else return unexpectedFormat();
 			break;
 		case 'n':
-			if(itr[0 .. 6] == "number") {
-				itr += 6;
+			if(itr[0 .. 5] == "number") {
+				itr += 5;
 				p.elementFormat = FORMAT_NUMBER;
 			}
 			else return unexpectedFormat();
@@ -371,21 +469,21 @@ public Message parseMessage(char[] msg)
 			case 'm':
 				if(itr[0 .. 6] == "medium") {
 					itr += 6;
-					p.elementFormat = DATE_STYLE_MEDIUM;
+					p.secondaryFormat = DATE_STYLE_MEDIUM;
 				}
 				else return unexpectedFormat();
 				break;
 			case 'l':
 				if(itr[0 .. 4] == "long") {
 					itr += 4;
-					p.elementFormat = DATE_STYLE_LONG;
+					p.secondaryFormat = DATE_STYLE_LONG;
 				}
 				else return unexpectedFormat();
 				break;
 			case 'f':
 				if(itr[0 .. 4] == "full") {
 					itr += 4;
-					p.elementFormat = DATE_STYLE_FULL;
+					p.secondaryFormat = DATE_STYLE_FULL;
 				}
 				else return unexpectedFormat();
 				break;
@@ -401,21 +499,21 @@ public Message parseMessage(char[] msg)
 			case 'c':
 				if(itr[0 .. 8] == "currency") {
 					itr += 8;
-					p.elementFormat = NUMBER_STYLE_CURRENCY;
+					p.secondaryFormat = NUMBER_STYLE_CURRENCY;
 				}
 				else return unexpectedFormat();
 				break;
 			case 'p':
 				if(itr[0 .. 7] == "percent") {
 					itr += 7;
-					p.elementFormat = NUMBER_STYLE_PERCENT;
+					p.secondaryFormat = NUMBER_STYLE_PERCENT;
 				}
 				else return unexpectedFormat();
 				break;
 			case 'i':
 				if(itr[0 .. 7] == "integer") {
 					itr += 7;
-					p.elementFormat = NUMBER_STYLE_INTEGER;
+					p.secondaryFormat = NUMBER_STYLE_INTEGER;
 				}
 				else return unexpectedFormat();
 				break;
@@ -432,6 +530,8 @@ public Message parseMessage(char[] msg)
 			if(itr[0] == ' ') ++itr;
 			switch(p.elementFormat) {
 			case FORMAT_DATE:
+			case FORMAT_TIME:
+			case FORMAT_DATETIME:
 				return parseDateStyle();
 			case FORMAT_NUMBER:
 				return parseNumberStyle();
@@ -478,11 +578,6 @@ public Message parseMessage(char[] msg)
 	return m;
 }
 
-class LocalText
-{
-	
-}
-
 version(Unittest)
 {
 	import tango.io.Stdout;
@@ -497,10 +592,10 @@ unittest
 	assert(m.params[0].varPath[0] == "word", m.params[0].varPath[0]);
 	assert(m.params[1].elementFormat == FORMAT_SPELLOUT);
 	assert(m.params[1].varPath[0] == "num", m.params[0].varPath[0]);
-	
+
 	auto ctxt = new ExecutionContext;
 	int x = 1;
 	ctxt.addVar("num", x);
 	ctxt.addVar("word", "beautiful");
-	Stdout(m.exec(ctxt)).newline;
+	assert(m.exec(ctxt) == "{Hello beautiful world, the only one}!");
 }

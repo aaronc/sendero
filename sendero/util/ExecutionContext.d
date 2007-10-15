@@ -140,15 +140,15 @@ VarT getVarT(X)()
 	else static if(isDynamicArrayType!(X)) {
 		return VarT.Array;
 	}
-	else static if(is(T == DateTime))
+	else static if(is(X == DateTime))
 	{
 		return VarT.DateTime;
 	}
-	else static if(is(T == Date))
+	else static if(is(X == Date))
 	{
 		return VarT.Date;
 	}
-	else static if(is(T == Time))
+	else static if(is(X == Time))
 	{
 		return VarT.Time;
 	}
@@ -314,11 +314,6 @@ struct VarPath
 		uint i = 0;
 		while(i < varPath.length) {
 			uint j = locate(varPath, '.', i);
-			/*if(j == varPath.length) {
-				v.path ~= varPath[i .. $];
-				return v;
-			}
-			else v.path ~= varPath[i .. j]*/
 			v.path ~= varPath[i .. j];
 			i = j + 1;
 		}
