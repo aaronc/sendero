@@ -303,7 +303,67 @@ struct VariableBinding
 
 interface IFunctionBinding
 {
-	VariableBinding exec(VariableBinding[] params);
+	VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt);
+}
+
+enum FuncParamT : ubyte { Var, String };
+
+struct FunctionParam
+{
+	FuncParamT type;
+	union
+	{
+		VarPath var;
+		VariableBinding str;
+	}
+}
+
+enum ExpressionT : ubyte { Var, Value, FuncCall };
+
+struct Expression
+{
+	ExpressionT type;
+	union
+	{
+		VarPath var;
+		VariableBinding val;
+		FunctionCall func;
+	}
+	
+	VariableBinding exec(ExecutionContext ctxt)
+	{
+		switch(type)
+		{
+		case ExpressionT.Var:
+			return ctxt.getVar(var);
+		case ExpressionT.Value:
+			return val;
+		case ExpressionT.FuncCall:
+			return func.exec(ctxt);
+		default:
+			return VariableBinding();
+		}
+	}
+}
+
+struct FunctionCall
+{
+	IFunctionBinding func;
+	Expression[] params;
+	
+	VariableBinding exec(ExecutionContext ctxt)
+	{
+		VariableBinding[] funcParams;
+		
+		auto n = params.length;
+		funcParams.length = n;
+			
+		for(size_t i = 0; i < n; ++i)
+		{
+			funcParams[i] = params[i].exec(ctxt);
+		}
+		return func.exec(funcParams, ctxt);
+	}
 }
 
 struct VarPath
@@ -330,16 +390,79 @@ struct VarPath
 	char[][] path;
 }
 
-class ExecutionContext
+class FunctionBindingContext
 {
-	VariableBinding[char[]] vars;
+	static this()
+	{
+		global = new FunctionBindingContext;
+		global.parent = null;
+	}
+	static FunctionBindingContext global;
+	
 	IFunctionBinding[char[]] fns;
-	ULocale locale;
-	UTimeZone timezone;
+	private FunctionBindingContext parent;
+	FunctionBindingContext[] imports;
 	
 	this()
 	{
-		locale = ULocale.US;
+		this.parent = global;
+	}
+	
+	this(FunctionBindingContext parent)
+	{
+		this.parent = parent;
+	}
+	
+	void addFunction(char[] name, IFunctionBinding func)
+	{
+		fns[name] = func;
+	}
+	
+	IFunctionBinding getFunction(char[] name)
+	{
+		auto pFn = (name in fns);
+		if(pFn) return *pFn;
+	
+		auto fn = parent.getFunction(name);
+		if(fn) return fn;
+		
+		foreach(i; imports)
+		{
+			fn = i.getFunction(name);
+			if(fn) return fn;
+		}
+		
+		return null;
+	}
+}
+
+
+class ExecutionContext
+{
+	static this()
+	{
+		global = new ExecutionContext;
+		global.parent = null;
+	}
+	static ExecutionContext global;
+	
+	VariableBinding[char[]] vars;
+	//IFunctionBinding[char[]] fns;
+	ULocale locale;
+	UTimeZone timezone;
+	
+	private ExecutionContext parent;
+	
+	this(ULocale locale = ULocale.US)
+	{
+		this.locale = locale;
+		this.parent = global;
+	}
+	
+	this(ExecutionContext parent, ULocale locale = ULocale.US)
+	{
+		this.locale = locale;
+		this.parent = parent;
 	}
 	
 	void addVar(T)(char[] name, T t)
@@ -381,7 +504,10 @@ class ExecutionContext
 	VariableBinding getVar(char[] var)
 	{
 		auto pVar = (var in vars);
-		if(!pVar) return VariableBinding();
+		if(!pVar) {
+			if(parent) return parent.getVar(var);
+			return VariableBinding();
+		}
 		return *pVar;
 	}
 	
@@ -391,7 +517,10 @@ class ExecutionContext
 		
 		
 		auto pVar = (varPath.path[0] in vars);
-		if(!pVar) return VariableBinding();
+		if(!pVar) {
+			if(parent) return parent.getVar(varPath);
+			return VariableBinding();
+		}
 		VariableBinding var = *pVar;
 		
 		uint n = 1;

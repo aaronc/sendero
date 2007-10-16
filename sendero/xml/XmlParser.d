@@ -1696,7 +1696,7 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 	
 	final bool nextAttribute()
 	{
-		if(parser.type == XmlNodeType.Element || parser.type == XmlNodeType.Attribute)
+		if(curType == XmlNodeType.Element || curType == XmlNodeType.Attribute)
 		{
 			if(parser.next) {
 				if(parser.type == XmlTokenType.AttrName || parser.type == XmlTokenType.AttrNSName) {
@@ -2055,6 +2055,10 @@ void testParser(Ch)(IXmlTokenIterator!(Ch, uint) itr)
 	assert(itr.next);
 	assert(itr.value == "3three");
 	assert(itr.next);
+	assert(itr.value == "a");
+	assert(itr.next);
+	assert(itr.value == "x");
+	assert(itr.next);
 	assert(itr.value == "sdlgjsh");
 	assert(itr.next);
 	assert(itr.value == "el3");
@@ -2078,7 +2082,7 @@ void doTests(Ch)()
 {
 	Ch[] t = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element "
 		"attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = "
-		"'3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
+		"'3three' a=\"x\"><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
 	
 	auto text = new StringCharIterator!(Ch)(t);
 	auto itr = new XmlParser!(Ch)(text);
@@ -2098,6 +2102,9 @@ void doTests(Ch)()
 	assert(fitr.nextAttribute);
 	assert(fitr.nodeName == "attr3");
 	assert(fitr.nodeValue == "3three");
+	assert(fitr.nextAttribute);
+	assert(fitr.nodeName == "a");
+	assert(fitr.nodeValue == "x");
 	assert(fitr.nextNode(2));
 	assert(fitr.type == XmlNodeType.CData);
 	assert(fitr.nodeValue == "sdlgjsh");

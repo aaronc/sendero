@@ -13,6 +13,7 @@ import mango.icu.UDateFormat;
 
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
+import Text = tango.text.Util;
 import tango.core.Traits;
 
 const ubyte FORMAT_TIME = 0;
@@ -37,13 +38,13 @@ const ubyte NUMBER_STYLE_INTEGER = 2;
 const ubyte NUMBER_STYLE_SCIENTIFIC = 3;
 const ubyte NUMBER_STYLE_CUSTOM = 4;
 
-
+enum ParamT : ubyte { Var, Func };
 
 package class Param
 {
 	ushort offset;
 	ushort index;
-	VarPath varPath;
+	Expression expr;
 	ubyte elementFormat;
 	ubyte secondaryFormat;
 	char[] formatString;
@@ -66,13 +67,14 @@ package class Message : IMessage
 		uint idx = 0;
 		char[] o;
 		foreach(p; params)
-		{
+		{			
 			o ~= msg[idx .. p.offset];
 			idx = p.offset;
-			
-			auto var = ctxt.getVar(p.varPath);
+		
 			auto lcl = ctxt.locale;
 			auto tz = ctxt.timezone;
+			
+			auto var = p.expr.exec(ctxt);
 			
 			switch(var.type)
 			{
@@ -340,7 +342,60 @@ class MessageParserException : Exception
 	}
 } 
 
-public Message parseMessage(char[] msg)
+public void parseExpression(char[] msg, inout Expression expr, FunctionBindingContext ctxt)
+{
+	scope itr = new StringCharIterator!(char)(msg);
+	if(itr[0] == '$') {
+		//throw new MessageParserException("Expected $ before variable name"); //TODO throw exception here?
+		++itr;
+		char[] var;
+		while(itr.good && itr[0] != ',' && itr[0] != '}')
+		{
+			var ~= itr[0];
+			++itr;
+		}
+		expr.var = VarPath(var);
+		expr.type = ExpressionT.Var;
+	}
+	else {	
+		void parseFuncParams(char[] str)
+		{
+			auto params = Text.split(str, ",");
+			foreach(x; params)
+			{
+				Expression fParam;
+				if(x[0] == '$')
+				{
+					fParam.type = ExpressionT.Var;
+					fParam.var = VarPath(x[1 .. $]);
+				}
+				else
+				{
+					fParam.type = ExpressionT.Value;
+					fParam.val.data = x;
+					fParam.val.type = VarT.String;
+				}
+				expr.func.params ~= fParam;
+			}
+		}
+		
+		uint i = itr.location;
+		if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name");
+		uint j = itr.location;
+		char[] name = itr.randomAccessSlice(i, j);
+		auto fn = ctxt.getFunction(name);
+		if(!fn)  new MessageParserException("Unable to find definition of function " ~ name); 
+		expr.func.func = fn;
+		i = j + 1;
+		if(!itr.forwardLocate(')')) throw new MessageParserException("Expected ) after function params");
+		j = itr.location;
+		parseFuncParams(itr.randomAccessSlice(i, j));
+		++itr;
+		expr.type = ExpressionT.FuncCall;
+	}
+}
+
+public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 {
 	auto itr = new StringCharIterator!(char)(msg);
 	
@@ -351,20 +406,16 @@ public Message parseMessage(char[] msg)
 			return null;
 		}
 		
-		auto p = new Param;
-		
+		auto p = new Param;		
 		p.offset = offset;
 		
-		char[] var;
-		if(itr[0] != '$') throw new MessageParserException("Expected $ before variable name"); //TODO throw exception here?
-		++itr;
-		while(itr.good && itr[0] != ',' && itr[0] != '}')
-		{
-			var ~= itr[0];
-			++itr;
-		}
-
-		p.varPath = VarPath(var);
+		uint i = itr.location;
+		if(!itr.forwardLocate('}')) throw new MessageParserException("Expected \'}\' at end of expression");
+		uint j = itr.location;
+		char[] exprTxt = itr.randomAccessSlice(i, j);		
+		j = Text.locate(exprTxt, ':');
+		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
+		itr.seek(i + j);	
 		
 		if(!itr.good)
 			return null;
@@ -554,7 +605,7 @@ public Message parseMessage(char[] msg)
 	{
 		switch(itr[0])
 		{
-		case '{':
+/*		case '{':
 			if(itr[1] == '{') {
 				itr += 2;
 				res ~= '{';
@@ -563,6 +614,22 @@ public Message parseMessage(char[] msg)
 				++itr;
 				auto p = parseParam(res.length);
 				params ~= p;
+			}*/
+		case '_':
+			if(itr[1] == '{') {
+				if(itr[2] == '{') {
+					itr += 3;
+					res ~= "_{";
+				}
+				else {
+					itr += 2;
+					auto p = parseParam(res.length);
+					params ~= p;
+				}
+			}
+			else {
+				res ~= '$';
+				++itr;
 			}
 			break;
 		default:
@@ -585,17 +652,19 @@ version(Unittest)
 
 unittest
 {
-	auto m = parseMessage("{{Hello {$word} world, the only {$num, spellout}}!");
-	assert(m.msg == "{Hello  world, the only }!");
+	auto funcCtxt = new FunctionBindingContext;
+	auto m = parseMessage("Hello _{$word} world, the only _{$num: spellout}!", funcCtxt);
+	assert(m.msg == "Hello  world, the only !");
 	assert(m.params.length == 2);
 	assert(m.params[0].elementFormat == FORMAT_STRING);
-	assert(m.params[0].varPath[0] == "word", m.params[0].varPath[0]);
+	assert(m.params[0].expr.var[0] == "word", m.params[0].expr.var[0]);
 	assert(m.params[1].elementFormat == FORMAT_SPELLOUT);
-	assert(m.params[1].varPath[0] == "num", m.params[0].varPath[0]);
+	assert(m.params[1].expr.var[0] == "num", m.params[1].expr.var[0]);
 
 	auto ctxt = new ExecutionContext;
 	int x = 1;
 	ctxt.addVar("num", x);
 	ctxt.addVar("word", "beautiful");
-	assert(m.exec(ctxt) == "{Hello beautiful world, the only one}!");
+	auto res = m.exec(ctxt);
+	assert(res == "Hello beautiful world, the only one!", res);
 }

@@ -9,22 +9,28 @@ import sendero.util.collection.ThreadSafeQueue;
 
 import tango.core.Atomic;
 
+interface IConnectionPool(ConnectionT)
+{
+	ConnectionT getConnection();
+	void releaseConnection(ConnectionT conn);
+}
+
 /**
  * Class for thread safe connection pooling with variable cache size.  Uses 
  * ThreadSafeQueue class for its implementation. 
  */
-class ConnectionPool(ConnectionT, ProviderT)
+class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 {
-	private static Atomic!(uint) maxCacheSize;
-	private static ThreadSafeQueue!(ConnectionT) queue;
-	private static ConnectionT[ConnectionT] activeConnections;
+	private Atomic!(uint) maxCacheSize;
+	private ThreadSafeQueue!(ConnectionT) queue;
+	private ConnectionT[ConnectionT] activeConnections;
 	
-	static this()
+	this()
 	{
 		queue = new ThreadSafeQueue!(ConnectionT);
 	}
 	
-	static ConnectionT getConnection()
+	ConnectionT getConnection()
 	{
 		auto conn = queue.dequeue;
 		if(conn)
@@ -32,18 +38,18 @@ class ConnectionPool(ConnectionT, ProviderT)
 		
 		conn = ProviderT.createNewConnection;
 		synchronized
-    {
+		{
 			activeConnections[conn] = conn;
-    }
+		}
 		return conn;
 	}
 	
-	static void releaseConnection(ConnectionT conn)
+	void releaseConnection(ConnectionT conn)
 	{
 		synchronized
-    {
+		{
 			activeConnections.remove(conn);
-    }
+		}
 		
 		if(queue.length >= maxCacheSize.load!(msync.seq))
 			return;
@@ -51,17 +57,17 @@ class ConnectionPool(ConnectionT, ProviderT)
 		queue.enqueue(conn);
 	}
 	
-	static uint getMaxCacheSize()
+	uint getMaxCacheSize()
 	{
 		return maxCacheSize.load!(msync.seq);
 	}
 	
-	static void setMaxCacheSize(uint size)
+	void setMaxCacheSize(uint size)
 	{
 		maxCacheSize.store!(msync.seq)(size);
 	}
 	
-	static uint cacheSize()
+	uint cacheSize()
 	{
 		return queue.length;
 	}
@@ -89,13 +95,13 @@ unittest
 {
 	auto appender = new FileAppender("ConnectionPool_test.log");
 	Log.getRootLogger.addAppender(appender);
-	alias ConnectionPool!(SqliteDB, SqliteTestProvider) Pool;
 	
 	static class TestThread : Thread
 	{
-		this()
+		this(ConnectionPool!(SqliteDB, SqliteTestProvider) pool)
 		{
-			this.db = Pool.getConnection;
+			this.pool = pool;
+			this.db = pool.getConnection;
 			super(&run);
 		}
 		~this()
@@ -106,17 +112,19 @@ unittest
 		bool res = false;
 		bool res2 = false;
 		SqliteDB db;
+		ConnectionPool!(SqliteDB, SqliteTestProvider) pool;
 		
 		private void run()
 		{
 			if(db) res = true;
 			if(db.tableExists("A")) res2 = true;
-			Pool.releaseConnection(db);
+			pool.releaseConnection(db);
 		}
 	}
 	
+	auto pool = new ConnectionPool!(SqliteDB, SqliteTestProvider);
 	const uint maxCache = 100;
-	Pool.setMaxCacheSize(maxCache);
+	pool.setMaxCacheSize(maxCache);
 	
 	auto group = new ThreadGroup;
 	const uint n = 100;
@@ -125,7 +133,7 @@ unittest
 	TestThread[n] threads;
 	for(uint i = 0; i < n; ++i)
 	{
-		threads[i] = new TestThread;
+		threads[i] = new TestThread(pool);
 		group.add(threads[i]);
 		threads[i].start;
 	}
@@ -144,17 +152,17 @@ unittest
 	}
 	
 	//	Asserts that the maxCacheSize was properly set
-	assert(Pool.getMaxCacheSize == maxCache);
+	assert(pool.getMaxCacheSize == maxCache);
 	
 	//	Asserts that some connections were cached
-	assert(Pool.cacheSize > 0);
+	assert(pool.cacheSize > 0);
 	//Stdout(Integer.toUtf8(Pool.cacheSize) ~ " connections cached").newline;
 	//Stdout(Integer.toUtf8(Pool.activeConnections.length) ~ " connections still active").newline;
 	
 	//Ensures that every connection that was cached was unique
 	SqliteDB[SqliteDB] cacheMap;
 	while(1) {
-		auto x = Pool.queue.dequeue;
+		auto x = pool.queue.dequeue;
 		if(!x)
 			break;
 		auto p = (x in cacheMap);
