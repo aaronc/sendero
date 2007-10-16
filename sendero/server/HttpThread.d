@@ -7,7 +7,7 @@ import tango.net.SocketConduit;
 import tango.io.model.IConduit;
 import tango.core.Thread;
 import sendero.server.HttpBridge;
-import mango.net.http.server.HttpProvider;
+import sendero.util.http.HttpProvider;
 import sendero.util.WorkQueue;
 
 

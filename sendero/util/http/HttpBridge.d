@@ -10,17 +10,16 @@
 
 *******************************************************************************/
 
-module sendero.server.HttpBridge;
+module sendero.util.http.HttpBridge;
 
 private import  tango.net.Socket;
 
 private import  tango.io.model.IConduit;
 
-private import  tango.core.Thread;
-
 private import  mango.net.util.model.IServer;
 
-private import  sendero.util.http.HttpRequest,
+private import  sendero.util.http.HttpThread,
+                sendero.util.http.HttpRequest,
                 sendero.util.http.HttpResponse,
                 sendero.util.http.ServiceBridge,
                 sendero.util.http.ServiceProvider;
@@ -39,9 +38,10 @@ private import  sendero.util.http.HttpRequest,
 
 class HttpBridge : ServiceBridge
 {
+        private IServer         server;
         private ServiceProvider provider;
 
-        private Thread      thread;
+        private HttpThread      thread;
         private HttpRequest     request;
         private HttpResponse    response;
         
@@ -53,8 +53,9 @@ class HttpBridge : ServiceBridge
 
         **********************************************************************/
 
-        this (ServiceProvider provider, Thread thread)
+        this (IServer server, ServiceProvider provider, HttpThread thread)
         {
+                this.server = server;
                 this.thread = thread;
                 this.provider = provider;
 
@@ -70,7 +71,7 @@ class HttpBridge : ServiceBridge
 
         IServer getServer()
         {
-					return null;
+                return server;
         }
 
         /**********************************************************************
@@ -89,6 +90,10 @@ class HttpBridge : ServiceBridge
                 // bind our input & output instance to this conduit
                 request.setConduit (conduit);
                 response.setConduit (conduit);
+
+                // close and destroy this conduit (socket)
+                scope (exit)
+                       conduit.detach;
 
                 // reset the (probably overridden) input and output
                 request.reset();
