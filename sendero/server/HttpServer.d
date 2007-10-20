@@ -16,6 +16,7 @@ import tango.io.Stdout;
 import tango.io.Console;
 import tango.core.Exception;
 import tango.net.Socket;
+import sendero.util.http.HttpProvider;
 import sendero.server.AsyncServer;
 import sendero.server.HttpThread;
 import sendero.server.SenderoProvider;
@@ -26,8 +27,8 @@ Logger logger;
 	{
 		auto sprint = new Sprint!(char);
 
-		auto provider = new SenderoProvider;
-		HttpThread.set_provider(provider); 
+		auto pfact = new SenderoProviderFactory;
+		HttpThread.set_providerfactory(pfact); 
 		auto srv = new AsyncServer!(HttpThread);
     srv.run();
 	}

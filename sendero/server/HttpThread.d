@@ -6,9 +6,11 @@ import tango.text.convert.Sprint;
 import tango.net.SocketConduit;
 import tango.io.model.IConduit;
 import tango.core.Thread;
+import tango.core.Exception;
 import sendero.server.HttpBridge;
 import sendero.util.http.HttpProvider;
 import sendero.util.WorkQueue;
+
 
 
 template safecall(char[] handler)
@@ -32,7 +34,7 @@ class HttpThread : Thread
 		sprint = new Sprint!(char);
 		wqueue = wq;
 		logger = Log.getLogger("HttpThread");
-		bridge = new HttpBridge (provider, this);
+		bridge = new HttpBridge (pfactory.get(), this);
 		super(&run);
 	}
 
@@ -40,7 +42,7 @@ class HttpThread : Thread
 	void run() 
 	{
 		auto sprint = new Sprint!(char);
-		logger.info("Starting thread");
+		//logger.info("Starting thread");
 		while(true)
 		{
 			//WorkQueue is built for threaded access and will block on empty
@@ -52,9 +54,13 @@ class HttpThread : Thread
 			{
 				task_handler(sock);
 			}
-			catch(Exception e)
+			catch(IOException e)
 			{
-				logger.error("Exception: " ~ e.toUtf8);
+				logger.error("IOException: " ~ e.toUtf8);
+			}
+			catch(TracedException te)
+			{
+				logger.error("Traced Exception: " ~ te.toUtf8);
 			}
 		}
 	}
@@ -62,17 +68,7 @@ class HttpThread : Thread
 	void task_handler(SocketConduit cond)
 	{
 		bridge.cross(cond);
-		/*
-	  char[] buf = new char[1024];
-		int rec;
 
-		logger.info(sprint("cond -> {}", cond));
-		
-		rec = cond.read(buf);
-
-		logger.info(sprint("received {} bytes", rec));
-		logger.info(buf[0 .. rec]);
-		*/
 		mixin(safecall!("after_response_write"));
 	}
 
@@ -94,15 +90,15 @@ class HttpThread : Thread
 		after_response_write = h;
 	}
 
-	static void set_provider(HttpProvider p)
+	static void set_providerfactory(ProviderFactory p)
 	{
-		provider = p;
+		pfactory = p;
 	}
 	private
 	static Handler before_request_read;
 	static Handler after_request_read;
 	static Handler before_response_write;
   static Handler after_response_write;
-  static HttpProvider provider;
+  static ProviderFactory pfactory;
 }
 

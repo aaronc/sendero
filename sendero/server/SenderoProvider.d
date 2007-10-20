@@ -13,6 +13,9 @@ import tango.net.http.HttpConst;
 import tango.io.protocol.Writer;
 import tango.io.Buffer;
 import tango.io.Stdout;
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 
 private static const int ResponseBufferSize = 20 * 1024;
 
@@ -20,9 +23,10 @@ private static const int ResponseBufferSize = 20 * 1024;
 class SenderoProvider : HttpProvider
 {
 	Buffer outbuf;
-	Writer respond;
+	Logger logger;
 	this()
 	{
+		logger = Log.getLogger("SenderoProvider");
 		outbuf = new Buffer(ResponseBufferSize);
 	}
 
@@ -37,8 +41,18 @@ class SenderoProvider : HttpProvider
 		response.setContentLength(outbuf.limit());
 		auto buf = response.getOutputBuffer();
 		buf(outbuf.slice());
+		logger.info("flushing output buffer");
 		response.flush();
     outbuf.clear();
 		//response.sendError(HttpResponses.NotFound);
+	}
+
+}
+
+class SenderoProviderFactory : ProviderFactory
+{
+	HttpProvider get()
+	{
+		return new SenderoProvider();
 	}
 }

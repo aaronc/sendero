@@ -13,6 +13,8 @@ module sendero.util.ThreadPool;
 
 public import sendero.util.WorkQueue;
 import tango.core.Exception;
+import tango.core.Thread;
+import tango.core.Memory;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
@@ -36,12 +38,14 @@ class ThreadPool(THREAD, OBJ)
 		workers = new THREAD[nthreads];
 
 		int i = 0;
+		GC.disable();
 		foreach (wk; workers)
 		{
 			wk = new THREAD(wqueue);
 			wk.name(Integer.toUtf8(++i));
 			wk.start();
 		}
+		GC.enable();
 	}
 
 	public void add_task(OBJ obj)
@@ -51,6 +55,7 @@ class ThreadPool(THREAD, OBJ)
 		logger.info(sprint("added task size - {}", wqueue.size()));
 	}
 
+	//this is unessesary sirce the tango.Thread class joins by default
 	public void wait()
 	{
 		foreach(wk; workers)

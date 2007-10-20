@@ -22,6 +22,7 @@ import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import tango.core.sync.Mutex;
+import tango.core.Exception;
 
 import sendero.util.ThreadPool;
 
@@ -33,7 +34,10 @@ const uint EvtOneReadEt = EPOLLIN | EPOLLET | EPOLLONESHOT;
 const uint EvtOneWriteEt = EPOLLOUT | EPOLLET | EPOLLONESHOT;
 const uint EvtPersistReadEt = EPOLLIN;
 }
+version (bsd)
+{
 
+}
 typedef char[] delegate(char[], int, int*) RequestHandler;
 
 class AsyncServer(THREAD)
@@ -115,22 +119,35 @@ class AsyncServer(THREAD)
 				  (cast(SocketConduit)key.conduit()).close();
 				}
 			}
+			//iterate through all empty sockets set here by the handler threads
+			//and place them back in the ready state
+			foreach(SocketConduit sock; reRegSockList)
+			{
+				selector.register(sock, cast(Event)EvtOneReadEt);
+			}
 		}
 	}
 
 	void handle_connection(ISelectable conduit)
 	{
-		ServerSocket server = cast(ServerSocket) conduit;
-		SocketConduit cond = server.accept();
-		cond.socket().blocking(false);  //not sure if we want this
-		
-		//it would probably be best to go blocking with a really short timeout
-    selector.register(cond, cast(Event)EvtOneReadEt);
+		try 
+		{
+			ServerSocket server = cast(ServerSocket) conduit;
+			SocketConduit cond = server.accept();
+			//cond.socket().blocking(false);  //not sure if we want this
+			logger.info(sprint("Adding socket to selector"));
+    	selector.register(cond, cast(Event)EvtOneReadEt);
+		}
+		catch(tango.core.Exception.SocketAcceptException e)
+		{
+			logger.info(sprint("Exception in accepting socket {}", e));
+		}
 	}
 
 	void handle_read_event(ISelectable conduit)
 	{
 		SocketConduit cond = cast(SocketConduit) conduit;
+		logger.info(sprint("adding task from read event {}", cond.fileHandle()));
 		pool.add_task(cond);
 	}
 
@@ -146,7 +163,7 @@ class AsyncServer(THREAD)
 		// re-add the event notification
 		selMutex.lock();
 		scope(exit) selMutex.unlock();
-		selector.reregister(sock, cast(Event)EvtOneReadEt);
+		reRegSocketList.pushBack(sock);
 		return true;
 	}
 

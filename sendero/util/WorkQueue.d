@@ -72,7 +72,7 @@ class WorkQueue(T)
 
   T popFront()
 	{
-		logger.info("top of popFront");
+		//logger.info("top of popFront");
 		frontmtx.lock();
 		while(_size.load() < 1)
 		{
@@ -87,6 +87,7 @@ class WorkQueue(T)
 		logger.info(sprint("_size is now {}", _size.load()));
 		
 		WorkNode* n = front;
+		logger.info(sprint("front = {0}, front.next = {1}",front, front.next)); 
 	  front = front.next;
 		frontmtx.unlock();
 		

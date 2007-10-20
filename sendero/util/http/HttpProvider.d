@@ -73,3 +73,7 @@ class HttpProvider : ServiceProvider
         }
 }
 
+interface ProviderFactory
+{
+	HttpProvider get();
+}

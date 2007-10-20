@@ -38,7 +38,7 @@ private import  Integer = tango.text.convert.Integer;
 
 private static const int ParamsBufferSize = 1 * 1024;
 private static const int HeaderBufferSize = 4 * 1024;
-
+private static const char HttpVersion[] = "HTTP/1.1";
 /******************************************************************************
 
         Define an http response to a user-agent (client). Note that all
@@ -232,7 +232,7 @@ class HttpResponse : HttpMessage
 				void setContentLength(int len)
 				{
 					char tmp[16] = void;
-					getHeader().add(HttpHeader.ContentLength, Integer.itoa(tmp, len)); 
+					getHeader().add(HttpHeader.ContentLength, " " ~ Integer.itoa(tmp, len)); 
 				}
         /**********************************************************************
 
@@ -301,7 +301,7 @@ class HttpResponse : HttpMessage
                    HttpHeaders  headers = getHeader;
 
                    // write the response header
-                   emit (HttpHeader.Version.value)
+                   emit (HttpVersion)
                         (" ")
                         (Integer.itoa (tmp, status.code))
                         (" ")
@@ -321,7 +321,7 @@ class HttpResponse : HttpMessage
                    version (ShowHeaders)
                            {
                            Stdout.formatln (">>>> output headers");
-                           Stdout.formatln (HttpHeader.Version.value);
+                           Stdout.formatln (HttpVersion);
                            Stdout.formatln (" {} ",status.code);
                            Stdout.formatln (status.name);
                            super.write(new Writer(Stdout.stream));
