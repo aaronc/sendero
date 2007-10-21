@@ -10,21 +10,23 @@
 
 *******************************************************************************/
 
-module sendero.util.http.HttpBridge;
+module sendero.server.HttpBridge;
 
 private import  tango.net.Socket;
 
 private import  tango.io.model.IConduit;
-
+private import  tango.net.SocketConduit;
 private import  mango.net.util.model.IServer;
 
-private import  sendero.util.http.HttpThread,
-                sendero.util.http.HttpRequest,
+private import  sendero.server.HttpThread;
+
+private import  sendero.util.http.HttpRequest,
                 sendero.util.http.HttpResponse,
 								sendero.util.http.HttpProvider,
                 sendero.util.http.ServiceBridge,
                 sendero.util.http.ServiceProvider;
 
+import tango.core.Thread;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
@@ -72,7 +74,7 @@ class HttpBridge : ServiceBridge
 								logger = Log.getLogger("HttpBridge");
 				}
 
-
+				IServer getServer() { return null;}
         /**********************************************************************
 
                 Bridge the divide between IServer and ServiceProvider instances.
@@ -88,7 +90,7 @@ class HttpBridge : ServiceBridge
         {
                 // bind our input & output instance to this conduit
 								logger.info(sprint("Thread: {0} crossing conduit {1}",
-														Thread.getThis().name(), conduit.getFileHandle()));
+														Thread.getThis().name(), (cast(SocketConduit)conduit).fileHandle()));
 
                 request.setConduit (conduit);
                 response.setConduit (conduit);

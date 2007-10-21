@@ -19,23 +19,26 @@ import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import Integer = tango.text.convert.Integer;
-
+import tango.stdc.posix.signal;
+import tango.stdc.posix.pthread;
 
 class ThreadPool(THREAD, OBJ)
 {
   private WorkQueue!(OBJ) wqueue;
 	private THREAD[] workers;
 	private int num_workers;
-  bool running;
 	private Logger logger;
-	
+	private static Thread main_thread;
 	this(int nthreads)
 	{ 
 		logger = Log.getLogger("Threadpool");
-		running = true;
 		num_workers = nthreads;
 		wqueue = new WorkQueue!(OBJ);
 		workers = new THREAD[nthreads];
+		
+		main_thread	= Thread.getThis();
+		//signal(SIGUSR1, &pausethreads);   not needed
+		//signal(SIGUSR2, &resumethreads);  
 
 		int i = 0;
 		GC.disable();
@@ -55,7 +58,7 @@ class ThreadPool(THREAD, OBJ)
 		logger.info(sprint("added task size - {}", wqueue.size()));
 	}
 
-	//this is unessesary sirce the tango.Thread class joins by default
+	//this is unessesary since the tango.Thread class joins by default
 	public void wait()
 	{
 		foreach(wk; workers)
@@ -64,9 +67,20 @@ class ThreadPool(THREAD, OBJ)
 		}
 	}
 
-	public void end()
+	extern (C) static private void pausethreads(int a)
 	{
-		running = false;
+			Logger log = Log.getLogger("Threadpool");
+			log.info("Suspending threads for GC");
 	}
 
+	extern (C) static private void resumethreads(int a)
+	{
+			Logger log = Log.getLogger("Threadpool");
+			log.info("Resuming threads");
+	}
+
+	public static bool iAmMainThread()
+	{
+		return (Thread.getThis() is ThreadPool.main_thread);
+	}
 }

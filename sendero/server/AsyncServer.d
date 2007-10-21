@@ -31,7 +31,7 @@ const char BIND_ADDR[] = "127.0.0.1";
 
 version (linux)
 {
-const uint EvtOneReadEt = EPOLLIN | EPOLLONESHOT;
+const uint EvtOneReadEt = EPOLLIN | EPOLLET | EPOLLONESHOT;
 const uint EvtOneWriteEt = EPOLLOUT | EPOLLONESHOT;
 const uint EvtPersistReadEt = EPOLLIN;
 }
@@ -55,7 +55,7 @@ class AsyncServer(THREAD)
 	uint listenerHandle;
   bool running;
  	WorkQueue!(SocketConduit) reRegSockList;
-  BitArray registry;
+  //BitArray registry;
 	public
 	this()
 	{ 
@@ -66,7 +66,7 @@ class AsyncServer(THREAD)
 		selMutex = new Mutex;
 		reRegSockList = new WorkQueue!(SocketConduit);
 		THREAD.register_after_response_write(&rereg_socket);
-		registry.length(1024); //sparse array to see if file handle is busy.
+		//registry.length(1024); //sparse array to see if file handle is busy.
 	}
 
 	void run()
@@ -93,7 +93,13 @@ class AsyncServer(THREAD)
 			{
 				foreach (SelectionKey key; selector.selectedSet())
 				{
-					if (key.isReadable())
+					if (key.isError() || key.isHangup() || key.isInvalidHandle())
+					{
+						logger.info(sprint("closing socket {}", key.conduit().fileHandle()));
+						selector.unregister(key.conduit());
+						(cast(SocketConduit)key.conduit()).close();
+					}					
+					else if (key.isReadable())
 					{
 						// new connection case
 						if (key.attachment())
@@ -105,27 +111,26 @@ class AsyncServer(THREAD)
 							handle_read_event(key.conduit());
 						}
 					}
+					//if (key.isWritable())
+					//{
+					//	logger.info("iswriteable was triggered");
+					//	handle_write_event(key.conduit());
+					//}
 
-					if (key.isWritable())
-					{
-						logger.info("iswriteable was triggered");
-						handle_write_event(key.conduit());
-					}
 
-					if (key.isError() || key.isHangup() || key.isInvalidHandle())
-					{
-						logger.info("closing socket");
-						selector.unregister(key.conduit());
-						(cast(SocketConduit)key.conduit()).close();
-					}
 				}
 			}
 			//iterate through all empty sockets set here by the handler threads
 			//and place them back in the ready state
-			foreach(SocketConduit sock; reRegSockList)
+			foreach(SocketConduit cond; reRegSockList)
 			{
-				logger.info(sprint("found socket to reregister {}", sock.fileHandle()));
-				selector.reregister(sock, cast(Event)EvtOneReadEt);
+				logger.info(sprint("found socket to reregister {}", cond.fileHandle()));
+				if (cond.isAlive())
+					selector.reregister(cond, cast(Event)EvtOneReadEt);
+				else
+				{
+					logger.info("socket unregistered");
+				}
 			}
 		}
 	}
@@ -151,6 +156,7 @@ class AsyncServer(THREAD)
 		SocketConduit cond = cast(SocketConduit) conduit;
 		logger.info(sprint("adding task from read event {}", cond.fileHandle()));
 		
+		/*
 		selMutex.lock();
 		scope(exit) selMutex.unlock();
 		if (registry.length() < cond.fileHandle()+1)
@@ -161,6 +167,8 @@ class AsyncServer(THREAD)
 			pool.add_task(cond);
 			registry[cond.fileHandle()] = true;
 		}
+		*/
+		pool.add_task(cond);
 	}
 
 	void handle_write_event(ISelectable conduit)
@@ -173,12 +181,22 @@ class AsyncServer(THREAD)
 	{
 		//once we've emptied the socket, we
 		// re-add the event notification
-		logger.info(sprint("Thread: {0} Re adding socket event {1}", 
+		if (! sock.isAlive())
+		{
+			logger.info(sprint("Thread: {0} dead socket {1}, dropping", 
 								Thread.getThis().name(), sock.fileHandle()));
-		selMutex.lock();
-		scope(exit) selMutex.unlock();
-		registry[sock.fileHandle()] = false;
-		reRegSockList.pushBack(sock);
+			//we don't re-add it to the reRegSockList because the Conduit will get recycled
+			//and instead of unregistering it, it will re-register it
+		}
+		else
+		{
+			logger.info(sprint("Thread: {0} Re adding socket event {1}", 
+									Thread.getThis().name(), sock.fileHandle()));
+			//selMutex.lock();
+			//scope(exit) selMutex.unlock();
+			//registry[sock.fileHandle()] = false;
+			reRegSockList.pushBack(sock);
+		}
 		return true;
 	}
 

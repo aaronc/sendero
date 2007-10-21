@@ -36,10 +36,12 @@ class SenderoProvider : HttpProvider
 	void service (HttpRequest request, HttpResponse response)
 	{
 
+		//synchronized
+		//{
 		outbuf("<HTML>\n<HEAD>\n<TITLE>Hello!</TITLE>\n"c)
     	 		 ("<BODY>\n<H2>This is a test</H2>\n"c)
        		 ("</BODY>\n</HTML>\n"c);
-		
+		//}
 		response.setContentType (HttpHeader.TextHtml.value);
 		response.setContentLength(outbuf.limit());
 		auto buf = response.getOutputBuffer();
@@ -56,7 +58,7 @@ class SenderoProvider : HttpProvider
 
 class SenderoProviderFactory : ProviderFactory
 {
-	HttpProvider get()
+	HttpProvider create()
 	{
 		return new SenderoProvider();
 	}
