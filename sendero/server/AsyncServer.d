@@ -16,6 +16,7 @@ import tango.io.Stdout;
 import tango.io.Console;
 import tango.net.InternetAddress;
 import tango.core.Exception;
+import tango.core.Thread;
 import tango.io.selector.EpollSelector;
 import tango.io.selector.model.ISelector;
 import tango.util.log.Log;
@@ -23,15 +24,15 @@ import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import tango.core.sync.Mutex;
 import tango.core.Exception;
-
+import tango.core.BitArray;
 import sendero.util.ThreadPool;
 
 const char BIND_ADDR[] = "127.0.0.1";
 
 version (linux)
 {
-const uint EvtOneReadEt = EPOLLIN | EPOLLET | EPOLLONESHOT;
-const uint EvtOneWriteEt = EPOLLOUT | EPOLLET | EPOLLONESHOT;
+const uint EvtOneReadEt = EPOLLIN | EPOLLONESHOT;
+const uint EvtOneWriteEt = EPOLLOUT | EPOLLONESHOT;
 const uint EvtPersistReadEt = EPOLLIN;
 }
 version (bsd)
@@ -53,7 +54,8 @@ class AsyncServer(THREAD)
 	RequestHandler reqhandler;
 	uint listenerHandle;
   bool running;
-  
+ 	WorkQueue!(SocketConduit) reRegSockList;
+  BitArray registry;
 	public
 	this()
 	{ 
@@ -62,7 +64,9 @@ class AsyncServer(THREAD)
 		selector = new EpollSelector();
 		pool = new SrvThreadPool(20);
 		selMutex = new Mutex;
+		reRegSockList = new WorkQueue!(SocketConduit);
 		THREAD.register_after_response_write(&rereg_socket);
+		registry.length(1024); //sparse array to see if file handle is busy.
 	}
 
 	void run()
@@ -71,7 +75,9 @@ class AsyncServer(THREAD)
 		listener.socket().blocking(false);
 		running = true;
 		selector.open();
-		selector.register(listener, cast(Event)EvtPersistReadEt, new Token);
+		selector.register(listener, cast(Event)EvtPersistReadEt, new Token); //token is a silly struct
+		                                                                     //that returns true
+		                                                                     //it's how identify that srv
 		event_loop();
 	  selector.close();
 	}
@@ -80,50 +86,46 @@ class AsyncServer(THREAD)
 	{
 		while (running)
 		{
-			int eventCount = selector.select();
-      
+			int eventCount = selector.select(0.3);
 			//TODO every iteration, empty a queue
 			// of file descriptors that need to be re-added as read events
-			if (eventCount < 0)
+			if (eventCount > 0)
 			{
-				//handle error
-				continue;
-			}
-
-			foreach (SelectionKey key; selector.selectedSet())
-			{
-				if (key.isReadable())
+				foreach (SelectionKey key; selector.selectedSet())
 				{
-					// new connection case
-					if (key.attachment())
+					if (key.isReadable())
 					{
-						handle_connection(key.conduit());
+						// new connection case
+						if (key.attachment())
+						{
+							handle_connection(key.conduit());
+						}
+						else
+						{
+							handle_read_event(key.conduit());
+						}
 					}
-					else
+
+					if (key.isWritable())
 					{
-						logger.info("isreadable was triggered");
-						handle_read_event(key.conduit());
+						logger.info("iswriteable was triggered");
+						handle_write_event(key.conduit());
 					}
-				}
 
-				if (key.isWritable())
-				{
-					logger.info("iswriteable was triggered");
-					handle_write_event(key.conduit());
-				}
-
-				if (key.isError() || key.isHangup() || key.isInvalidHandle())
-				{
-					logger.info("closing socket");
-					selector.unregister(key.conduit());
-				  (cast(SocketConduit)key.conduit()).close();
+					if (key.isError() || key.isHangup() || key.isInvalidHandle())
+					{
+						logger.info("closing socket");
+						selector.unregister(key.conduit());
+						(cast(SocketConduit)key.conduit()).close();
+					}
 				}
 			}
 			//iterate through all empty sockets set here by the handler threads
 			//and place them back in the ready state
 			foreach(SocketConduit sock; reRegSockList)
 			{
-				selector.register(sock, cast(Event)EvtOneReadEt);
+				logger.info(sprint("found socket to reregister {}", sock.fileHandle()));
+				selector.reregister(sock, cast(Event)EvtOneReadEt);
 			}
 		}
 	}
@@ -134,13 +136,13 @@ class AsyncServer(THREAD)
 		{
 			ServerSocket server = cast(ServerSocket) conduit;
 			SocketConduit cond = server.accept();
-			//cond.socket().blocking(false);  //not sure if we want this
-			logger.info(sprint("Adding socket to selector"));
+			cond.socket().blocking(false);  //not sure if we want this
+			logger.info(sprint("Adding socket to selector {}", cond.fileHandle()));
     	selector.register(cond, cast(Event)EvtOneReadEt);
 		}
 		catch(tango.core.Exception.SocketAcceptException e)
 		{
-			logger.info(sprint("Exception in accepting socket {}", e));
+			logger.error(sprint("Exception in accepting socket {}", e));
 		}
 	}
 
@@ -148,7 +150,17 @@ class AsyncServer(THREAD)
 	{
 		SocketConduit cond = cast(SocketConduit) conduit;
 		logger.info(sprint("adding task from read event {}", cond.fileHandle()));
-		pool.add_task(cond);
+		
+		selMutex.lock();
+		scope(exit) selMutex.unlock();
+		if (registry.length() < cond.fileHandle()+1)
+			registry.length(cond.fileHandle()+1);
+		
+		if (!registry[cond.fileHandle()])
+		{
+			pool.add_task(cond);
+			registry[cond.fileHandle()] = true;
+		}
 	}
 
 	void handle_write_event(ISelectable conduit)
@@ -161,9 +173,12 @@ class AsyncServer(THREAD)
 	{
 		//once we've emptied the socket, we
 		// re-add the event notification
+		logger.info(sprint("Thread: {0} Re adding socket event {1}", 
+								Thread.getThis().name(), sock.fileHandle()));
 		selMutex.lock();
 		scope(exit) selMutex.unlock();
-		reRegSocketList.pushBack(sock);
+		registry[sock.fileHandle()] = false;
+		reRegSockList.pushBack(sock);
 		return true;
 	}
 

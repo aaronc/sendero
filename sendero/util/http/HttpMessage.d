@@ -248,11 +248,8 @@ class HttpMessage : IWritable
         {
                 headers.write (writer);
         }
-
         /**********************************************************************
-
                 Output our headers to the provided consumer
-
         **********************************************************************/
 
         void produce (void delegate (void[]) consume, char[] eol)

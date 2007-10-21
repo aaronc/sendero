@@ -7,7 +7,7 @@ import tango.net.SocketConduit;
 import tango.io.model.IConduit;
 import tango.core.Thread;
 import tango.core.Exception;
-import sendero.server.HttpBridge;
+import sendero.util.http.HttpBridge;
 import sendero.util.http.HttpProvider;
 import sendero.util.WorkQueue;
 
@@ -49,7 +49,8 @@ class HttpThread : Thread
 			//so this thread simply needs to request a task and will block(sleep)
 			//until one becomes available
 			SocketConduit sock = wqueue.popFront();
-			logger.info(sprint("popped task size - {}", wqueue.size()));
+			logger.info(sprint("Thread: {0} popped task size - {1}",
+					 				Thread.getThis().name(), wqueue.size()));
 			try
 			{
 				task_handler(sock);
@@ -58,15 +59,22 @@ class HttpThread : Thread
 			{
 				logger.error("IOException: " ~ e.toUtf8);
 			}
-			catch(TracedException te)
+			catch(TracedException e)
 			{
-				logger.error("Traced Exception: " ~ te.toUtf8);
+				logger.error("Traced Exception: " ~ e.toUtf8);
+			}
+			catch(Exception e)
+			{
+				logger.error("Caught other exception : " ~ e.toUtf8);
 			}
 		}
 	}
 
 	void task_handler(SocketConduit cond)
 	{
+		//while(1) <-- for edge triggered: we might have received another request, should
+		//process all possible data before returning the socket because it will ignore 
+		//any data left there
 		bridge.cross(cond);
 
 		mixin(safecall!("after_response_write"));

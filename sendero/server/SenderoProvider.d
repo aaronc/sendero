@@ -16,6 +16,7 @@ import tango.io.Stdout;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
+import tango.core.Thread;
 
 private static const int ResponseBufferSize = 20 * 1024;
 
@@ -24,10 +25,12 @@ class SenderoProvider : HttpProvider
 {
 	Buffer outbuf;
 	Logger logger;
+	Sprint!(char) sprint;
 	this()
 	{
 		logger = Log.getLogger("SenderoProvider");
 		outbuf = new Buffer(ResponseBufferSize);
+		sprint = new Sprint!(char);
 	}
 
 	void service (HttpRequest request, HttpResponse response)
@@ -40,6 +43,8 @@ class SenderoProvider : HttpProvider
 		response.setContentType (HttpHeader.TextHtml.value);
 		response.setContentLength(outbuf.limit());
 		auto buf = response.getOutputBuffer();
+		logger.info(sprint("Thread: {0}, buf: 0x{1:x}, outbuf: 0x{2:x}",
+								Thread.getThis().name(),cast(uint)&buf,cast(uint)&outbuf));
 		buf(outbuf.slice());
 		logger.info("flushing output buffer");
 		response.flush();

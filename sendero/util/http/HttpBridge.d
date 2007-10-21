@@ -21,8 +21,13 @@ private import  mango.net.util.model.IServer;
 private import  sendero.util.http.HttpThread,
                 sendero.util.http.HttpRequest,
                 sendero.util.http.HttpResponse,
+								sendero.util.http.HttpProvider,
                 sendero.util.http.ServiceBridge,
                 sendero.util.http.ServiceProvider;
+
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 
 /******************************************************************************
 
@@ -38,13 +43,15 @@ private import  sendero.util.http.HttpThread,
 
 class HttpBridge : ServiceBridge
 {
-        private IServer         server;
         private ServiceProvider provider;
-
+			
         private HttpThread      thread;
         private HttpRequest     request;
         private HttpResponse    response;
-        
+      
+				private Logger          logger;
+				private Sprint!(char)   sprint;
+	
         /**********************************************************************
 
                 Construct a bridge with the requisite attributes. We create
@@ -53,26 +60,18 @@ class HttpBridge : ServiceBridge
 
         **********************************************************************/
 
-        this (IServer server, ServiceProvider provider, HttpThread thread)
+        this (HttpProvider provider, HttpThread thread)
         {
-                this.server = server;
                 this.thread = thread;
                 this.provider = provider;
 
                 request = provider.createRequest (this);
                 response = provider.createResponse (this);
-        }
+					
+								sprint = new Sprint!(char);
+								logger = Log.getLogger("HttpBridge");
+				}
 
-        /**********************************************************************
-
-                Return the server from one side of this bridge
-
-        **********************************************************************/
-
-        IServer getServer()
-        {
-                return server;
-        }
 
         /**********************************************************************
 
@@ -88,6 +87,9 @@ class HttpBridge : ServiceBridge
         void cross (IConduit conduit)
         {
                 // bind our input & output instance to this conduit
+								logger.info(sprint("Thread: {0} crossing conduit {1}",
+														Thread.getThis().name(), conduit.getFileHandle()));
+
                 request.setConduit (conduit);
                 response.setConduit (conduit);
 

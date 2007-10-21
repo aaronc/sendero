@@ -20,103 +20,97 @@ import tango.core.Atomic;
 import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
+import tango.io.Stdout;
+import tango.core.Thread;
 
 class WorkQueue(T)
 {
 	this()
 	{
 		sprint = new Sprint!(char);
-		frontmtx = new Mutex;
-		backmtx = new Mutex;
-		emptycond = new Condition(frontmtx);
+		lock = new Mutex;
+		emptycond = new Condition(lock);
 		logger = Log.getLogger("WorkQueue");
+		_size.store(cast(uint)0);
+		root = new WorkNode;
+		root.next = root;
+		root.prev = root;
 	}
 
-	//TODO refactor this, has to be a cleaner way
 	void pushBack(T obj)
 	{
-		bool wasempty = false;
 		WorkNode* n = new WorkNode;
-		
-		backmtx.lock();
+	  n.data = obj;
 
-		switch (_size.load())
-		{
-			case 0:
-				frontmtx.lock();
-				n.prev = null;
-				back = n;
-				front = n;
-				wasempty = true;
-				break;
-			case 1:
-				front.next = n;
-				front.next.prev = front;
-			default:
-        back.next = n;
-				n.prev = back;
-				back = n;
-		}	
-		n.data = obj;
-		n.next = null;
+		lock.lock();
+
 		_size.increment();
-    logger.info(sprint("obj -> {}", obj));
-		if (wasempty)
-		{
-			frontmtx.unlock();
-		}
+		n.prev = root.prev;
+		n.next = root;
+		root.prev.next = n;
+		root.prev = n;
 
+		lock.unlock();
 		emptycond.notify();
-		backmtx.unlock();
 	}
 
   T popFront()
 	{
-		//logger.info("top of popFront");
-		frontmtx.lock();
+		lock.lock();
 		while(_size.load() < 1)
 		{
 			emptycond.wait();
 		}
-
-		if (_size.load() > 1)
-		  front.next.prev = null;
+		logger.info(sprint("Thread: {} done waiting on size", Thread.getThis().name()));
 
 		_size.decrement();
 
-		logger.info(sprint("_size is now {}", _size.load()));
-		
-		WorkNode* n = front;
-		logger.info(sprint("front = {0}, front.next = {1}",front, front.next)); 
-	  front = front.next;
-		frontmtx.unlock();
-		
-		logger.info(sprint("Thread ID {}", Thread.getThis().name()));
-		logger.info("done with popFront");
-		
+		WorkNode *n = root.next;
+		root.next = n.next;
+		root.next.prev = root;
+		lock.unlock();
 		return n.data;
 	}
 
 	T tryPopFront()
 	{
-		if (_size.load() == 0)
+		lock.lock();
+		scope(exit) lock.unlock();
+		if (_size.load() < 1)
 		{
-			logger.info("queue empty, returning null");
-			return null;
+			return cast(T)(null);
 		}
-		frontmtx.lock();
-		if (_size.load() > 1)
-		  front.next.prev = null;
 		_size.decrement();
-		WorkNode* n = front;
-	  front = front.next;
-		frontmtx.unlock();
-		
-		logger.info("CHECKING NULL");
-		if (n.data is null)
-			logger.info("tryPopFront task is null");
-		
+		WorkNode *n = root.next;
+		root.next = n.next;
+		root.next.prev = root;
+
 		return n.data;
+	}
+
+	//this is a course lock, but it serves the purposes of
+	//the server better, the foreach is used by the selector
+	//to re-assign sockets and events
+	int opApply(int delegate(inout T) dg)
+	{
+		if (_size.load() < 1)
+			return 0;
+
+		lock.lock();
+		scope(exit) lock.unlock();
+		int rc;
+		int max = _size.load();
+		for(int i = 0; i < max; ++i)
+		{
+			_size.decrement();
+			WorkNode *n = root.next;
+			root.next = n.next;
+			root.next.prev = root;
+			rc = dg(n.data);
+			//if (rc)
+			//	break;
+		}
+		return rc;
 	}
 
 	uint size()
@@ -124,12 +118,10 @@ class WorkQueue(T)
 		return _size.load();
 	}
 
-	private WorkNode* front;
-	private WorkNode* back;
+	private WorkNode* root;
   private Sprint!(char) sprint;
 	private Atomic!(uint) _size;
-	private Mutex frontmtx;	
-	private Mutex backmtx;
+	private Mutex lock;	
 	private Condition emptycond;
   Logger logger;
 
@@ -141,4 +133,44 @@ class WorkQueue(T)
 	}
 }
 
+version(unit)
+{
+	void main()
+	{
+		auto wq = new WorkQueue!(int);
+		wq.pushBack(1);
+		wq.pushBack(2);
+		Stdout.formatln("size = {}", wq.size());
+		wq.pushBack(3);
+		wq.pushBack(4);
+		Stdout.formatln("size {}", wq.size());
+		Stdout.formatln("1- {}", wq.popFront());
+		Stdout.formatln("1- {}", wq.popFront());
+		Stdout.formatln("size = {}", wq.size());
+		Stdout.formatln("1- {}",wq.popFront());
+		Stdout.formatln("1- {}",wq.popFront());
+		Stdout.formatln("1- {}",wq.tryPopFront());
+		Stdout.formatln("We should not be here");
 
+		wq.pushBack(1);
+		wq.pushBack(2);
+		wq.pushBack(3);
+		wq.pushBack(4);
+		wq.pushBack(5);
+		wq.pushBack(6);
+		wq.pushBack(7);
+		Stdout.formatln("size = {}", wq.size());
+		foreach(i; wq)
+		{
+			Stdout.formatln("forloop - {}", i);
+		}
+		foreach(i; wq)
+		{
+			Stdout.formatln("forloop2 - {}", i);
+		}
+		foreach(i; wq)
+		{
+			Stdout.formatln("forloop3 - {}", i);
+		}
+	}
+}
