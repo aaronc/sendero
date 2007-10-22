@@ -22,7 +22,7 @@ enum XmlTemplateActionType { If, For, Def, List, Include };
  * d:list each sep
  * d:def function, d:def
  * 
- * xi:include
+ * xi:include href
  * 
  * TODO:
  * d:choose, d:when, d:otherwise (elem or attr)

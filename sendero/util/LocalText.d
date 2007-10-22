@@ -16,6 +16,36 @@ import Utf = tango.text.convert.Utf;
 import Text = tango.text.Util;
 import tango.core.Traits;
 
+/*
+ * {$varName}
+ * {$varName: elementFormat}
+ * {functionName(parameters)}
+ * {functionName(parameters): elementFormat}
+ * 
+ *  elementFormat := "time" { "," datetimeStyle }
+                      | "date" { "," datetimeStyle }
+                      | "datetime" { "," datetimeStyle }
+                      | "number" { "," numberStyle }
+                      | "choice" "," choiceStyle
+                      | "spellout"
+                      | "ordinal"
+                      | "duration"
+
+       datetimeStyle := "short"
+                      | "medium"
+                      | "long"
+                      | "full"
+                      | dateFormatPattern
+
+       numberStyle :=   "currency"
+                      | "percent"
+                      | "integer"
+                      | numberFormatPattern
+
+       choiceStyle :=   choiceFormatPattern
+ */
+
+
 const ubyte FORMAT_TIME = 0;
 const ubyte FORMAT_DATE= 1;
 const ubyte FORMAT_NUMBER = 2;
@@ -305,34 +335,6 @@ package class PluralMessage : IMessage
 		return null;
 	}
 }
-
-
-/*
- * {$varName}
- * {$varName, elementFormat}
- * 
- *  elementFormat := "time" { "," datetimeStyle }
-                      | "date" { "," datetimeStyle }
-                      | "datetime" { "," datetimeStyle }
-                      | "number" { "," numberStyle }
-                      | "choice" "," choiceStyle
-                      | "spellout"
-                      | "ordinal"
-                      | "duration"
-
-       datetimeStyle := "short"
-                      | "medium"
-                      | "long"
-                      | "full"
-                      | dateFormatPattern
-
-       numberStyle :=   "currency"
-                      | "percent"
-                      | "integer"
-                      | numberFormatPattern
-
-       choiceStyle :=   choiceFormatPattern
- */
 
 class MessageParserException : Exception
 {
