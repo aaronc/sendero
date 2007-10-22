@@ -3,13 +3,22 @@ module sendero.util.LocalText;
 import sendero.util.ExecutionContext;
 import sendero.util.StringCharIterator;
 
-public import mango.icu.ULocale;
-
-import mango.icu.UMessageFormat;
-import mango.icu.UCalendar;
-import mango.icu.UString;
-import mango.icu.UNumberFormat;
-import mango.icu.UDateFormat;
+version(ICU) {
+	public import mango.icu.ULocale;
+	import mango.icu.UMessageFormat;
+	import mango.icu.UCalendar;
+	import mango.icu.UString;
+	import mango.icu.UNumberFormat;
+	import mango.icu.UDateFormat;
+	alias ULocale Locale;
+	alias UTimeZone Timezone;
+}
+else {
+	import Float = tango.text.convert.Float;
+	import tango.text.locale.Convert;
+	alias char[] Locale;
+	alias char[] Timezone;
+}
 
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
@@ -182,141 +191,226 @@ package class Message : IMessage
 		return o;
 	}
 	
-	static char[] renderLong(long x, inout Param p, ULocale lcl = ULocale.US)
+	static char[] renderLong(long x, inout Param p, Locale lcl)
 	{
-		UNumberFormat fmt;
-		
-		switch(p.elementFormat)
-		{
-		case FORMAT_SPELLOUT:
-			fmt = new USpelloutFormat(lcl);
-			break;
-		case FORMAT_ORDINAL:
-			fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
-			break;
-		case FORMAT_DURATION:
-			fmt = new UDurationFormat(lcl);
-			break;
-		case FORMAT_NUMBER:
-			switch(p.secondaryFormat)
+		version(ICU) {
+			UNumberFormat fmt;
+			
+			switch(p.elementFormat)
 			{
-			case NUMBER_STYLE_PERCENT:
-				fmt = new UPercentFormat(lcl);
+			case FORMAT_SPELLOUT:
+				fmt = new USpelloutFormat(lcl);
 				break;
-			case NUMBER_STYLE_SCIENTIFIC:
-				fmt = new UScientificFormat(lcl);
+			case FORMAT_ORDINAL:
+				fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
 				break;
-			case NUMBER_STYLE_INTEGER:
+			case FORMAT_DURATION:
+				fmt = new UDurationFormat(lcl);
+				break;
+			case FORMAT_NUMBER:
+				switch(p.secondaryFormat)
+				{
+				case NUMBER_STYLE_PERCENT:
+					fmt = new UPercentFormat(lcl);
+					break;
+				case NUMBER_STYLE_SCIENTIFIC:
+					fmt = new UScientificFormat(lcl);
+					break;
+				case NUMBER_STYLE_INTEGER:
+					fmt = new UDecimalFormat(lcl);
+					break;
+				}
+				break;
+			default:
 				fmt = new UDecimalFormat(lcl);
 				break;
 			}
-			break;
-		default:
-			fmt = new UDecimalFormat(lcl);
-			break;
-		}
-		
-		auto dst = new UString(100);
-		fmt.format(dst, x);
-		return dst.toUtf8;
-	}
-	
-	static char[] renderDouble(double x, inout Param p, ULocale lcl = ULocale.US)
-	{
-		UNumberFormat fmt;
-		
-		if(p.secondaryFormat == NUMBER_STYLE_SCIENTIFIC) {
-			fmt = new UScientificFormat(lcl);
+			
+			auto dst = new UString(100);
+			fmt.format(dst, x);
+			return dst.toUtf8;
 		}
 		else {
-			fmt = new UDecimalFormat(lcl);
+			return Integer.toUtf8(x);
 		}
-		
-		auto dst = new UString(100);
-		fmt.format(dst, x);
-		return dst.toUtf8;
 	}
 	
-	static char[] renderDateTime(inout DateTime dt, inout Param p, ULocale lcl = ULocale.US, UTimeZone tz = UTimeZone.Default)
+	static char[] renderDouble(double x, inout Param p, Locale lcl)
 	{
-		UDateFormat udf;
-		switch(p.elementFormat)
-		{
-		case FORMAT_DATE:
-			switch(p.secondaryFormat)
-			{
-			case DATE_STYLE_SHORT:
-				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Short, lcl, tz);
-				break;
-			case DATE_STYLE_LONG:
-				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Long, lcl, tz);
-				break;
-			case DATE_STYLE_FULL:
-				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Full, lcl, tz);
-				break;
-			case DATE_STYLE_CUSTOM:
-				auto pat = new UString(Utf.toUtf16(p.formatString));
-				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Default, lcl, tz, pat);
-				break;
-			case DATE_STYLE_MEDIUM:
-			default:
-				udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Medium, lcl, tz);
-				break;
-			}
-			break;
+		version(ICU) {
+			UNumberFormat fmt;
 			
-		case FORMAT_TIME:
-			switch(p.secondaryFormat)
-			{
-			case DATE_STYLE_SHORT:
-				udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.None, lcl, tz);
-				break;
-			case DATE_STYLE_LONG:
-				udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.None, lcl, tz);
-				break;
-			case DATE_STYLE_FULL:
-				udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.None, lcl, tz);
-				break;
-			case DATE_STYLE_CUSTOM:
-				auto pat = new UString(Utf.toUtf16(p.formatString));
-				udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.None, lcl, tz, pat);
-				break;
-			case DATE_STYLE_MEDIUM:
-			default:
-				udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.None, lcl, tz);
-				break;
+			if(p.secondaryFormat == NUMBER_STYLE_SCIENTIFIC) {
+				fmt = new UScientificFormat(lcl);
 			}
-			break;
-		
-		case FORMAT_DATETIME:
-		default:
-			switch(p.secondaryFormat)
-			{
-			case DATE_STYLE_SHORT:
-				udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.Short, lcl, tz);
-				break;
-			case DATE_STYLE_LONG:
-				udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.Long, lcl, tz);
-				break;
-			case DATE_STYLE_FULL:
-				udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.Full, lcl, tz);
-				break;
-			case DATE_STYLE_CUSTOM:
-				auto pat = new UString(Utf.toUtf16(p.formatString));
-				udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.Default, lcl, tz, pat);
-				break;
-			case DATE_STYLE_MEDIUM:
-			default:
-				udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.Medium, lcl, tz);
-				break;
+			else {
+				fmt = new UDecimalFormat(lcl);
 			}
-			break;
+			
+			auto dst = new UString(100);
+			fmt.format(dst, x);
+			return dst.toUtf8;
 		}
-		
-		auto dst = new UString(100);
-		UCalendar.UDate udat = cast(UCalendar.UDate)((dt.ticks - 621355788e9) / 1e4);
-		udf.format(dst, udat);
-		return dst.toUtf8;
+		else {
+			return Float.toUtf8(x);
+		}
+	}
+	
+	static char[] renderDateTime(inout DateTime dt, inout Param p, Locale lcl, Timezone tz)
+	{
+		version(ICU) {
+			UDateFormat udf;
+			switch(p.elementFormat)
+			{
+			case FORMAT_DATE:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Short, lcl, tz);
+					break;
+				case DATE_STYLE_LONG:
+					udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Long, lcl, tz);
+					break;
+				case DATE_STYLE_FULL:
+					udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Full, lcl, tz);
+					break;
+				case DATE_STYLE_CUSTOM:
+					auto pat = new UString(Utf.toUtf16(p.formatString));
+					udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Default, lcl, tz, pat);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					udf = new UDateFormat(UDateFormat.Style.None, UDateFormat.Style.Medium, lcl, tz);
+					break;
+				}
+				break;
+				
+			case FORMAT_TIME:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.None, lcl, tz);
+					break;
+				case DATE_STYLE_LONG:
+					udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.None, lcl, tz);
+					break;
+				case DATE_STYLE_FULL:
+					udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.None, lcl, tz);
+					break;
+				case DATE_STYLE_CUSTOM:
+					auto pat = new UString(Utf.toUtf16(p.formatString));
+					udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.None, lcl, tz, pat);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.None, lcl, tz);
+					break;
+				}
+				break;
+			
+			case FORMAT_DATETIME:
+			default:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					udf = new UDateFormat(UDateFormat.Style.Short, UDateFormat.Style.Short, lcl, tz);
+					break;
+				case DATE_STYLE_LONG:
+					udf = new UDateFormat(UDateFormat.Style.Long, UDateFormat.Style.Long, lcl, tz);
+					break;
+				case DATE_STYLE_FULL:
+					udf = new UDateFormat(UDateFormat.Style.Full, UDateFormat.Style.Full, lcl, tz);
+					break;
+				case DATE_STYLE_CUSTOM:
+					auto pat = new UString(Utf.toUtf16(p.formatString));
+					udf = new UDateFormat(UDateFormat.Style.Default, UDateFormat.Style.Default, lcl, tz, pat);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					udf = new UDateFormat(UDateFormat.Style.Medium, UDateFormat.Style.Medium, lcl, tz);
+					break;
+				}
+				break;
+			}
+			
+			auto dst = new UString(100);
+			UCalendar.UDate udat = cast(UCalendar.UDate)((dt.ticks - 621355788e9) / 1e4);
+			udf.format(dst, udat);
+			return dst.toUtf8;
+		}
+		else {
+			char[] res;
+			res.length = 100;
+			switch(p.elementFormat)
+			{
+			case FORMAT_DATE:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					return formatDateTime(res, dt, "d");
+					break;
+				case DATE_STYLE_LONG:
+					return formatDateTime(res, dt, "D");
+					break;
+				case DATE_STYLE_FULL:
+					return formatDateTime(res, dt, "D");
+					break;
+				case DATE_STYLE_CUSTOM:
+					return formatDateTime(res, dt, p.formatString);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					return formatDateTime(res, dt, "D");
+					break;
+				}
+				break;
+				
+			case FORMAT_TIME:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					return formatDateTime(res, dt, "t");
+					break;
+				case DATE_STYLE_LONG:
+					return formatDateTime(res, dt, "T");
+					break;
+				case DATE_STYLE_FULL:
+					return formatDateTime(res, dt, "T");
+					break;
+				case DATE_STYLE_CUSTOM:
+					return formatDateTime(res, dt, p.formatString);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					return formatDateTime(res, dt, "t");
+					break;
+				}
+				break;
+			
+			case FORMAT_DATETIME:
+			default:
+				switch(p.secondaryFormat)
+				{
+				case DATE_STYLE_SHORT:
+					return formatDateTime(res, dt, "g");
+					break;
+				case DATE_STYLE_LONG:
+					return formatDateTime(res, dt, "G");
+					break;
+				case DATE_STYLE_FULL:
+					return formatDateTime(res, dt, "G");
+					break;
+				case DATE_STYLE_CUSTOM:
+					return formatDateTime(res, dt, p.formatString);
+					break;
+				case DATE_STYLE_MEDIUM:
+				default:
+					return formatDateTime(res, dt, "g");
+					break;
+				}
+				break;
+			}
+		}
 	}
 }
 
@@ -668,5 +762,6 @@ unittest
 	ctxt.addVar("num", x);
 	ctxt.addVar("word", "beautiful");
 	auto res = m.exec(ctxt);
-	assert(res == "Hello beautiful world, the only one!", res);
+	//assert(res == "Hello beautiful world, the only one!", res);
+	Stdout(res);
 }

@@ -9,8 +9,16 @@ import tango.core.Traits;
 import tango.core.Variant;
 import tango.text.Util;
 
-import mango.icu.ULocale;
-import mango.icu.UTimeZone;
+version(ICU) {
+	import mango.icu.ULocale;
+	import mango.icu.UTimeZone;
+	alias ULocale Locale;
+	alias UTimeZone Timezone;
+}
+else {
+	alias char[] Locale;
+	alias char[] Timezone;
+}
 
 enum VarT : ubyte {  Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, String, DateTime, Date, Time, ClassStruct, Array, Null };
 
@@ -448,21 +456,38 @@ class ExecutionContext
 	
 	VariableBinding[char[]] vars;
 	//IFunctionBinding[char[]] fns;
-	ULocale locale;
-	UTimeZone timezone;
+	Locale locale;
+	Timezone timezone;
 	
 	private ExecutionContext parent;
 	
-	this(ULocale locale = ULocale.US)
-	{
-		this.locale = locale;
-		this.parent = global;
+	version(ICU) {
+		this(Locale locale = ULocale.US)
+		{
+			this.locale = locale;
+			this.parent = global;
+			this.timezone = UTimeZone.Default;
+		}
+		
+		this(ExecutionContext parent, Locale locale = ULocale.US)
+		{
+			this.locale = locale;
+			this.parent = parent;
+			this.timezone = UTimeZone.Default;
+		}
 	}
-	
-	this(ExecutionContext parent, ULocale locale = ULocale.US)
-	{
-		this.locale = locale;
-		this.parent = parent;
+	else {
+		this(Locale locale = "en-US")
+		{
+			this.locale = locale;
+			this.parent = global;
+		}
+		
+		this(ExecutionContext parent, Locale locale = "en-US")
+		{
+			this.locale = locale;
+			this.parent = parent;
+		}
 	}
 	
 	void addVar(T)(char[] name, T t)
