@@ -234,6 +234,7 @@ class HttpResponse : HttpMessage
 					char tmp[16] = void;
 					getHeader().add(HttpHeader.ContentLength, " " ~ Integer.itoa(tmp, len)); 
 				}
+
         /**********************************************************************
 
                 Send a redirect response to the user-agent

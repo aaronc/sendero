@@ -141,7 +141,7 @@ class AsyncServer(THREAD)
 		{
 			ServerSocket server = cast(ServerSocket) conduit;
 			SocketConduit cond = server.accept();
-			cond.socket().blocking(false);  //not sure if we want this
+			//cond.socket().blocking(false);  //not sure if we want this
 			logger.info(sprint("Adding socket to selector {}", cond.fileHandle()));
     	selector.register(cond, cast(Event)EvtOneReadEt);
 		}

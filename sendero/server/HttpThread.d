@@ -28,13 +28,12 @@ class HttpThread : Thread
 	SocketQueue wqueue;
 	Logger logger;
 	Sprint!(char) sprint;
-
 	this (SocketQueue wq)
 	{
 		sprint = new Sprint!(char);
 		wqueue = wq;
 		logger = Log.getLogger("HttpThread");
-		bridge = new HttpBridge (pfactory.create(), this);
+		bridge = new HttpBridge (provider, this);
 		super(&run);
 	}
 
@@ -107,12 +106,18 @@ class HttpThread : Thread
 	static void set_providerfactory(ProviderFactory p)
 	{
 		pfactory = p;
+		provider = p.create();
+	}
+	static void set_provider(HttpProvider p)
+	{
+		provider = p;
 	}
 	private
 	static Handler before_request_read;
 	static Handler after_request_read;
 	static Handler before_response_write;
   static Handler after_response_write;
-  static ProviderFactory pfactory;
+  static HttpProvider provider;
+	static ProviderFactory pfactory;
 }
 

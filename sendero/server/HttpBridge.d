@@ -91,6 +91,7 @@ class HttpBridge : ServiceBridge
                 // bind our input & output instance to this conduit
 								logger.info(sprint("Thread: {0} crossing conduit {1}",
 														Thread.getThis().name(), (cast(SocketConduit)conduit).fileHandle()));
+								
 
                 request.setConduit (conduit);
                 response.setConduit (conduit);
@@ -108,6 +109,8 @@ class HttpBridge : ServiceBridge
 
                 // pass request off to the provider. It is the provider's 
                 // responsibility to flush the output!
-                provider.service (request, response);
+                //(cast(SocketConduit) conduit).socket().blocking(true);
+								provider.service (request, response);
+                //(cast(SocketConduit) conduit).socket().blocking(false);
         }
 }

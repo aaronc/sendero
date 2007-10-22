@@ -17,6 +17,7 @@ import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import tango.core.Thread;
+import tango.io.FileConduit;
 
 private static const int ResponseBufferSize = 20 * 1024;
 
@@ -35,22 +36,22 @@ class SenderoProvider : HttpProvider
 
 	void service (HttpRequest request, HttpResponse response)
 	{
-
+		auto from = new FileConduit ("/home/rick/Desktop/testdata/Oscar_Wilde.html");
 		//synchronized
 		//{
-		outbuf("<HTML>\n<HEAD>\n<TITLE>Hello!</TITLE>\n"c)
-    	 		 ("<BODY>\n<H2>This is a test</H2>\n"c)
-       		 ("</BODY>\n</HTML>\n"c);
+		//outbuf("<HTML>\n<HEAD>\n<TITLE>Hello!</TITLE>\n"c)
+    //	 		 ("<BODY>\n<H2>This is a test</H2>\n"c)
+    //  		 ("</BODY>\n</HTML>\n"c);
 		//}
 		response.setContentType (HttpHeader.TextHtml.value);
-		response.setContentLength(outbuf.limit());
+		response.setContentLength(from.length());
 		auto buf = response.getOutputBuffer();
 		logger.info(sprint("Thread: {0}, buf: 0x{1:x}, outbuf: 0x{2:x}",
 								Thread.getThis().name(),cast(uint)&buf,cast(uint)&outbuf));
-		buf(outbuf.slice());
+
+		buf.copy(from);
 		logger.info("flushing output buffer");
 		response.flush();
-    outbuf.clear();
 		//response.sendError(HttpResponses.NotFound);
 	}
 
