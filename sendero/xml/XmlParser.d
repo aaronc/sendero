@@ -1779,6 +1779,11 @@ class XmlForwardNodeParser(Ch) : IForwardNodeIterator!(Ch)
 		return parser.depth;
 	}
 	
+	final void retainCurrent()
+	{
+		parser.retainCurrent;
+	}
+	
 	final void reset()
 	{
 		return parser.reset;

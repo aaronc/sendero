@@ -15,6 +15,7 @@ import Float = tango.text.convert.Float;
  * Enumerates the seven acceptable JSON value types.
  */
 enum JSONValueType { String, Number, Object, Array, True, False, Null };
+alias JSONValueType JSONType;
 
 
 /**
@@ -81,31 +82,20 @@ class JSONValue(Ch = char)
 }
 
 /**
- * Represents a single member (name-value pair) of a JSONObject.
- */
-class JSONMember(Ch = char)
-{
-	this()
-	{
-		value = new JSONValue!(Ch);
-	}
-	Ch[] name;
-	JSONValue!(Ch) value;
-}
-
-/**
  * Represents a single JSON Object.
  */
 class JSONObject(Ch = char)
 {
-	JSONMember!(Ch)[] members;
+	//JSONMember!(Ch)[] members;
+	JSONValue!(Ch)[Ch[]] members;
 	
 	/**
 	 * Parses the provided text string into a JSON Object.
 	 */
 	static JSONObject!(Ch) parse(Ch[] text)
 	{
-		return parse(new StringCharIterator!(Ch)(text));
+		scope itr = new StringCharIterator!(Ch)(text);
+		return parse(itr);
 	}
 	
 	static private JSONValue!(Ch)[] parseArray(JSONParser!(Ch) p)
@@ -118,6 +108,7 @@ class JSONObject(Ch = char)
 			
 			arr ~= parseValue(p);
 		}
+		return arr;
 	}
 	
 	static private JSONObject!(Ch) parseObject(JSONParser!(Ch) p)
@@ -129,15 +120,16 @@ class JSONObject(Ch = char)
 			else if(p.type != JSONTokenType.Name)
 				return null;
 			
-			auto m = new JSONMember!(Ch);
-			m.name = p.value;
+//			auto m = new JSONMember!(Ch);
+			//m.name = p.value;
+			Ch[] name = p.value;
 			
 			if(!p.next)
 				return null;
-			m.value = parseValue(p);
-			
-			o.members ~= m;
+			//m.value = parseValue(p);
+			o.members[name] = parseValue(p);
 		}
+		return o;
 	}
 	
 	static private JSONValue!(Ch) parseValue(JSONParser!(Ch) p)
@@ -154,6 +146,12 @@ class JSONObject(Ch = char)
 		case JSONTokenType.Null:
 			v.type_ = JSONValueType.Null;
 			break;
+		case JSONTokenType.BeginObject:
+			v = parseObject(p);
+			break;
+		case JSONTokenType.BeginArray:
+			v = parseArray(p);
+			break;
 		case JSONTokenType.String:
 			v = p.value;
 			break;
@@ -161,13 +159,9 @@ class JSONObject(Ch = char)
 			auto num = Float.parse(p.value);
 			v = num;
 			break;
-		case JSONTokenType.BeginObject:
-			v = parseObject(p);
-			break;
-		case JSONTokenType.BeginArray:
-			v = parseArray(p);
 		default:
-			return null;
+			v.type_ = JSONValueType.Null;
+			break;
 		}
 		return v;
 	}
@@ -177,23 +171,111 @@ class JSONObject(Ch = char)
 	 */
 	static JSONObject!(Ch) parse(ICharIterator!(Ch) itr)
 	{
-		auto p = new JSONParser!(Ch)(itr);		
+		scope p = new JSONParser!(Ch)(itr);		
 		if(!p.next) return null;
 		if(p.type != JSONTokenType.BeginObject) return null;
 		return parseObject(p);
 	}
+	
+	Ch[] print()
+	{
+		Ch[] res;
+		
+		Ch[] tab;
+		
+		void printVal(JSONValue!(Ch) val)
+		{
+			void printObj(JSONObject!(Ch) obj)
+			{
+				bool first = true;
+				res ~= tab ~ "\n{\n";
+				//tab ~= " ";
+				foreach(k, v; obj.members)
+				{
+					if(!first) res ~= ",\n";
+					res ~= tab ~ "\"" ~ k ~ "\":";
+					printVal(v);
+					first = false;
+				}
+				//tab = tab[0 .. $-1];
+				res ~= tab ~ "\n}\n";
+				
+			}
+			
+			void printArr(JSONValue!(Ch)[] arr)
+			{
+				
+				bool first = true;
+				res ~= tab ~ "\n[\n";
+				//tab ~= " ";
+				foreach(v; arr)
+				{
+					if(!first) res ~= ",\n";
+					res ~= tab;
+					printVal(v);
+					first = false;
+				}
+				//tab = tab[0 .. $-1];
+				res ~= tab ~ "\n]\n";
+			}
+			
+			with(JSONValueType)
+			{
+				switch(val.type)
+				{
+				case String:
+					res ~= "\"" ~ val.getString ~ "\"";
+					break;
+				case Number:
+					res ~= Float.toUtf8(val.getNumber);
+					break;
+				case Object:
+					printObj(val.getObject);
+					break;
+				case Array:
+					printArr(val.getArray);
+					break;
+				case True:
+					res ~= "true";
+					break;
+				case False:
+					res ~= "false";
+					break;
+				case Null:
+				default:
+					res ~= "null";
+					break;
+				}
+			}
+		}
+		
+		auto val = new JSONValue!(Ch);
+		val = this;
+		printVal(val);
+		
+		return res;
+	}
 }
+
+alias JSONObject!(char) JSON;
 
 unittest
 {
 	auto obj = JSONObject!(char).parse(TestCase.one);
 	assert(obj);
-	assert(obj.members[0].name == "glossary");
-	assert(obj.members[0].value.type == JSONValueType.Object);
-	auto o = obj.members[0].value.getObject;
-	assert(o.members[0].name == "title");
-	assert(o.members[1].name == "GlossDiv");
-	o = o.members[1].value.getObject;
-	assert(o.members[0].name == "title");
-	assert(o.members[1].name == "GlossList");
+	//assert(obj.members[0].name == "glossary");
+	//assert(obj.members[0].value.type == JSONValueType.Object);
+	assert("glossary" in obj.members);
+	assert(obj.members["glossary"].type == JSONValueType.Object);
+	auto o = obj.members["glossary"].getObject;
+	//assert(o.members[0].name == "title");
+	//assert(o.members[1].name == "GlossDiv");
+	assert("title" in o.members);
+	assert("GlossDiv" in o.members);
+	o = o.members["GlossDiv"].getObject;
+	//assert(o.members[0].name == "title");
+	//assert(o.members[1].name == "GlossList");
+	
+	assert("title" in o.members);
+	assert("GlossList" in o.members);
 }

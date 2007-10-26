@@ -8,6 +8,7 @@ module sendero.json.JsonParser;
 
 public import sendero.util.ICharIterator;
 import sendero.util.StringCharIterator;
+import sendero.util.collection.Stack;
 
 enum JSONTokenType { Name, String, Number, BeginObject, EndObject, BeginArray, EndArray, True, False, Null, Empty };
 
@@ -15,11 +16,13 @@ class JSONParser(Ch, Int = uint)
 {
 	this(Ch[] text)
 	{
+		this.stateStack = new Stack!(State);
 		this.itr = new StringCharIterator!(Ch)(text);
 	}
 	
 	this(ICharIterator!(Ch) itr)
 	{
+		this.stateStack = new Stack!(State);
 		this.itr = itr;
 	}
 	
@@ -30,6 +33,9 @@ class JSONParser(Ch, Int = uint)
 	private JSONTokenType curType = JSONTokenType.Empty;
 	private ushort arrayDepth = 0;
 	private ushort curDepth = 0;
+	private enum State : ubyte {Object, Array};
+	private State curState = State.Object; 
+	private Stack!(State) stateStack;
 	private bool retain = false;
 	private bool err = false;
 	private char[] errMsg;
@@ -204,6 +210,8 @@ class JSONParser(Ch, Int = uint)
 		curLoc = itr.location;
 		curLen = 0;
 		++itr;
+		stateStack.push(curState);
+		curState = State.Object;
 		return true;
 	}
 	
@@ -214,6 +222,8 @@ class JSONParser(Ch, Int = uint)
 		curLoc = itr.location;
 		curLen = 0;
 		++itr;
+		curState = stateStack.top;
+		stateStack.pop;
 		return true;
 	}
 	
@@ -224,6 +234,8 @@ class JSONParser(Ch, Int = uint)
 		curLoc = itr.location;
 		curLen = 0;
 		++itr;
+		stateStack.push(curState);
+		curState = State.Array;
 		return true;
 	}
 	
@@ -234,6 +246,8 @@ class JSONParser(Ch, Int = uint)
 		curLoc = itr.location;
 		curLen = 0;
 		++itr;
+		curState = stateStack.top;
+		stateStack.pop;
 		return true;
 	}
 	
@@ -256,32 +270,33 @@ class JSONParser(Ch, Int = uint)
 			retain = false;
 			return true;
 		}
-		
+
 		eatWhitespace;
-		
-		if(arrayDepth > 0) {
+
+		if(curState == State.Array) {
 			return parseArrayValue;
 		}
-		
-		switch(curType)
-		{
-		case JSONTokenType.Empty:
-			return parseObject;
-			break;
-		case JSONTokenType.Name:
-			return parseMemberValue;
-			break;
-		case JSONTokenType.String:
-		case JSONTokenType.Number:
-		case JSONTokenType.EndObject:
-		case JSONTokenType.BeginObject:
-		case JSONTokenType.EndArray:
-		case JSONTokenType.True:
-		case JSONTokenType.False:
-		case JSONTokenType.Null:
-		default:		
-			return parseMemberName;
-			break;
+		else {
+			switch(curType)
+			{
+			case JSONTokenType.Empty:
+				return parseObject;
+				break;
+			case JSONTokenType.Name:
+				return parseMemberValue;
+				break;
+			case JSONTokenType.String:
+			case JSONTokenType.Number:
+			case JSONTokenType.EndObject:
+			case JSONTokenType.BeginObject:
+			case JSONTokenType.EndArray:
+			case JSONTokenType.True:
+			case JSONTokenType.False:
+			case JSONTokenType.Null:
+			default:		
+				return parseMemberName;
+				break;
+			}
 		}
 		
 	}

@@ -1,0 +1,10 @@
+<html>
+<head></>
+<!--Syntax inspired by HAML for Ruby and SGML. 
+For this to work properly, you must compile Sendero with -version=CompactSynax in the
+current release. # specifies id and . specifies class as in CSS.
+Default tag name is div.
+-->
+<body><#main.hello.world><p.world#myPara>Hello World</></>
+</>
+</>

@@ -1,6 +1,7 @@
 module sendero.util.LocalText;
 
 import sendero.util.ExecutionContext;
+import sendero.util.FunctionBindingContext;
 import sendero.util.StringCharIterator;
 
 version(ICU) {
@@ -77,8 +78,6 @@ const ubyte NUMBER_STYLE_INTEGER = 2;
 const ubyte NUMBER_STYLE_SCIENTIFIC = 3;
 const ubyte NUMBER_STYLE_CUSTOM = 4;
 
-enum ParamT : ubyte { Var, Func };
-
 package class Param
 {
 	ushort offset;
@@ -101,6 +100,50 @@ package class Message : IMessage
 	Param[] params;
 	bool plural() {return false;}
 	
+	static char[] renderParam(ExecutionContext ctxt, inout VariableBinding var)
+	{
+		scope p = new Param;
+		return renderParam(ctxt, var, p);
+	}
+	
+	static char[] renderParam(ExecutionContext ctxt, inout VariableBinding var, Param p)
+	{
+		char[] o;
+		auto lcl = ctxt.locale;
+		auto tz = ctxt.timezone;
+		
+		switch(var.type)
+		{
+		case(VarT.Bool):
+			auto x = var.bool_;
+			o ~= renderLong(x, p, lcl);
+			break;
+		case(VarT.Long):
+			auto x = var.long_;
+			o ~= renderLong(x, p, lcl);
+			break;
+		case(VarT.ULong):
+			auto x = var.ulong_;
+			o ~= renderLong(x, p, lcl);
+			break;
+		case(VarT.Double):
+			auto x = var.double_;
+			o ~= renderDouble(x, p, lcl);
+			break;
+		case(VarT.String):
+			auto x = var.string_;
+			o ~= x;
+			break;
+		case(VarT.DateTime):
+			auto x = var.DateTime_;
+			o ~= renderDateTime(x, p, lcl, tz);
+			break;
+		default:
+			break;
+		}
+		return o;
+	}
+	
 	char[] exec(ExecutionContext ctxt)
 	{
 		uint idx = 0;
@@ -109,83 +152,10 @@ package class Message : IMessage
 		{			
 			o ~= msg[idx .. p.offset];
 			idx = p.offset;
-		
-			auto lcl = ctxt.locale;
-			auto tz = ctxt.timezone;
 			
 			auto var = p.expr.exec(ctxt);
 			
-			switch(var.type)
-			{
-			case(VarT.Bool):
-				auto x = var.data.get!(bool);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.Byte):
-				auto x = var.data.get!(byte);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.Short):
-				auto x = var.data.get!(short);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.Int):
-				auto x = var.data.get!(int);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.Long):
-				auto x = var.data.get!(long);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.UByte):
-				auto x = var.data.get!(ubyte);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.UShort):
-				auto x = var.data.get!(ushort);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.UInt):
-				auto x = var.data.get!(uint);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.ULong):
-				auto x = var.data.get!(ulong);
-				o ~= renderLong(x, p, lcl);
-				break;
-			case(VarT.Float):
-				auto x = var.data.get!(float);
-				o ~= renderDouble(x, p, lcl);
-				break;
-			case(VarT.Double):
-				auto x = var.data.get!(float);
-				o ~= renderDouble(x, p, lcl);
-				break;
-			case(VarT.String):
-				auto x = var.data.get!(char[]);
-				o ~= x;
-				break;
-			case(VarT.DateTime):
-				auto x = var.data.get!(DateTime);
-				o ~= renderDateTime(x, p, lcl, tz);
-				break;
-			case(VarT.Date):
-				auto x = var.data.get!(Date);
-				auto dt = DateTime(x.year, x.month, x.day);
-				dt.addHours(x.hour);
-				dt.addMinutes(x.min);
-				dt.addSeconds(x.sec);
-				o ~= renderDateTime(dt, p, lcl, tz);
-				break;
-			case(VarT.Time):
-				auto x = var.data.get!(Time);
-				o ~= renderDateTime(DateTime(x), p, lcl, tz);
-				break;
-			default:
-				break;
-			}
-			
-			
+			o ~= renderParam(ctxt, var, p);		
 		}
 		if(idx < msg.length) o ~= msg[idx .. $];
 		return o;
@@ -436,59 +406,96 @@ class MessageParserException : Exception
 	{
 		super(msg);
 	}
-} 
+}
 
-public void parseExpression(char[] msg, inout Expression expr, FunctionBindingContext ctxt)
+public void parseExpression(char[] msg, inout Expression expression, FunctionBindingContext ctxt)
 {
 	scope itr = new StringCharIterator!(char)(msg);
-	if(itr[0] == '$') {
-		//throw new MessageParserException("Expected $ before variable name"); //TODO throw exception here?
-		++itr;
-		char[] var;
-		while(itr.good && itr[0] != ',' && itr[0] != '}')
+	
+	void parseExpr(inout Expression expr)
+	{
+		void parseFunction()
 		{
-			var ~= itr[0];
-			++itr;
-		}
-		expr.var = VarPath(var);
-		expr.type = ExpressionT.Var;
-	}
-	else {	
-		void parseFuncParams(char[] str)
-		{
-			auto params = Text.split(str, ",");
-			foreach(x; params)
+			void parseFuncParams()
 			{
-				Expression fParam;
-				if(x[0] == '$')
+				bool parseParam()
 				{
-					fParam.type = ExpressionT.Var;
-					fParam.var = VarPath(x[1 .. $]);
+					itr.eatSpace;
+					if(itr[0] == ')') return false;
+					
+					Expression p;
+					parseExpr(p);
+					expr.func.params ~= p;
+					switch(itr[0])
+					{
+					case ',':
+						++itr;
+						return true;
+					case ')':
+						return false;
+					default:
+						debug new MessageParserException("expected ',' or ')' in function parameters");
+						return false;
+					}
 				}
-				else
-				{
-					fParam.type = ExpressionT.Value;
-					fParam.val.data = x;
-					fParam.val.type = VarT.String;
-				}
-				expr.func.params ~= fParam;
+				
+				while(parseParam) {};			
 			}
+			
+			uint i = itr.location;
+			if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name");
+			uint j = itr.location;
+			char[] name = itr.randomAccessSlice(i, j);
+			auto fn = ctxt.getFunction(name);
+			if(!fn) new MessageParserException("Unable to find definition of function " ~ name); 
+			expr.func.func = fn;
+			++itr;
+			parseFuncParams();
+			expr.type = ExpressionT.FuncCall;
 		}
 		
-		uint i = itr.location;
-		if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name");
-		uint j = itr.location;
-		char[] name = itr.randomAccessSlice(i, j);
-		auto fn = ctxt.getFunction(name);
-		if(!fn)  new MessageParserException("Unable to find definition of function " ~ name); 
-		expr.func.func = fn;
-		i = j + 1;
-		if(!itr.forwardLocate(')')) throw new MessageParserException("Expected ) after function params");
-		j = itr.location;
-		parseFuncParams(itr.randomAccessSlice(i, j));
-		++itr;
-		expr.type = ExpressionT.FuncCall;
+		switch(itr[0])
+		{
+		case '$':
+			++itr;
+			char[] var;
+			while(itr.good) {
+				if(itr[0] == ',' || itr[0] == ')' || itr[' '])
+					break;
+				var ~= itr[0];
+				++itr;
+			}
+			expr.var = VarPath(var);
+			expr.type = ExpressionT.Var;
+			return;
+		case '\"', '\'':
+			char quote = itr[0];
+			char[] str;
+			++itr;
+			while(itr.good) {
+				if(itr[0] == '\\') {
+					str ~= itr[1];
+					itr += 2;
+				}
+				else if(itr[0] == quote) {
+					++itr;
+					break;
+				}
+				else {
+					str ~= itr[0];
+					++itr;
+				}
+			}
+			expr.type = ExpressionT.Value;
+			expr.val.set(str);
+			break;
+		default:
+			parseFunction();
+			return;
+		}
 	}
+	
+	parseExpr(expression);
 }
 
 public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
@@ -509,7 +516,7 @@ public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 		if(!itr.forwardLocate('}')) throw new MessageParserException("Expected \'}\' at end of expression");
 		uint j = itr.location;
 		char[] exprTxt = itr.randomAccessSlice(i, j);		
-		j = Text.locate(exprTxt, ':');
+		j = Text.locate(exprTxt, '|');
 		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
 		itr.seek(i + j);	
 		
@@ -724,7 +731,7 @@ public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 				}
 			}
 			else {
-				res ~= '$';
+				res ~= '_';
 				++itr;
 			}
 			break;
@@ -741,6 +748,18 @@ public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 	return m;
 }
 
+void parseTextExpression(char[] text, inout Expression expr, FunctionBindingContext ctxt)
+{
+	auto msg = parseMessage(text, ctxt);
+	if(!msg.msg.length && msg.params.length == 1) {
+		expr = msg.params[0].expr;
+	}
+	else {
+		expr.type = ExpressionT.TextExpr;
+		expr.textExpr = msg;
+	}
+}
+
 version(Unittest)
 {
 	import tango.io.Stdout;
@@ -749,7 +768,7 @@ version(Unittest)
 unittest
 {
 	auto funcCtxt = new FunctionBindingContext;
-	auto m = parseMessage("Hello _{$word} world, the only _{$num: spellout}!", funcCtxt);
+	auto m = parseMessage("Hello _{$word} world, the only _{$num|spellout}!", funcCtxt);
 	assert(m.msg == "Hello  world, the only !");
 	assert(m.params.length == 2);
 	assert(m.params[0].elementFormat == FORMAT_STRING);
@@ -763,5 +782,23 @@ unittest
 	ctxt.addVar("word", "beautiful");
 	auto res = m.exec(ctxt);
 	//assert(res == "Hello beautiful world, the only one!", res);
-	Stdout(res);
+	Stdout(res).newline;
+	
+	Expression expr;
+	parseExpression("\"hello\"", expr, FunctionBindingContext.global);
+	assert(expr.type == ExpressionT.Value);
+	auto var = expr.exec(ExecutionContext.global);
+	assert(var.type == VarT.String);
+	assert(var.string_ == "hello");
+	
+	parseExpression("'hello'", expr, FunctionBindingContext.global);
+	assert(expr.type == ExpressionT.Value);
+	var = expr.exec(ExecutionContext.global);
+	assert(var.type == VarT.String);
+	assert(var.string_ == "hello");
+	
+	parseExpression("now()", expr, FunctionBindingContext.global);
+	assert(expr.type == ExpressionT.FuncCall);
+	var = expr.exec(ExecutionContext.global);
+	assert(var.type == VarT.DateTime);
 }
