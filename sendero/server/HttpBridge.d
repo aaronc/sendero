@@ -96,9 +96,9 @@ class HttpBridge : ServiceBridge
                 request.setConduit (conduit);
                 response.setConduit (conduit);
 
-                // close and destroy this conduit (socket)
-                scope (exit)
-                       conduit.detach;
+								//there will be no closing of sockets
+                //scope (exit)
+                //       conduit.detach;
 
                 // reset the (probably overridden) input and output
                 request.reset();
@@ -111,6 +111,5 @@ class HttpBridge : ServiceBridge
                 // responsibility to flush the output!
                 //(cast(SocketConduit) conduit).socket().blocking(true);
 								provider.service (request, response);
-                //(cast(SocketConduit) conduit).socket().blocking(false);
         }
 }

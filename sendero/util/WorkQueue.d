@@ -61,7 +61,6 @@ class WorkQueue(T)
 		{
 			emptycond.wait();
 		}
-		logger.info(sprint("Thread: {} done waiting on size", Thread.getThis().name()));
 
 		_size.decrement();
 

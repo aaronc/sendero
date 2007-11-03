@@ -8,6 +8,7 @@ module sendero.server.HttpServer;
 
 import tango.util.log.Log;
 import tango.util.log.Configurator;
+import tango.util.log.FileAppender;
 import tango.text.convert.Sprint;
 import tango.sys.linux.epoll;
 import tango.net.SocketConduit;
@@ -25,6 +26,7 @@ Logger logger;
 
   void main()
 	{
+		Log.getRootLogger.addAppender(new FileAppender("httpserv.log"));
 		auto sprint = new Sprint!(char);
 
 		auto pfact = new SenderoProviderFactory;

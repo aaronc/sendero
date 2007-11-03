@@ -1,377 +1,380 @@
 /*******************************************************************************
 
-        copyright:      Copyright (c) 2004 Kris Bell. All rights reserved
+copyright:      Copyright (c) 2004 Kris Bell. All rights reserved
 
-        license:        BSD style: $(LICENSE)
-        
-        version:        Initial release: April 2004      
-        
-        author:         Kris
+license:        BSD style: $(LICENSE)
 
-*******************************************************************************/
+version:        Initial release: April 2004      
+
+author:         Kris
+
+ *******************************************************************************/
 
 module sendero.util.http.HttpResponse;
 
 private import  tango.io.Buffer;
 
 private import  tango.net.http.HttpConst,
-                tango.net.http.HttpParams,
-                tango.net.http.HttpCookies,
-                tango.net.http.HttpHeaders;
+tango.net.http.HttpParams,
+	tango.net.http.HttpCookies,
+	tango.net.http.HttpHeaders;
 
 private import  tango.io.protocol.model.IWriter,
-								tango.io.Stdout,
-				        tango.io.protocol.Writer;
+				tango.io.Stdout,
+				tango.io.protocol.Writer;
 
 private import  sendero.util.http.HttpMessage,
-                sendero.util.http.ServiceBridge;
+				sendero.util.http.ServiceBridge;
 
 private import  Integer = tango.text.convert.Integer;
+import tango.util.log.Log;
+import tango.util.log.Configurator;
+import tango.text.convert.Sprint;
 
 //version = ShowHeaders;
 
 /*******************************************************************************
 
-        Some constants for output buffer sizes
+	Some constants for output buffer sizes
 
-*******************************************************************************/
+ *******************************************************************************/
 
 private static const int ParamsBufferSize = 1 * 1024;
 private static const int HeaderBufferSize = 4 * 1024;
 private static const char HttpVersion[] = "HTTP/1.1";
 /******************************************************************************
 
-        Define an http response to a user-agent (client). Note that all
-        data is managed on a thread-by-thread basis.
+	Define an http response to a user-agent (client). Note that all
+	data is managed on a thread-by-thread basis.
 
-******************************************************************************/
+ ******************************************************************************/
 
 class HttpResponse : HttpMessage
 {
-        private HttpParams      params;
-        private HttpCookies     cookies;
-        private HttpStatus      status;
-        private IBuffer         output;
-        private bool            commited;
-				private int							hdrsize;
-        static private InvalidStateException InvalidState;
+	private HttpParams      params;
+	private HttpCookies     cookies;
+	private HttpStatus      status;
+	private IBuffer         output;
+	private bool            commited;
+	private int							hdrsize;
+	private Logger 					logger;
+	private Sprint!(char) 	sprint;
+	static private InvalidStateException InvalidState;
 
-        /**********************************************************************
+	/**********************************************************************
 
-                Construct static instances of exceptions etc. 
+		Construct static instances of exceptions etc. 
 
-        **********************************************************************/
+	 **********************************************************************/
 
-        static this()
-        {
-                InvalidState = new InvalidStateException("Invalid response state");
-        }
+	static this()
+	{
 
-        /**********************************************************************
+		InvalidState = new InvalidStateException("Invalid response state");
+	}
 
-                Create a Response instance. Note that we create a bunch of
-                internal support objects on a per-thread basis. This is so
-                we don't have to create them on demand; however, we should
-                be careful about resetting them all before each new usage.
+	/**********************************************************************
 
-        **********************************************************************/
+		Create a Response instance. Note that we create a bunch of
+		internal support objects on a per-thread basis. This is so
+		we don't have to create them on demand; however, we should
+		be careful about resetting them all before each new usage.
 
-        this (ServiceBridge bridge)
-        {
-                // create a seperate output buffer for headers to reside
-                super (bridge, new Buffer(HeaderBufferSize));
+	 **********************************************************************/
 
-                // hang onto the output buffer
-                output = super.getBuffer;
+	this (ServiceBridge bridge)
+	{
+		// create a seperate output buffer for headers to reside
+		super (bridge, new Buffer(HeaderBufferSize));
 
-                // create a cached query-parameter processor. We
-                // support a maximum output parameter list of 1K bytes
-                params = new HttpParams (new Buffer(ParamsBufferSize));
-        
-                // create a wrapper for output cookies. This is more akin 
-                // to a specialized writer, since it just adds additional
-                // content to the output headers.
-                cookies = new HttpCookies (super.getHeader);
-        }
+		// hang onto the output buffer
+		output = super.getBuffer;
 
-        /**********************************************************************
+		// create a cached query-parameter processor. We
+		// support a maximum output parameter list of 1K bytes
+		params = new HttpParams (new Buffer(ParamsBufferSize));
 
-                Reset this response, ready for the next connection
+		// create a wrapper for output cookies. This is more akin 
+		// to a specialized writer, since it just adds additional
+		// content to the output headers.
+		cookies = new HttpCookies (super.getHeader);
+		sprint = new Sprint!(char);
+	  logger = Log.getLogger("HttpResponse");
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void reset()
-        {
-                // response is "OK" by default
-                commited = false;
-                setStatus (HttpResponses.OK);
+		Reset this response, ready for the next connection
 
-                // reset the headers
-                super.reset;
+	 **********************************************************************/
 
-                // reset output parameters
-                params.reset;
-        }
+	void reset()
+	{
+		// response is "OK" by default
+		commited = false;
+		setStatus (HttpResponses.OK);
 
-        /**********************************************************************
+		// reset the headers
+		super.reset;
 
-                Send an error status to the user-agent
+		// reset output parameters
+		params.reset;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void sendError (inout HttpStatus status)
-        {
-                sendError (status, "");
-        }
+		Send an error status to the user-agent
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Send an error status to the user-agent, along with the
-                provided message
+	void sendError (inout HttpStatus status)
+	{
+		sendError (status, "");
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void sendError (inout HttpStatus status, char[] msg)
-        {       
-                sendError (status, status.name, msg);
-        }
+		Send an error status to the user-agent, along with the
+		provided message
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Send an error status to the user-agent, along with the
-                provided exception text
+	void sendError (inout HttpStatus status, char[] msg)
+	{       
+		sendError (status, status.name, msg);
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void sendError (inout HttpStatus status, Exception ex)
-        {
-                sendError (status, status.name, ex.toUtf8);
-        }
+		Send an error status to the user-agent, along with the
+		provided exception text
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Set the current response status.
+	void sendError (inout HttpStatus status, Exception ex)
+	{
+		sendError (status, status.name, ex.toUtf8);
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void setStatus (inout HttpStatus status)
-        {
-                this.status = status;
-        }
+		Set the current response status.
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Return the current response status
+	void setStatus (inout HttpStatus status)
+	{
+		this.status = status;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        HttpStatus getStatus ()
-        {
-                return status;
-        }
+		Return the current response status
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Return the wrapper for adding output parameters
+	HttpStatus getStatus ()
+	{
+		return status;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        HttpParams getOutputParams()
-        {
-                return params;
-        }
+		Return the wrapper for adding output parameters
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Return the wrapper for output cookies
+	HttpParams getOutputParams()
+	{
+		return params;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        HttpCookies getOutputCookies()
-        {
-                return cookies;
-        }
+		Return the wrapper for output cookies
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Return the wrapper for output headers.
+	HttpCookies getOutputCookies()
+	{
+		return cookies;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        HttpHeaders getOutputHeaders()
-        {
-                // can't access headers after commiting
-                if (commited)
-                    throw InvalidState;
-                return super.getHeader;
-        }
+		Return the wrapper for output headers.
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Return the buffer attached to the output conduit. Note that
-                further additions to the output headers is disabled from
-                this point forward. 
+	HttpHeaders getOutputHeaders()
+	{
+		// can't access headers after commiting
+		if (commited)
+			throw InvalidState;
+		return super.getHeader;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        IBuffer getOutputBuffer()
-        {
-                // write headers, and cause InvalidState 
-                // on next call to getOutputHeaders()
-                commit;
-                return output;
-        }
+		Return the buffer attached to the output conduit. Note that
+		further additions to the output headers is disabled from
+		this point forward. 
 
-				/**********************************************************************
+	 **********************************************************************/
 
-					Set the content length, this should always be done since we do not
-					close the connection after the response is complete 
+	IBuffer getOutputBuffer()
+	{
+		// write headers, and cause InvalidState 
+		// on next call to getOutputHeaders()
+		commit;
+		return output;
+	}
 
-				***********************************************************************/
+	/**********************************************************************
 
-				void setContentLength(int len)
-				{
-					char tmp[16] = void;
-					getHeader().add(HttpHeader.ContentLength, " " ~ Integer.itoa(tmp, len)); 
-				}
+		Set the content length, this should always be done since we do not
+		close the connection after the response is complete 
 
-        /**********************************************************************
+	 ***********************************************************************/
 
-                Send a redirect response to the user-agent
+	void setContentLength(int len)
+	{
+		char tmp[16] = void;
+		getHeader().add(HttpHeader.ContentLength, " " ~ Integer.itoa(tmp, len)); 
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void sendRedirect (char[] location)
-        {
-                setStatus (HttpResponses.MovedTemporarily);
-                getHeader().add (HttpHeader.Location, location);
-                flush ();
-        }
+		Send a redirect response to the user-agent
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Write the response and the output headers 
+	void sendRedirect (char[] location)
+	{
+		setStatus (HttpResponses.MovedTemporarily);
+		getHeader().add (HttpHeader.Location, location);
+		flush ();
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void write (IWriter writer)
-        {
-                commit (writer.buffer);
-        }
+		Write the response and the output headers 
 
-        /**********************************************************************
+	 **********************************************************************/
 
-                Ensure the output is flushed
+	void write (IWriter writer)
+	{
+		commit (writer.buffer);
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        void flush ()
-        {
-                commit (output);
+		Ensure the output is flushed
 
-                version (ShowHeaders)
-                        {
-                        Stdout.formatln ("###############");
-                        Stdout.formatln (cast(char[])output.slice);
-                        Stdout.formatln ("###############");
-                        }
-               output.flush;
-        }
+	 **********************************************************************/
 
-        /**********************************************************************
+	void flush ()
+	{
+		commit (output);
 
-                Private method to send the response status, and the
-                output headers, back to the user-agent
+		version (ShowHeaders)
+		{
+			logger.info("###############");
+			logger.info(cast(char[])output.slice);
+			logger.info("###############");
+		}
+		output.flush;
+	}
 
-        **********************************************************************/
+	/**********************************************************************
 
-        private void commit ()
-        {
-                commit(output);
-        }
+		Private method to send the response status, and the
+		output headers, back to the user-agent
 
-        private void commit (IBuffer emit)
-        {
-                if (! commited)
-                   {
-                   // say we've send headers on this response
-                   commited = true;
+	 **********************************************************************/
 
-                   char[16]     tmp;
-                   char[]       header;
-                   HttpHeaders  headers = getHeader;
+	private void commit ()
+	{
+		commit(output);
+	}
 
-                   // write the response header
-                   emit (HttpVersion)
-                        (" ")
-                        (Integer.itoa (tmp, status.code))
-                        (" ")
-                        (status.name)
-                        (HttpConst.Eol);
+	private void commit (IBuffer emit)
+	{
+		if (! commited)
+		{
+			// say we've send headers on this response
+			commited = true;
 
-                   // tell client we don't support keep-alive
-                   //if (! headers.get (HttpHeader.Connection))
-                   //      headers.add (HttpHeader.Connection, "close");
-									 
-									 // write the header tokens, followed by a blank line
-                   super.produce (&emit.consume, HttpConst.Eol);
+			char[16]     tmp;
+			char[]       header;
+			HttpHeaders  headers = getHeader;
 
-                   // send headers back to the UA right away
-                   emit (HttpConst.Eol).flush;
-                        
-                   version (ShowHeaders)
-                           {
-                           Stdout.formatln (">>>> output headers");
-                           Stdout.formatln (HttpVersion);
-                           Stdout.formatln (" {} ",status.code);
-                           Stdout.formatln (status.name);
-                           super.write(new Writer(Stdout.stream));
-                           }
-                   }
+			// write the response header
+			emit (HttpVersion)
+				(" ")
+				(Integer.itoa (tmp, status.code))
+				(" ")
+				(status.name)
+				(HttpConst.Eol);
 
-        }
+			// write the header tokens, followed by a blank line
+			super.produce (&emit.consume, HttpConst.Eol);
 
-        /**********************************************************************
+			// send headers back to the UA right away
+			emit (HttpConst.Eol).flush;
 
-                Send an error back to the user-agent. We have to be careful
-                about which errors actually have content returned and those
-                that don't.
+			version (ShowHeaders)
+			{
+				logger.info (">>>> output headers");
+				logger.info (HttpVersion);
+				logger.info (sprint(" {} ",status.code));
+				logger.info (status.name);
+			}
+		}
 
-        **********************************************************************/
+	}
 
-        private void sendError (inout HttpStatus status, char[] reason, char[] message)
-        {
-                setStatus (status);
+	/**********************************************************************
 
-                if (status.code != HttpResponses.NoContent.code && 
-                    status.code != HttpResponses.NotModified.code && 
-                    status.code != HttpResponses.PartialContent.code && 
-                    status.code >= HttpResponses.OK.code)
-                   {
-                   // error-page is html
-                   setContentType (HttpHeader.TextHtml.value);
+		Send an error back to the user-agent. We have to be careful
+		about which errors actually have content returned and those
+		that don't.
 
-                   // output the headers
-                   commit;
-        
-                   // output an error-page
-                   char[16] tmp = void;
-                   auto code = Integer.itoa(tmp, status.code);
+	 **********************************************************************/
 
-                   output ("<HTML>\n<HEAD>\n<TITLE>Error ")
-                          (code)
-                          (" ")
-                          (reason)
-                          ("</TITLE>\n<BODY>\n<H2>HTTP Error: ")
-                          (code)
-                          (" ")
-                          (reason)                       
-                          ("</H2>\n")
-                          (message ? message : "")
-                          ("\n</BODY>\n</HTML>\n");
-									 flush;
-                   }
-        }
+	private void sendError (inout HttpStatus status, char[] reason, char[] message)
+	{
+		setStatus (status);
+
+		if (status.code != HttpResponses.NoContent.code && 
+				status.code != HttpResponses.NotModified.code && 
+				status.code != HttpResponses.PartialContent.code && 
+				status.code >= HttpResponses.OK.code)
+		{
+			// error-page is html
+			setContentType (HttpHeader.TextHtml.value);
+
+			// output the headers
+			commit;
+
+			// output an error-page
+			char[16] tmp = void;
+			auto code = Integer.itoa(tmp, status.code);
+
+			output ("<HTML>\n<HEAD>\n<TITLE>Error ")
+				(code)
+				(" ")
+				(reason)
+				("</TITLE>\n<BODY>\n<H2>HTTP Error: ")
+				(code)
+				(" ")
+				(reason)                       
+				("</H2>\n")
+				(message ? message : "")
+				("\n</BODY>\n</HTML>\n");
+			flush;
+		}
+	}
 }
 
 

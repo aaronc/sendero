@@ -36,7 +36,9 @@ class SenderoProvider : HttpProvider
 
 	void service (HttpRequest request, HttpResponse response)
 	{
-		auto from = new FileConduit ("/home/rick/Desktop/testdata/Oscar_Wilde.html");
+		//auto from = new FileConduit ("/home/rick/Desktop/testdata/Oscar_Wilde.html");
+		auto from = new FileConduit ("/var/www/index.lighttpd.html");
+		
 		//synchronized
 		//{
 		//outbuf("<HTML>\n<HEAD>\n<TITLE>Hello!</TITLE>\n"c)
@@ -45,12 +47,9 @@ class SenderoProvider : HttpProvider
 		//}
 		response.setContentType (HttpHeader.TextHtml.value);
 		response.setContentLength(from.length());
-		auto buf = response.getOutputBuffer();
-		logger.info(sprint("Thread: {0}, buf: 0x{1:x}, outbuf: 0x{2:x}",
-								Thread.getThis().name(),cast(uint)&buf,cast(uint)&outbuf));
 
+		auto buf = response.getOutputBuffer();
 		buf.copy(from);
-		logger.info("flushing output buffer");
 		response.flush();
 		//response.sendError(HttpResponses.NotFound);
 	}

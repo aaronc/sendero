@@ -55,7 +55,6 @@ class ThreadPool(THREAD, OBJ)
 	{
 		auto sprint = new Sprint!(char);
 		wqueue.pushBack(obj);
-		logger.info(sprint("added task size - {}", wqueue.size()));
 	}
 
 	//this is unessesary since the tango.Thread class joins by default

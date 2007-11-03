@@ -4,6 +4,7 @@ import tango.util.log.Log;
 import tango.util.log.Configurator;
 import tango.text.convert.Sprint;
 import tango.net.SocketConduit;
+import tango.io.selector.model.ISelector;
 import tango.io.model.IConduit;
 import tango.core.Thread;
 import tango.core.Exception;
@@ -16,11 +17,11 @@ import sendero.util.WorkQueue;
 template safecall(char[] handler)
 {
 	const char[] safecall = "if (" ~ handler ~ ")" ~
-		handler ~ "(cond);";
+		handler ~ "(key);";
 }
 
-alias WorkQueue!(SocketConduit) SocketQueue;
-typedef bool delegate(SocketConduit) Handler;
+alias WorkQueue!(SelectionKey) SocketQueue;
+typedef bool delegate(SelectionKey) Handler;
 
 class HttpThread : Thread 
 {
@@ -47,41 +48,40 @@ class HttpThread : Thread
 			//WorkQueue is built for threaded access and will block on empty
 			//so this thread simply needs to request a task and will block(sleep)
 			//until one becomes available
-			SocketConduit sock = wqueue.popFront();
-			logger.info(sprint("Thread: {0}, Sock {1} popped task size - {2}",
-					 				Thread.getThis().name(), sock.fileHandle(), wqueue.size()));
-			try
-			{
-				task_handler(sock);
-			}
-			catch(IOException e)
-			{
-				logger.error(sprint("Thread: {0}, Sock: {1}, IOException: {2}", 
-										 Thread.getThis.name(), sock.fileHandle(), e.toUtf8));
-			}
-			catch(TracedException e)
-			{
-				logger.error(sprint("Thread: {0}, Sock: {1}, TracedException: {2}", 
-										 Thread.getThis.name(), sock.fileHandle(), e.toUtf8));
-
-			}
-			catch(Exception e)
-			{
-				logger.error(sprint("Thread: {0}, Sock: {1}, Exception: {2}", 
-										 Thread.getThis.name(), sock.fileHandle(), e.toUtf8));
-
-			}
+			SelectionKey key = wqueue.popFront();
+			SocketConduit sock = cast(SocketConduit) key.conduit();
+			task_handler(key);
 		}
 	}
 
-	void task_handler(SocketConduit cond)
+	void task_handler(SelectionKey key)
 	{
 		//while(1) <-- for edge triggered: we might have received another request, should
 		//process all possible data before returning the socket because it will ignore 
 		//any data left there
-			while (cond.isAlive())
+		SocketConduit cond = cast(SocketConduit) key.conduit();	
+		try
+		{
+				logger.info(sprint("crossing handle {0} - id {1}", 
+										cond.fileHandle(), key._id)); 
 				bridge.cross(cond);
+		}
+		catch(IOException e)
+		{
+			logger.error(sprint("Thread: {0}, Sock: {1}, IOException: {2}", 
+										 Thread.getThis.name(), cond.fileHandle(), e.toUtf8));
+		}
+		catch(TracedException e)
+		{
+			logger.error(sprint("Thread: {0}, Sock: {1}, TracedException: {2}", 
+										 Thread.getThis.name(), cond.fileHandle(), e.toUtf8));
 
+		}
+		catch(Exception e)
+		{
+			logger.error(sprint("Thread: {0}, Sock: {1}, Exception: {2}", 
+										 Thread.getThis.name(), cond.fileHandle(), e.toUtf8));
+		}
 		mixin(safecall!("after_response_write"));
 	}
 
