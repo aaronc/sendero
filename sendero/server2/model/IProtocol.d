@@ -15,4 +15,5 @@ interface IProtocol
 {
 	static int validateRequest(FastBuffer);
 	int handleRequest(FastBuffer, ISelectable);
+
 }
