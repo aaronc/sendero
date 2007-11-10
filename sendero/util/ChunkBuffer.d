@@ -4,6 +4,9 @@ module sendero.util.ChunkBuffer;
 import tango.io.Buffer;
 import tango.net.SocketConduit;
 import tango.net.Socket;
+
+version(Debug)
+	import tango.io.Stdout;
 /*******************************************************************
 
 	ChunkedBuffer
@@ -14,11 +17,14 @@ import tango.net.Socket;
 	to.
 
 *******************************************************************/
+const int BUFSIZE = (8*1024);
 
 class ChunkBuffer : Buffer
 {
 	private ChunkBuffer next;
-
+	private ChunkBuffer currentout;
+	private ChunkBuffer currentin;
+	private bool usingSocket;
 	public
 
 
@@ -31,36 +37,70 @@ class ChunkBuffer : Buffer
 	final uint drainAll()
 	{
 		uint total;
-		uint lim;
-		ChunkBuffer nxt = this;
-		while (lim == 0 && nxt)
+		uint len;
+		version(Debug)              
+			Stdout.formatln("next buffer is {:x}", &currentout);
+		while (len == 0 && currentout)
 		{
-			total += nxt.adrain();
-			lim = nxt.limit;
-			nxt = nxt.next;
+			currentout.output(this.sink);
+			
+			version(Debug)
+				Stdout.formatln("using next buffer to drain");
+
+			if (currentout.readable() < 1)
+				break;
+			total += currentout.adrain();
+			len = currentout.readable();
+			currentout = currentout.next;
 		}
+		return total;
 	}
 
 	/********************************************************************
 
 		Iterate through all chained buffers, reading from the input stream
 		into as many buffers as it will fill. 
-	
+		A return of -1 is there is no data to be read. 
+		a return of -2 is a socket error. 	
 	*********************************************************************/
-	final uint fillAll(InputStream istream)
+	final int fillAll(InputStream istream)
 	{
 		if (capacity < 1)
 			return 0;
-		uint total = afill(istream);
+		int read;
+		uint total = currentin.afill(istream);
+		switch(total)
+		{
+			case 0:
+				return -2;
+			case -1:
+				return -1;
+			default:
+				;
+		}
 		uint lim = limit;
 		uint cap = capacity;
 
 		while(lim == cap)
 		{
-			ChunkBuffer cb = New();
-			total += cb.afill(istream);
+			version(Debug)
+				Stdout.formatln("Creating New ChunkBuffer");
+			ChunkBuffer cb = New(usingSocket);
+			read = cb.afill(istream);
+			switch (read)
+			{
+				case 0:
+					return -2;
+				case -1:
+					return total;
+				default:
+					;
+			}
+			total += read;
 			lim = cb.limit;
 			cap = cb.capacity;
+			currentin.next = cb;
+			currentin = cb;
 		}
 		return total;
 	}
@@ -71,7 +111,7 @@ class ChunkBuffer : Buffer
 		one if none exist
 
 	*******************************************************************/
-	static ChunkBuffer New()
+	static ChunkBuffer New(bool issock=true)
 	{
 		ChunkBuffer cb;
 		synchronized(mtx)
@@ -82,7 +122,7 @@ class ChunkBuffer : Buffer
 					freelist = cb.next;
 			}
 			else
-				cb = new ChunkBuffer;
+				cb = new ChunkBuffer(issock);
 		}
 		cb.next = null;
 		return cb;
@@ -95,21 +135,30 @@ class ChunkBuffer : Buffer
 	********************************************************************/
 	static void Delete(ChunkBuffer cb)
 	{
-		cb.clear();
+		cb.reset();
 		ChunkBuffer nxt = cb;
+		ChunkBuffer last;
 		while(nxt)
 		{
-			nxt.clear();
+			last = nxt;
+			nxt.reset();
 			nxt = nxt.next;
 		}
+
 		synchronized(mtx)
 		{
-			nxt.next = freelist;
+			last.next = freelist;
 			freelist = cb;
 		}
 	}
 
-	private static FastBuffer freelist;
+	this(bool issock = true)
+	{
+		usingSocket = issock;
+		currentout = currentin = this;
+		super(BUFSIZE);
+	}
+	private static ChunkBuffer freelist;
 	private static Object mtx;
 	static this()
 	{
@@ -158,7 +207,7 @@ class ChunkBuffer : Buffer
 
 	 ***********************************************************************/
 
-	uint afill (InputStream src)
+	int afill (InputStream src)
 	{
 		if (src is null)
 			return IConduit.Eof;
@@ -168,8 +217,13 @@ class ChunkBuffer : Buffer
 		else 
 			if (writable is 0)
 				return 0;
-		Socket sock = (cast(SocketConduit) src).socket();
-		return write (&sock.receive);
+
+		if (usingSocket)
+		{
+			Socket sock = (cast(SocketConduit) src).socket();
+			return write (&sock.receive);
+		}
+		return super.write(&src.read);
 	}
 
 	/***********************************************************************
@@ -203,5 +257,57 @@ class ChunkBuffer : Buffer
 			assert (extent <= dimension);
 		}
 		return count;
-	}  
+	} 
+
+	/********************************************************************
+
+		reset, re-initializes the currentin and currentout as well as 
+	  clears the buffer
+
+	********************************************************************/
+	void reset()
+	{
+		currentin = this;
+		currentout = this;
+		clear();
+	}	
+}
+
+
+version (UnitTest)
+{
+	import tango.io.FileConduit;
+	import tango.io.Stdout;
+	void main()
+	{
+		auto from = new FileConduit ("test.in");
+		auto buf = ChunkBuffer.New(false);
+
+		int ttl = buf.fillAll(from);
+		Stdout.formatln("read {} bytes", ttl);
+
+		auto to = new FileConduit("test.out", FileConduit.WriteCreate);
+		buf.output(to);
+		ttl = buf.drainAll();
+		Stdout.formatln("wrote {} bytes", ttl);
+		ChunkBuffer.Delete(buf);
+		to.close();
+		
+		// take 2 
+
+		from = new FileConduit ("test.in");
+		buf = ChunkBuffer.New(false);
+
+		ttl = buf.fillAll(from);
+		Stdout.formatln("read {} bytes", ttl);
+		from.seek(0);
+		ttl = buf.fillAll(from);
+		Stdout.formatln("read {} bytes", ttl);
+
+		to = new FileConduit("test.out", FileConduit.WriteCreate);
+		buf.output(to);
+		ttl = buf.drainAll();
+		Stdout.formatln("wrote {} bytes", ttl);
+		ChunkBuffer.Delete(buf);
+	}
 }

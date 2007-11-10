@@ -120,7 +120,7 @@ class AsyncServer(THREAD)
 			foreach(SelectionKey key; reRegSockList)
 			{
 				SocketConduit cond = cast(SocketConduit) key.conduit();
-				if (cond.readable())
+				if (cond.fileHandle() > 0)
 				{
 					//selector.reregister(key, EvtOneRead);
 				}
