@@ -53,6 +53,8 @@ class ChunkBuffer : Buffer
 			len = currentout.readable();
 			currentout = currentout.next;
 		}
+		if (currentout.readable() == 0)
+			currentout = this;
 		return total;
 	}
 
