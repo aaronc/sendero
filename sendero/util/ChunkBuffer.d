@@ -1,5 +1,5 @@
 
-module sendero.util.ChunkBuffer;
+module sendero.util.ChainBuffer;
 
 import tango.io.Buffer;
 import tango.net.SocketConduit;
@@ -19,11 +19,11 @@ version(Debug)
 *******************************************************************/
 const int BUFSIZE = (8*1024);
 
-class ChunkBuffer : Buffer
+class ChainBuffer : Buffer
 {
-	private ChunkBuffer next;
-	private ChunkBuffer currentout;
-	private ChunkBuffer currentin;
+	private ChainBuffer next;
+	private ChainBuffer currentout;
+	private ChainBuffer currentin;
 	private bool usingSocket;
 	public
 
@@ -86,8 +86,8 @@ class ChunkBuffer : Buffer
 		while(lim == cap)
 		{
 			version(Debug)
-				Stdout.formatln("Creating New ChunkBuffer");
-			ChunkBuffer cb = New(usingSocket);
+				Stdout.formatln("Creating New ChainBuffer");
+			ChainBuffer cb = New(usingSocket);
 			read = cb.afill(istream);
 			switch (read)
 			{
@@ -109,13 +109,13 @@ class ChunkBuffer : Buffer
 
 	/*******************************************************************
 
-		Pull a free ChunkBuffer off of the freelist or allocate a new
+		Pull a free ChainBuffer off of the freelist or allocate a new
 		one if none exist
 
 	*******************************************************************/
-	static ChunkBuffer New(bool issock=true)
+	static ChainBuffer New(bool issock=true)
 	{
-		ChunkBuffer cb;
+		ChainBuffer cb;
 		synchronized(mtx)
 		{
 			if (freelist)
@@ -124,7 +124,7 @@ class ChunkBuffer : Buffer
 					freelist = cb.next;
 			}
 			else
-				cb = new ChunkBuffer(issock);
+				cb = new ChainBuffer(issock);
 		}
 		cb.next = null;
 		return cb;
@@ -135,11 +135,11 @@ class ChunkBuffer : Buffer
 		Place this chunk and all of its children back onto the freelist
 	
 	********************************************************************/
-	static void Delete(ChunkBuffer cb)
+	static void Delete(ChainBuffer cb)
 	{
 		cb.reset();
-		ChunkBuffer nxt = cb;
-		ChunkBuffer last;
+		ChainBuffer nxt = cb;
+		ChainBuffer last;
 		while(nxt)
 		{
 			last = nxt;
@@ -160,7 +160,7 @@ class ChunkBuffer : Buffer
 		currentout = currentin = this;
 		super(BUFSIZE);
 	}
-	private static ChunkBuffer freelist;
+	private static ChainBuffer freelist;
 	private static Object mtx;
 	static this()
 	{
@@ -283,7 +283,7 @@ version (UnitTest)
 	void main()
 	{
 		auto from = new FileConduit ("test.in");
-		auto buf = ChunkBuffer.New(false);
+		auto buf = ChainBuffer.New(false);
 
 		int ttl = buf.fillAll(from);
 		Stdout.formatln("read {} bytes", ttl);
@@ -292,13 +292,13 @@ version (UnitTest)
 		buf.output(to);
 		ttl = buf.drainAll();
 		Stdout.formatln("wrote {} bytes", ttl);
-		ChunkBuffer.Delete(buf);
+		ChainBuffer.Delete(buf);
 		to.close();
 		
 		// take 2 
 
 		from = new FileConduit ("test.in");
-		buf = ChunkBuffer.New(false);
+		buf = ChainBuffer.New(false);
 
 		ttl = buf.fillAll(from);
 		Stdout.formatln("read {} bytes", ttl);
@@ -310,6 +310,6 @@ version (UnitTest)
 		buf.output(to);
 		ttl = buf.drainAll();
 		Stdout.formatln("wrote {} bytes", ttl);
-		ChunkBuffer.Delete(buf);
+		ChainBuffer.Delete(buf);
 	}
 }
