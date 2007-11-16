@@ -2,7 +2,7 @@
 module sendero.server2.model.IProtocol;
 import tango.io.model.IConduit;
 import tango.io.selector.model.ISelector;
-import sendero.util.FastBuffer;
+import tango.io.model.IBuffer;
 
 /**
 	* IProtocol
@@ -13,7 +13,13 @@ import sendero.util.FastBuffer;
 
 interface IProtocol
 {
-	static int validateRequest(FastBuffer);
-	int handleRequest(FastBuffer, ISelectable);
+  static int validateRequest(IBuffer);
+  int handleRequest(IBuffer, ISelectable);
+}
 
+enum Validator : int
+{
+  COMPLETE = 0,
+  INVALID = -1,
+  INCOMPLETE = 1
 }

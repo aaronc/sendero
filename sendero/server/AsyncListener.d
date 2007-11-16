@@ -31,7 +31,6 @@ class AsyncListener
   {
     listener = new ServerSocket(new InternetAddress(BIND_ADDR, 3456), 128 * 8, true);
     listener.socket().blocking(false);
-    running = true;
     selector.open();
     selector.register(listener, EvtPersistRead); 
     event_loop();
@@ -42,19 +41,10 @@ class AsyncListener
   {
     while (running)
     {
-      int eventCount = selector.select(0.3);
+      int eventCount = selector.select(0.1);
       if (eventCount > 0)
       {
         ISelectionSet selset = selector.selectedSet();
-        foreach (SelectionKey key; selset)
-        {
-          if (key.check(Event.Error) || key.check(Event.Hangup))
-          {
-            logger.info(sprint("closing socket {}", key.conduit().fileHandle()));
-            selector.unregister(key);
-            (cast(SocketConduit)key.conduit()).detach();
-          }
-        }
         foreach (SelectionKey key; selset)
         {
           if (key.conduit() is listener)
