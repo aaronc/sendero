@@ -1027,11 +1027,13 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 			if(pInfo) {
 				(*pInfo).offset = f.offset;
 			
-				auto pValidation = (f.name in ValidationOptionsFor!(T).rules);
-				if(pValidation) {
-					auto propService = new ClassPropertyService;
-					propService.validation = *pValidation;
-					(*pInfo).propertyService = propService;
+				static if(is(typeof(T.defineValidation))) {
+					auto pValidation = (f.name in ValidationOptionsFor!(T).rules);
+					if(pValidation) {
+						auto propService = new ClassPropertyService;
+						propService.validation = *pValidation;
+						(*pInfo).propertyService = propService;
+					}
 				}
 				
 				bindInfo[f.name] = *pInfo;
