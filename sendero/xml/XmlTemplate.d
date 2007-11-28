@@ -1,6 +1,7 @@
 module sendero.xml.XmlTemplate;
 
 import sendero.xml.XmlParser;
+import sendero.xml.XmlNodeType;
 import sendero.util.ArrayWriter;
 import sendero.util.collection.Stack;
 import sendero.util.StringCharIterator;
@@ -13,8 +14,10 @@ import tango.text.Util;
 import tango.io.File;
 import tango.io.FilePath;
 
+debug import tango.io.Stdout;
+
 enum XmlTemplateNodeType { Element, ForElement, IfElement, Data, CData, Comment, PI, Doctype };
-enum XmlTemplateActionType { If, For, AssocFor, Def, List, DefObject, Include, Extend, Block, Super, Attr, Attrs, Element, Choice, Let};
+enum XmlTemplateActionType { If, For, AssocFor, Def, List, DefObject, Include, Import, Extend, Block, Super, Attr, Attrs, Element, Choice, Let};
 
 /*
  * Elements/Attributes:
@@ -230,13 +233,21 @@ class XmlTemplate
 	
 	static XmlTemplate compile(char[] templ)
 	{
-		auto itr = new XmlForwardNodeParser!(char)(templ);
+		auto itr = new XmlParser!(char)(templ);
+		bool retain = false;
 		
 		XmlTemplateNode base = new XmlTemplateNode;
 		base.type = XmlNodeType.Element;
 
 		bool text = false;
 		auto res = new XmlTemplate;
+		
+		bool nextAttribute()
+		{
+			if(itr.next && itr.type == XmlTokenType.Attribute) return true;
+			retain = true;
+			return false;
+		}
 		
 		void processNode(XmlTemplateNode elem, int limit = -1)
 		{
@@ -333,25 +344,26 @@ class XmlTemplate
 					fn.templ = templ;
 					fn.paramNames = params;
 					res.functionCtxt.addFunction(name, fn);
-					
 					processNode(node, depth);
 				}
 				
 				void doObject(char[] name)
 				{
-					if(!itr.nextNode) return;
-					if(itr.type != XmlNodeType.Data) {
-						itr.retainCurrent;
+					if(!(retain || itr.next)) return;
+					if(itr.type != XmlTokenType.Data) {
+						retain = true;
 						return;
 					}
+					retain = false;
+					
 					XmlTemplateAction action;
 					action.action = XmlTemplateActionType.DefObject;
-					action.obj.expr = parseMessage(itr.nodeValue, res.functionCtxt);
+					action.obj.expr = parseMessage(itr.value, res.functionCtxt);
 					action.obj.name = name;
 					node.elem.actions ~= action;
 					
-					while(itr.nextNode && itr.depth > depth) {}
-					itr.retainCurrent;
+					while((retain || itr.next) && itr.depth > depth) { retain = false; }
+					retain = true;
 				}
 				
 				void doLet(char[] name, char[] val)
@@ -359,21 +371,22 @@ class XmlTemplate
 					XmlTemplateAction action;
 					action.action = XmlTemplateActionType.Let;
 					action.let.name = name;
-					parseTextExpression(val, action.let.expr, res.functionCtxt);
+					//parseTextExpression(val, action.let.expr, res.functionCtxt);
+					parseExpression(val, action.let.expr, res.functionCtxt);
 					node.elem.actions ~= action;
 					
-					while(itr.nextNode && itr.depth > depth) {}
-					itr.retainCurrent;
+					while((retain || itr.next) && itr.depth > depth) { retain = false; }
+					retain = true;
 				}
 				
 				void doExtendBlock()
 				{
 					char[] name;
-					while(itr.nextAttribute)
+					while(nextAttribute)
 					{
 						if(itr.localName == "name")
 						{
-							name = itr.nodeValue;
+							name = itr.value;
 							break;
 						}
 					}
@@ -394,13 +407,14 @@ class XmlTemplate
 					action.expr = parseMessage(href, res.functionCtxt);
 					node.elem.actions ~= action;
 					
-					while(itr.nextNode && itr.depth > depth) {
-						if(itr.type == XmlNodeType.Element && itr.nodeName == "d:block")
+					while((retain || itr.next) && itr.depth > depth) {
+						retain = false;
+						if(itr.type == XmlTokenType.StartElement && itr.name == "d:block")
 						{
 							doExtendBlock();
 						}
 					}
-					itr.retainCurrent;
+					retain = true;
 				}
 				
 				void doBlock(char[] name)
@@ -418,8 +432,8 @@ class XmlTemplate
 					action.action = XmlTemplateActionType.Super;
 					node.elem.actions ~= action;
 					
-					while(itr.nextNode && itr.depth > depth) {}
-					itr.retainCurrent;
+					while((retain || itr.next) && itr.depth > depth) {retain = false;}
+					retain = true;
 				}
 				
 				void doAttr(char[] name, char[] val)
@@ -430,8 +444,8 @@ class XmlTemplate
 					action.attr.val = parseMessage(val, res.functionCtxt);
 					curElem.elem.actions ~= action;
 					
-					while(itr.nextNode && itr.depth > depth) {}
-					itr.retainCurrent;
+					while((retain || itr.next) && itr.depth > depth) {retain = false;}
+					retain = true;
 				}
 				
 				void doChoice(char[] expr)
@@ -439,17 +453,18 @@ class XmlTemplate
 					XmlTemplateAction action;
 					action.action = XmlTemplateActionType.Choice;
 					action.choice.expr = parseMessage(expr, res.functionCtxt);
-					while(itr.nextNode && itr.depth > depth) {
+					while((retain || itr.next) && itr.depth > depth) {
+						retain = false;
 						if(itr.type == XmlNodeType.Element && itr.prefix == "d")
 						{
 							if(itr.localName == "when")
 							{
 								char[] val;
-								while(itr.nextAttribute)
+								while(nextAttribute)
 								{
 									if(itr.localName == "val")
 									{
-										val = itr.nodeValue;
+										val = itr.value;
 										break;
 									}
 								}
@@ -467,7 +482,7 @@ class XmlTemplate
 							}
 						}
 					}
-					itr.retainCurrent;
+					retain = true;
 					curElem.elem.actions ~= action;
 				}
 				
@@ -479,79 +494,79 @@ class XmlTemplate
 					case "for":
 					case "list":	
 						char[] each, sep;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "each")
 							{
-								each = itr.nodeValue;
+								each = itr.value;
 							}
 							
 							if(itr.localName == "sep")
 							{
-								sep = itr.nodeValue;
+								sep = itr.value;
 							}
 						}
 						if(each) doFor(each, sep);
 						break;
 					case "if":
 						char[] test;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "test")
 							{
-								test = itr.nodeValue;
+								test = itr.value;
 							}
 						}
 						if(test) doIf(test);
 						break;
 					case "def":
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "function")
 							{
-								return doFunction(itr.nodeValue);
+								return doFunction(itr.value);
 								break;
 							}
 							if(itr.localName == "object")
 							{
-								doObject(itr.nodeValue);
+								doObject(itr.value);
 								break;
 							}
 						}
 						break;
 					case "let":
 						char[] name, val;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "name")
 							{
-								name = itr.nodeValue;
+								name = itr.value;
 							}
 							if(itr.localName == "value")
 							{
-								val = itr.nodeValue;
+								val = itr.value;
 							}
 						}
 						if(name.length && val.length) doLet(name, val);
 						break;
 					case "extends":
 						char[] href;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "href")
 							{
-								href = itr.nodeValue;
+								href = itr.value;
 							}
 						}
 						if(href) doExtend(href);
 						break;
-					case "block":
+					case "block":	
 						char[] name;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "name")
 							{
-								name = itr.nodeValue;
+								name = itr.value;
 							}
 						}
 						if(name) doBlock(name);
@@ -561,26 +576,26 @@ class XmlTemplate
 						break;
 					case "attr":
 						char[] name, val;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "name")
 							{
-								name = itr.nodeValue;
+								name = itr.value;
 							}
 							if(itr.localName == "val")
 							{
-								val = itr.nodeValue;
+								val = itr.value;
 							}
 						}
 						if(name.length && val.length) return doAttr(name, val); 
 						break;
 					case "choose":
 						char[] val;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "expr")
 							{
-								val = itr.nodeValue;
+								val = itr.value;
 								break;
 							}
 						}
@@ -598,11 +613,11 @@ class XmlTemplate
 					if(itr.localName == "include")
 					{
 						char[] href;
-						while(itr.nextAttribute)
+						while(nextAttribute)
 						{
 							if(itr.localName == "href")
 							{
-								href = itr.nodeValue;
+								href = itr.value;
 							}
 						}
 						if(href) doInclude(href);
@@ -616,8 +631,8 @@ class XmlTemplate
 				{
 					node.elem.qname.prefix = itr.prefix;
 					node.elem.qname.localName = itr.localName;
-					version(CompactSyntax)
-					{
+					//version(CompactSyntax)
+					//{
 						if(!node.elem.qname.prefix.length)
 						{
 							auto str = node.elem.qname.localName;
@@ -682,9 +697,9 @@ class XmlTemplate
 								addAttr("class", clsdef);
 							}
 						}
-					}
+					//}
 					
-					while(itr.nextAttribute)
+					while(nextAttribute)
 					{
 						//if(itr.namespace == "http://www.dsource.org/projects/sendero") //TODO add namespace awareness to parser
 						if(itr.prefix == "d")
@@ -692,16 +707,16 @@ class XmlTemplate
 							switch(itr.localName)
 							{
 							case "for":
-								doFor(itr.nodeValue);
+								doFor(itr.value);
 								break;
 							case "if":
-								doIf(itr.nodeValue);
+								doIf(itr.value);
 								break;
 							case "def":
-								return doFunction(itr.nodeValue);
+								return doFunction(itr.value);
 								break;
 							case "block":
-								doBlock(itr.nodeValue);
+								doBlock(itr.value);
 								break;
 							default:
 								//TODO parse error
@@ -710,11 +725,11 @@ class XmlTemplate
 						}
 						else
 						{
-							auto msg = parseMessage(itr.nodeValue, res.functionCtxt);
+							auto msg = parseMessage(itr.value, res.functionCtxt);
 							if(msg.params.length) {
 								XmlTemplateAction action;
 								action.action = XmlTemplateActionType.Attr;
-								action.attr.name = parseMessage(itr.nodeName, res.functionCtxt);
+								action.attr.name = parseMessage(itr.name, res.functionCtxt);
 								action.attr.val = msg;
 								node.elem.actions ~= action;
 							}
@@ -722,7 +737,7 @@ class XmlTemplate
 								Attribute attr;
 								attr.qname.prefix = itr.prefix;
 								attr.qname.localName = itr.localName;
-								attr.value = itr.nodeValue;
+								attr.value = itr.value;
 								node.elem.attributes ~= attr;
 							}
 						}
@@ -747,7 +762,7 @@ class XmlTemplate
 			void doData()
 			{
 				auto node = new XmlTemplateNode;
-				char[] val = itr.nodeValue;
+				char[] val = itr.value;
 				auto len = val.length;
 				uint i = 0;
 				while(i < len && val[i] < 32) {++i;} //Check for all whitespace in data
@@ -770,18 +785,25 @@ class XmlTemplate
 				auto node = new XmlTemplateNode;
 				switch(itr.type)
 				{
-				case XmlNodeType.Comment:
+				case XmlTokenType.Comment:
 					node.type = XmlNodeType.Comment;
-					node.node.value = itr.nodeValue;
+					node.node.value = itr.value;
+					break;
+				case XmlTokenType.Doctype:
+					break;
+				case XmlTokenType.Attribute:
+					//debug Stdout(itr.prefix ~ ":" ~ itr.localName ~ "=" ~ itr.rawValue);
+					debug assert(false, itr.prefix ~ ":" ~ itr.localName ~ "=" ~ itr.rawValue);
 					break;
 				default:
-					assert(false, "Unhandled node type");
+					assert(false, "Unhandled node type " ~ Integer.toUtf8(itr.type));
 				}
 				curElem.elem.children ~= node;
 			}
 			
-			while(itr.nextNode && itr.depth > limit)
+			while((retain || itr.next) && itr.depth > limit)
 			{
+				retain = false;
 				if(depth < itr.depth)
 				{
 					stack.push(curElem);
@@ -800,18 +822,21 @@ class XmlTemplate
 				
 				switch(itr.type)
 				{
-				case XmlNodeType.Element:
+				case XmlTokenType.StartElement:
 					doElement();
 					break;
-				case XmlNodeType.Data:
+				case XmlTokenType.Data:
 					doData();
+					break;
+				case XmlTokenType.EndElement:
+				case XmlTokenType.EndEmptyElement:
 					break;
 				default:
 					doDefault();
 					break;
 				}
 			}
-			itr.retainCurrent;
+			retain = true;
 		}
 		
 		processNode(base);
@@ -863,18 +888,22 @@ class XmlTemplate
 						auto var = ctxt.getVar(a.params[1]);
 						if(var.type != VarT.Array) return;
 						
+						//uint i = 0; uint n = var.arrayBinding.length;
 						foreach(v; var.arrayBinding)
 						{
 							auto curCtxt = ctxt;
 							scope localCtxt = new ExecutionContext(ctxt);
 							ctxt = localCtxt;
 							
-							ctxt.addVar(a.params[0][0], v); 
+							ctxt.addVar(a.params[0][0], v);
+							//if(i == n) ctxt.addVar("__loopLast__", true);
+							ctxt.addVar("__loopN__", i);
 									
 							renderElement(i + 1);
 							
 							ctxt = curCtxt;
 							//ctxt.removeVar(a.params[0][0]);
+							++i;
 						}
 					}
 					
@@ -885,6 +914,7 @@ class XmlTemplate
 						auto var = ctxt.getVar(a.params[2]);
 						if(var.type != VarT.Object) return;
 						
+						uint i = 0; //uint n = var.objBinding.length;
 						foreach(k, v; var.objBinding)
 						{
 							auto curCtxt = ctxt;
@@ -893,10 +923,13 @@ class XmlTemplate
 							
 							ctxt.addVar(a.params[0][0], k); 
 							ctxt.addVar(a.params[1][0], v);
+							//if(i == n) ctxt.addVar("__loopLast__", true);
+							ctxt.addVar("__loopN__", i);
 									
 							renderElement(i + 1);
 							
 							ctxt = curCtxt;
+							++i;
 						}
 					}
 					
@@ -958,6 +991,7 @@ class XmlTemplate
 						auto path = a.expr.exec(ctxt);
 						auto templ = XmlTemplate.get(path);
 						templ.ctxt = ctxt;
+						ctxt.runtimeImports ~= templ.templ.functionCtxt;
 						if(templ) str ~= templ.render;
 					}
 					
@@ -1201,6 +1235,8 @@ class XmlTemplate
 
 class XmlTemplateInstance
 {
+	private this() {}
+	
 	private this(XmlTemplate t)
 	{
 		templ = t;
@@ -1235,6 +1271,8 @@ version(Unittest)
 {
 	import tango.io.Stdout;
 	import sendero.data.Validation;
+	import tango.util.time.StopWatch;
+	import Integer = tango.text.convert.Integer;
 	//import tango.text.locale.Convert, tango.text.locale.Core;
 	
 	static class Name
@@ -1250,10 +1288,26 @@ version(Unittest)
 			v.setRequired(&n.last, "Must input last name");
 		}
 	}
+	
+void benchmark(XmlTemplateInstance inst)
+{
+	StopWatch watch;
+	watch.start;
+	uint n = 1000;
+	for(uint i = 0; i < n; ++i)
+	{
+		inst.render;
+	}
+	float t = watch.stop;
+	double rate = t/n * 1000;
+	
+	Stdout.formatln("XmlTemplate: {} iterations, {} seconds, {} ms/templ", n, t, rate);
 }
 
 unittest
 {
+	Stdout("beginning template tests").newline;
+	
 	char[] templ =
 		"<div><p d:def=\"myfunction()\">Some text!!</p>"
 		"<h1 d:if=\"$heading\">A heading</h1>"
@@ -1291,6 +1345,18 @@ unittest
 	n.somenumber = 7654321;
 	n.date = DateTime(1942, 10, 14);
 	names ~= n;
+	n = new Name;
+	n.first = "Joe";
+	n.last = "Schmoe";
+	n.somenumber = 7654321;
+	n.date = DateTime(1967, 3, 3);
+	names ~= n;
+	n = new Name;
+	n.first = "Pete";
+	n.last = "This Is Neat";
+	n.somenumber = 7654321;
+	n.date = DateTime(1967, 3, 3);
+	names ~= n;
 	
 	ctxt.addVar("names", names);
 	
@@ -1318,8 +1384,16 @@ unittest
 
 	auto complex = XmlTemplate.get("test/complex.xml");
 	complex["person"] = n;
+	complex["names"] = names;
 	Stdout(complex.render).newline;
 	
 	auto compact = XmlTemplate.get("test/compactsyntax.xml");
 	Stdout(compact.render).newline;
+	
+	auto test = XmlTemplate.get("test/template.xml");
+	Stdout(test.render).newline;
+	benchmark(test);
+	
+	auto gen = XmlTemplate.get("gen/xml/XmlNodeParser.d.xml");
+}
 }

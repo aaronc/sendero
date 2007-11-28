@@ -563,6 +563,25 @@ class DBSerializer(T)
 		return t;
 	}
 	
+	/*bool serialize(T t, IPreparedStatement st)
+	{
+		auto setter = new SetStatementBinder(st);
+		ReflectionOf!(T).visitTuple(t, setter);
+		st.bindUInt(t.id(), setter.i);
+		
+		auto res = st.execute;
+		updateStatement.reset;
+		
+		if(res < 0)
+			return false;
+		
+		if(TableDescriptionOf!(T).hasAssociations) {
+			auto setAssoc = new SetAssociated(t.id(), this.db);
+			ReflectionOf!(T).visitTuple(t, setAssoc);
+		}
+		return true;
+	}*/
+	
 	/**
 	 * Finds and deserialized an object of type T with the specified id from the database.
 	 */
@@ -708,11 +727,11 @@ version(Unittest)
 		void[] blob;
 		char[] txt;
 	}
-}
 
 unittest
 {
 	assert(TableDescriptionOf!(TestModel).columns[0].type == ColT.UInt, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[0].type));
 	assert(TableDescriptionOf!(TestModel).columns[1].type == ColT.Blob, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[1].type));
 	assert(TableDescriptionOf!(TestModel).columns[2].type == ColT.VarChar, Integer.toUtf8(TableDescriptionOf!(TestModel).columns[2].type));
+}
 }

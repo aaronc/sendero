@@ -1,7 +1,7 @@
 module sendero.util.LocalText;
 
 import sendero.util.ExecutionContext;
-import sendero.util.FunctionBindingContext;
+//import sendero.util.FunctionBindingContext;
 import sendero.util.StringCharIterator;
 
 version(ICU) {
@@ -21,6 +21,8 @@ else {
 	alias char[] Timezone;
 }
 
+import tango.util.time.DateTime;
+import tango.util.time.Date;
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
 import Text = tango.text.Util;
@@ -408,6 +410,45 @@ class MessageParserException : Exception
 	}
 }
 
+const ubyte Excl = 1;
+const ubyte LeftBrace = 2;
+const ubyte RightBrace = 3;
+const ubyte Times = 4;
+const ubyte Plus = 5;
+const ubyte Minus = 6;
+const ubyte Divide = 7;
+const ubyte LT = 8;
+const ubyte Equals = 9;
+const ubyte GT = 10;
+
+const ubyte Quote = 100;
+const ubyte SingleQuote = 101;
+const ubyte Numeric = 243;
+const ubyte DollarSign = 244;
+const ubyte Identifier = 255;
+
+
+const ubyte lookupT[256] = 
+    [
+      // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 0
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 1
+         0,  Excl,  0,  0,  0,  0,  0,  0,  LeftBrace,  RightBrace,  0,  0,  0,  0,  0,  0,  // 2
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  Equals,  0,  0,  // 3
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 4
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 5
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 6
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 7
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 8
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 9
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // A
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // B
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // C
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // D
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // E
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   // F
+    ];
+
 public void parseExpression(char[] msg, inout Expression expression, FunctionBindingContext ctxt)
 {
 	scope itr = new StringCharIterator!(char)(msg);
@@ -417,7 +458,7 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 		void parseFunction()
 		{
 			void parseFuncParams()
-			{
+			{				
 				bool parseParam()
 				{
 					itr.eatSpace;
@@ -432,6 +473,7 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 						++itr;
 						return true;
 					case ')':
+						++itr;
 						return false;
 					default:
 						debug new MessageParserException("expected ',' or ')' in function parameters");
@@ -439,60 +481,86 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 					}
 				}
 				
+				expr.func.params.length = 0;
 				while(parseParam) {};			
 			}
 			
 			uint i = itr.location;
-			if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name");
+			if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name in \'" ~ msg ~ "\'");
 			uint j = itr.location;
 			char[] name = itr.randomAccessSlice(i, j);
 			auto fn = ctxt.getFunction(name);
-			if(!fn) new MessageParserException("Unable to find definition of function " ~ name); 
+			if(!fn) {
+				fn = new LateBindingFunction(name);
+				//new MessageParserException("Unable to find definition of function " ~ name); 
+			}
 			expr.func.func = fn;
 			++itr;
 			parseFuncParams();
 			expr.type = ExpressionT.FuncCall;
 		}
 		
-		switch(itr[0])
+		void parseBinaryExpr()
 		{
-		case '$':
 			++itr;
-			char[] var;
-			while(itr.good) {
-				if(itr[0] == ',' || itr[0] == ')' || itr[' '])
-					break;
-				var ~= itr[0];
-				++itr;
-			}
-			expr.var = VarPath(var);
-			expr.type = ExpressionT.Var;
-			return;
-		case '\"', '\'':
-			char quote = itr[0];
-			char[] str;
+			if(itr[0] != '=') return;
 			++itr;
-			while(itr.good) {
-				if(itr[0] == '\\') {
-					str ~= itr[1];
-					itr += 2;
-				}
-				else if(itr[0] == quote) {
-					++itr;
-					break;
-				}
-				else {
-					str ~= itr[0];
-					++itr;
-				}
-			}
-			expr.type = ExpressionT.Value;
-			expr.val.set(str);
-			break;
-		default:
-			parseFunction();
-			return;
+			itr.eatSpace;
+			Expression expr1 = expr;
+			Expression expr2;
+			parseExpr(expr2);
+			expr.type = ExpressionT.Binary;
+			expr.binaryExpr.type = OperatorT.Eq;
+			expr.binaryExpr.expr[0] = expr1;
+			expr.binaryExpr.expr[1] = expr2;
 		}
+		
+		//while(itr.good) {
+			auto x = lookupT[itr[0]];
+			switch(itr[0])
+			{
+			case '$':
+				++itr;
+				char[] var;
+				while(itr.good) {
+					if(itr[0] == ',' || itr[0] == ')' || itr[' '])
+						break;
+					var ~= itr[0];
+					++itr;
+				}
+				expr.var = VarPath(var);
+				expr.type = ExpressionT.Var;
+				return;
+			case '\"', '\'':
+				char quote = itr[0];
+				char[] str;
+				++itr;
+				while(itr.good) {
+					if(itr[0] == '\\') {
+						str ~= itr[1];
+						itr += 2;
+					}
+					else if(itr[0] == quote) {
+						++itr;
+						break;
+					}
+					else {
+						str ~= itr[0];
+						++itr;
+					}
+				}
+				expr.type = ExpressionT.Value;
+				expr.val.set(str);
+				break;
+		/*	case '=':
+				parseBinaryExpr();
+				break;*/
+			default:
+				parseFunction();
+				return;
+			}
+			itr.eatSpace;
+		//}
 	}
 	
 	parseExpr(expression);
@@ -748,7 +816,7 @@ public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 	return m;
 }
 
-void parseTextExpression(char[] text, inout Expression expr, FunctionBindingContext ctxt)
+/*void parseTextExpression(char[] text, inout Expression expr, FunctionBindingContext ctxt)
 {
 	auto msg = parseMessage(text, ctxt);
 	if(!msg.msg.length && msg.params.length == 1) {
@@ -758,12 +826,12 @@ void parseTextExpression(char[] text, inout Expression expr, FunctionBindingCont
 		expr.type = ExpressionT.TextExpr;
 		expr.textExpr = msg;
 	}
-}
+}*/
 
 version(Unittest)
 {
 	import tango.io.Stdout;
-}
+
 
 unittest
 {
@@ -800,5 +868,6 @@ unittest
 	parseExpression("now()", expr, FunctionBindingContext.global);
 	assert(expr.type == ExpressionT.FuncCall);
 	var = expr.exec(ExecutionContext.global);
-	assert(var.type == VarT.DateTime);
+	assert(var.type == VarT.DateTime);	
+}
 }

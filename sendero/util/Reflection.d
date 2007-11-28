@@ -9,7 +9,19 @@ module sendero.util.Reflection;
 
 public import sendero.util.FieldInfo;
 
+version(Tango) {
 import tango.core.Traits;
+}
+else {
+	// From tango.core.Traits (BSD-style License):
+	template BaseTypeTupleOf( T )
+	{
+	    static if( is( T Base == super ) )
+	        alias Base BaseTypeTupleOf;
+	    else
+	        static assert( false, "Argument is not a class or interface." );
+	}
+}
 
 template Reflector(char[] i)
 {	
@@ -30,13 +42,18 @@ template VisitTuple() {
 }
 
 class ReflectionOf(T) {
-	static this()
+	/*static this()
 	{
 		fields = doReflect;
-	}
+	}*/
 	
 	const static int limit = 64;
-	const static FieldInfo[] fields;
+	static FieldInfo[] fields_ = null;
+	static FieldInfo[] fields()
+	{
+		if(!fields_) fields_ = doReflect;
+		return fields_;
+	}
 	
 	private static FieldInfo[] doReflect()
 	{
@@ -226,7 +243,6 @@ version(Unittest)
 	{
 		double z;
 	}
-}
 
 unittest
 {
@@ -255,4 +271,5 @@ unittest
 	assert(ReflectionOf!(Derived).fields[0].name == "x", ReflectionOf!(Derived).fields[0].name);
 	assert(ReflectionOf!(Derived).fields[1].name == "y", ReflectionOf!(Derived).fields[1].name);
 	assert(ReflectionOf!(Derived).fields[2].name == "z", ReflectionOf!(Derived).fields[2].name);
+}
 }

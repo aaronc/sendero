@@ -12,7 +12,7 @@ class Stack(T)
 		count_ = 0;
 	}
 	
-	static protected class Cell(T)
+	static class Cell(T)
 	{
 		this(T t)
 		{
@@ -25,8 +25,8 @@ class Stack(T)
 		Cell!(T) prev;
 	}
 	
-	protected Cell!(T) head;
-	protected Cell!(T) tail;
+	Cell!(T) head;
+	Cell!(T) tail;
 	protected uint count_;
 	
 	uint count()

@@ -288,7 +288,6 @@ version(Unittest)
 	}
 	
 	import sendero.util.Reflection;
-}
 
 unittest
 {
@@ -298,4 +297,5 @@ unittest
 	assert(ReflectionOf!(BC).fields[1].name == "xID", ReflectionOf!(BC).fields[1].name);
 	assert(ReflectionOf!(BC).fields[2].name == "yID", ReflectionOf!(BC).fields[2].name);
 	assert(ReflectionOf!(BC).fields[3].name == "x", ReflectionOf!(BC).fields[3].name);
+}
 }

@@ -89,7 +89,6 @@ version(Unittest)
 	import tango.io.Stdout;
 	import tango.util.log.Log;
 	import tango.util.log.FileAppender;
-}
 
 unittest
 {
@@ -170,4 +169,5 @@ unittest
 		cacheMap[x] = x;
 	}
 	appender.close;
+}
 }

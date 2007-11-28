@@ -4,7 +4,9 @@ import tango.math.Math;
 
 debug import Integer = tango.text.convert.Integer;
 
-//debug import tango.io.Stdout;
+debug import tango.io.Stdout;
+
+const char[64] lookupBase64Encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /**
  *
@@ -18,9 +20,6 @@ char[] base64Encode(bool MIME = false)(ubyte[] src, char[] dest = null)
 {
 	static if(MIME) {
 		const char[64] lookupBase64Encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";		
-	}
-	else  {
-		const char[64] lookupBase64Encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	}
 	
 	uint srcLen = src.length;
@@ -80,9 +79,12 @@ char[] base64Encode(bool MIME = false)(ubyte[] src, char[] dest = null)
 		dest[j] = lookupBase64Encode[ n >>> 18 & 63 ];
 		dest[j + 1] = lookupBase64Encode[ n >>> 12 & 63 ];
 		dest[j + 2] = lookupBase64Encode[ n >>> 6 & 63 ];
-		dest[j + 3] = '=';
 		
-		j += 4;
+		static if(MIME) {
+			dest[j + 3] = '=';
+			j += 4;
+		}
+		else j += 3;
 		
 		//debug Stdout.formatln("{},{}:{}\t\t{},{},{}", src[i], src[i+1], n, n >>> 18 & 63, n >>> 12 & 63, n >>> 6 & 63);
 		
@@ -95,10 +97,12 @@ char[] base64Encode(bool MIME = false)(ubyte[] src, char[] dest = null)
 		
 		dest[j] = lookupBase64Encode[ n >>> 18 & 63 ];
 		dest[j + 1] = lookupBase64Encode[ n >>> 12 & 63 ];
-		dest[j + 2] = '=';
-		dest[j + 3] = '=';
-		
-		j += 4;
+		static if(MIME) {
+			dest[j + 2] = '=';
+			dest[j + 3] = '=';
+			j += 4;
+		}
+		else j += 2;
 		
 		//debug Stdout.formatln("{}:{}\t\t{},{},{}", src[i], n, n >>> 18 & 63, n >>> 12 & 63);
 	}
@@ -133,14 +137,7 @@ ubyte[] base64Decode(char[] src, ubyte[] dest = null)
 	ubyte[] data = cast(ubyte[])src;
 	uint srcLen = data.length;
 	
-	
-	ubyte suffix = 0;
-	if(src.length > 0 && src[$-1] == '=') {
-		if(src.length > 1 && src[$-2] == '=') suffix = 2;
-		else suffix = 1;
-	}
-	
-	uint destLen = srcLen / 4 * 3 - suffix;
+	uint destLen = cast(uint)ceil(cast(double)srcLen/ 4) * 3;
 	if(dest) {
 		debug assert(dest.length >= destLen, "If a dest array is passed it should be at least 3/4 as big as the source array.");
 		if(dest.length < destLen) dest.length = destLen;
@@ -207,7 +204,9 @@ ubyte[] base64Decode(char[] src, ubyte[] dest = null)
 		{
 			ubyte x = 255;
 			while(x == 255 && i < srcLen) {
-				x = lookupBase64Decode[ data[i] ];
+				auto ch = data[i];
+				if(ch > 127) { ++i; continue;}
+				x = lookupBase64Decode[ ch ];
 				++i;
 			}
 			if(x == 255 || x == 101) break;
@@ -229,7 +228,6 @@ ubyte[] base64Decode(char[] src, ubyte[] dest = null)
 		case 0:
 			break;
 		default:
-			//debug throw new Exception("Unexpected number of characters in Base64 sequence " ~ Integer.toUtf8(c));
 			throw new Exception("Unexpected number of characters in Base64 sequence.");
 		}
 	}
@@ -237,8 +235,96 @@ ubyte[] base64Decode(char[] src, ubyte[] dest = null)
 	return dest[0 .. j];
 }
 
+/**
+ * 
+ * Utility function for converting integers to base64 strings - useful for encoding
+ * integers in URLs.
+ * 
+ */
+char[] intToBase64(X)(X x, char[] dest = null)
+{	
+	static if(X.sizeof == 2) const ubyte n = 3;
+	else static if(X.sizeof == 4) const ubyte n = 6;
+	else static if(X.sizeof == 8) const ubyte n = 11;
+	else assert(false, "Unhandled type " ~ X.stringof);
+	
+	if(dest) {
+		debug assert(dest.length >= n, "If a dest array is passed it should be at least 4/3 as big as the source type.");
+		if(dest.length < n) dest.length = n;
+	}
+	else dest.length = n;
+	
+	for(int i = n - 1; i >= 0; --i)
+	{
+		debug assert(i < n, Integer.toUtf8(n) ~ ":" ~ Integer.toUtf8(i));
+		//debug Stdout.formatln("{},{},{}", i, x, x & 63);
+		dest[i] = lookupBase64Encode[x & 63];
+		x >>>= 6;
+	}
+	
+	return dest[0 .. n];
+}
+
+/**
+ * 
+ * Utility function for converting base64 strings that have been created using
+ * intToBase64 back into integers.
+ * 
+ */
+bool base64ToInt(X)(char[] src, inout X x)
+{
+	static if(X.sizeof == 2) {
+		const ubyte n = 3;
+		const ubyte tail = 2;
+	}
+	else static if(X.sizeof == 4) {
+		const ubyte n = 6;
+		const ubyte tail = 4;
+	}
+	else static if(X.sizeof == 8) {
+		const ubyte n = 11;
+		const ubyte tail = 2;
+	}
+	else static if(X.sizeof == 10) {
+		const ubyte n = 14;
+		const ubyte tail = 2;
+	}
+	else assert(false, "Unhandled type " ~ X.stringof);
+	
+	if(src.length < n) {
+		debug throw new Exception("Source array is too small for type " ~ X.stringof);
+		x = X.init;
+		return false;
+	}
+	
+	for(ubyte i = 0; i < n; ++i)
+	{
+		ubyte ch = src[i];
+		if(ch > 127) {
+			debug assert(false, "Invalid character in Base64 sequence");
+			return false;
+		}
+		ubyte z = lookupBase64Decode[ch];
+		if(z > 63) {
+			debug assert(false, "Invalid character in Base64 sequence");
+			return false;
+		}
+		x += z;
+		
+		//debug Stdout.formatln("{}, {}", x, z);
+		
+		if(i < n - 1) {
+			x <<= 6;
+		}
+		
+	}
+	return true;
+}
+
 version(Unittest)
 {
+	
+import Integer = tango.text.convert.Integer;
 import tango.io.Stdout;
 
 unittest
@@ -266,6 +352,36 @@ unittest
 	auto res1MIME = base64Encode!(true)(src1);
 	auto decode1MIME = base64Decode(res1MIME);
 	assert(src1 == decode1MIME);
-	Stdout(res1MIME);
+	
+	ulong ul = 2938576174325948;
+	auto ulB64 = intToBase64(ul);
+	ulong ul2;
+	assert(base64ToInt(ulB64, ul2));
+	assert(ul == ul2, Integer.toUtf8(ul2));
+	
+	uint ui = 4007639867;
+	auto uiB64 = intToBase64(ui);
+	uint ui2;
+	assert(base64ToInt(uiB64, ui2));
+	assert(ui == ui2, Integer.toUtf8(ui2));
+	
+	ushort us = 17689;
+	auto usB64 = intToBase64(us);
+	ushort us2;
+	assert(base64ToInt(usB64, us2));
+	assert(us == us2, Integer.toUtf8(us2));
+	
+	int i = -46389236;
+	auto iB64 = intToBase64(i);
+	int i2;
+	assert(base64ToInt(iB64, i2));
+	assert(i == i2, Integer.toUtf8(i2));
+	
+	char[] b64 = "c2RsZ2toS0hES1NKR0Jqa2RmZ2gyOTM4NTZrc2pnaEtKR0dramZkc2c=";
+	ubyte[] src = cast(ubyte[])"sdlgkhKHDKSJGBjkdfgh293856ksjghKJGGkjfdsg";
+	assert(base64Decode(b64) == src);
+	
+	char[] b64WithoutSuffix = "c2RsZ2toS0hES1NKR0Jqa2RmZ2gyOTM4NTZrc2pnaEtKR0dramZkc2c";
+	assert(base64Decode(b64WithoutSuffix) == src);
 }
 }

@@ -6,7 +6,7 @@
 
 
 module sendero.xml.IForwardNodeIterator;
-
+/*
 enum XmlNodeType { Element, Data, CData, Comment, PI, Attribute, Doctype };
 
 interface IForwardNodeIterator(Ch)
@@ -24,4 +24,4 @@ interface IForwardNodeIterator(Ch)
 	Ch[] nodeValue();
 	ushort depth();
 	void reset();
-}
+}*/

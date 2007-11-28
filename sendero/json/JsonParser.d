@@ -159,7 +159,6 @@ class JSONParser(Ch, Int = uint)
 		if(!itr.good) return unexpectedEOF("after number");
 		
 		curLen = itr.location - curLoc;
-		++itr;
 		
 		return true;
 	}
@@ -328,6 +327,10 @@ class JSONParser(Ch, Int = uint)
 	
 	bool reset()
 	{
+		curDepth = 0;
+		arrayDepth = 0;
+		while(stateStack.top) {stateStack.pop;}
+		curState = State.Object;
 		return itr.seek(0);
 	}
 	
@@ -383,7 +386,7 @@ private class Lookup
 }
 
 version(Unittest)
-{
+{	
 	class TestCase
 	{
 		const static char[] one = 
@@ -414,11 +417,9 @@ version(Unittest)
 		    "}"
 		"}";
 	}
-}
-
+	
 unittest
 {
-	
 	
 	auto text = new StringCharIterator!(char)(TestCase.one); 
 	auto p = new JSONParser!(char)(text);
@@ -553,4 +554,6 @@ unittest
 	assert(p.type == JSONTokenType.EndObject);
 	assert(!p.next);
 	assert(p.depth == 0);
+}
+
 }

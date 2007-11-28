@@ -1,0 +1,184 @@
+<d:text>
+/** 
+ * Copyright: Copyright (C) 2007 Aaron Craelius and Kris Bell.  All rights reserved.
+ * License:   BSD Style
+ * Authors:   Aaron Craelius and Kris Bell
+ */
+
+module sendero.xml.XmlParser;
+
+public import sendero.xml.XmlEntities;
+import sendero.util.StringCharIterator;
+import sendero.util.ArrayWriter;
+import sendero.xml.XmlCharIterator;
+
+enum XmlTokenType {StartElement, Attribute, EndElement, EndEmptyElement, Data, Comment, CData, Doctype, PI, None};
+
+interface IXmlTokenIterator(Ch, Int)
+{
+    bool next();
+    XmlTokenType type();
+    Ch[] qvalue();
+    Ch[] value();
+    Int loc();
+    Int qlen();
+    Int len();
+    bool reset();
+    ushort depth();
+    bool error();
+    //char[] errorMsg();
+}
+
+import tango.util.log.Log;
+import Util = tango.text.Util;
+
+
+/* Acknowledgements:
+ * 
+ * This parser was inspired by VTD-XML and Marcin Kalicinski&apos;s RapidXml parser.  Thanks to the 
+ * RapidXml project for the lookup table idea.  We have used a few similar lookup tables
+ * to implement this parser. Also the idea of not copying the source string
+ * but simply referencing it is used here.  IXmlTokenIterator doesn&apos;t implement the same
+ * interface as VTD-XML, but  the spirit is similar.  Thank you for your work!
+ *  
+ *  /
+
+/**
+ * Token based XML Parser.  Works with char[], wchar[], and dchar[] based Xml strings. 
+ * 
+ */
+<xi:include href="XmlParser_src.d.xml" />
+
+version (Unittest)
+{
+import tango.io.File;
+import tango.io.Stdout;
+import tango.util.time.StopWatch;
+import tango.util.log.ConsoleAppender;
+
+void benchmarkSenderoReader (int iterations, char[] filename = &quot;othello.xml&quot;) 
+{       
+        uint i;
+        StopWatch elapsed;
+        
+        try {
+            auto file = new File (&quot;../senderoRelease/&quot; ~ filename);
+            auto content = cast(char[]) file.read;
+            auto parser = new XmlParser!(char) (content);
+            //XmlParser!(char) parser;
+            parser.reset(content);
+
+            elapsed.start;
+            for (i=0; i&lt;iterations; i++)
+                {
+                while (parser.next) {}
+                parser.reset;
+                }
+
+            Stdout.formatln (&quot;sendero: {} MB/s&quot;, (content.length * iterations) / (elapsed.stop * (1024 * 1024)));
+            } catch (Object o) 
+                    {
+                    Stdout.formatln (&quot;On iteration: {}&quot;, i);
+                    throw o;
+                    } 
+}
+
+/*void main() 
+{
+        //Log.getLogger(&quot;sendero.xml&quot;).addAppender(new ConsoleAppender);
+    
+        for (int i = 5; --i;)
+             testSenderoReader (1000, &quot;hamlet.xml&quot;);       
+}*/
+
+void testParser(Ch)(XmlParser!(Ch) itr)
+{
+  /*      assert(itr.next);
+        assert(itr.value == &quot;&quot;);
+        assert(itr.type == XmlTokenType.Declaration, Integer.toUtf8(itr.type));
+        assert(itr.next);
+        assert(itr.value == &quot;version&quot;);
+        assert(itr.next);
+        assert(itr.value == &quot;1.0&quot;);*/
+        assert(itr.next);
+        assert(itr.value == &quot;element [ &lt;!ELEMENT element (#PCDATA)&gt;]&quot;);
+        assert(itr.type == XmlTokenType.Doctype);
+        assert(itr.next);
+        assert(itr.localName == &quot;element&quot;);
+        assert(itr.type == XmlTokenType.StartElement);
+        assert(itr.depth == 0);
+        assert(itr.next);
+        assert(itr.localName == &quot;attr&quot;);
+        assert(itr.value == &quot;1&quot;);
+        assert(itr.next);
+        assert(itr.type == XmlTokenType.Attribute, Integer.toUtf8(itr.type));
+        assert(itr.localName == &quot;attr2&quot;);
+        assert(itr.value == &quot;two&quot;);
+        assert(itr.next);
+        assert(itr.value == &quot;comment&quot;);
+        assert(itr.next);
+        assert(itr.rawValue == &quot;test&amp;amp;&amp;#x5a;&quot;);
+        assert(itr.value == &quot;test&amp;Z&quot;, itr.value);
+        assert(itr.next);
+        assert(itr.prefix == &quot;qual&quot;);
+        assert(itr.localName == &quot;elem&quot;);
+        assert(itr.next);
+        assert(itr.type == XmlTokenType.EndEmptyElement);
+        assert(itr.next);
+        assert(itr.localName == &quot;el2&quot;);
+        assert(itr.depth == 1);
+        assert(itr.next);
+        assert(itr.localName == &quot;attr3&quot;);
+        assert(itr.value == &quot;3three&quot;, itr.value);
+        assert(itr.next);
+        assert(itr.rawValue == &quot;sdlgjsh&quot;);
+        assert(itr.next);
+        assert(itr.localName == &quot;el3&quot;);
+        assert(itr.depth == 2);
+        assert(itr.next);
+        assert(itr.type == XmlTokenType.EndEmptyElement);
+        assert(itr.next);
+        assert(itr.value == &quot;data&quot;);
+        assert(itr.next);
+      //  assert(itr.qvalue == &quot;pi&quot;, itr.qvalue);
+      //  assert(itr.value == &quot;test&quot;);
+        assert(itr.rawValue == &quot;pi test&quot;);
+        assert(itr.next);
+        assert(itr.localName == &quot;el2&quot;);
+        assert(itr.next);
+        assert(itr.localName == &quot;element&quot;);
+        assert(!itr.next);
+}
+
+static const char[] testXML = &quot;&lt;?xml version=\&quot;1.0\&quot; ?&gt;&lt;!DOCTYPE element [ &lt;!ELEMENT element (#PCDATA)&gt;]&gt;&lt;element &quot;
+    &quot;attr=\&quot;1\&quot; attr2=\&quot;two\&quot;&gt;&lt;!--comment--&gt;test&amp;amp;&amp;#x5a;&lt;qual:elem /&gt;&lt;el2 attr3 = &quot;
+    &quot;&apos;3three&apos;&gt;&lt;![CDATA[sdlgjsh]]&gt;&lt;el3 /&gt;data&lt;?pi test?&gt;&lt;/el2&gt;&lt;/element&gt;&quot;;
+
+void doTests(Ch)()
+{
+        
+        auto itr = new XmlParser!(Ch)(testXML);
+//		XmlParser!(Ch) itr;
+//		itr.reset(testXML);
+        
+        testParser!(Ch)(itr);
+}
+
+
+unittest
+{       
+        char[] txt = &quot;abcdef&quot;;
+        XmlCharIterator!(char) itr;
+        itr.reset(txt);
+    
+        doTests!(char)();
+        //doTests!(wchar)();
+        //doTests!(dchar)();
+        
+        for (int i = 5; --i;)
+            benchmarkSenderoReader (1000, &quot;hamlet.xml&quot;);
+}
+
+
+}
+</d:text>

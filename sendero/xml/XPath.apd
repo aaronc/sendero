@@ -1,0 +1,826 @@
+APDDeclaration
+{
+	module sendero.xml.XPath;
+
+	import sendero.xml.xpath10.Expression;
+	import sendero.xml.XmlNode;
+
+	import tango.io.Stdout;
+	import tango.text.convert.Integer;
+	import Float = tango.text.convert.Float;
+
+		
+	public import sendero.util.ExecutionContext;
+	
+
+version(TestApaged)
+{
+	import sendero.util.LocalText;
+
+    void main(string[] args)
+    {
+        if ( args.length < 2 )
+            throw new Exception("Usage: arithmetic <expression>");
+        SyntaxTree* root;
+        if ( parse("", args[1], root, true) ) {
+            Expression value;
+            root.Expr(value);
+            debug root.print;
+			auto ctxt = new ExecutionContext;
+			auto res = value.exec(ctxt);
+			auto text = Message.renderParam(ctxt, res);
+            Stdout.format("{} = {}\n", args[1], text);
+        }
+        else
+        {
+            Stdout.format("Invalid expression: {}\n", args[1]);
+        }
+    }
+}
+else
+{
+	bool compileXPath10(char[] xpath, inout Expression expr)
+	{
+		SyntaxTree* root;
+		if ( parse("", xpath, root, true) ) {
+            Expression value;
+            root.Expr(expr);
+			return true;
+		}
+		else return false;
+	}
+	
+	ExecutionContext createXPathContext(XmlNode node)
+	{
+		auto ctxt = new ExecutionContext;
+		ctxt.contextNode = node;
+		return ctxt;
+	}
+	
+	Var execXPath10(char[] xpath, XmlNode node)
+	{
+		Expression expr;
+		if(!compileXPath10(xpath, expr)) return Var();
+		auto ctxt = createXPathContext(node);
+		return expr.exec(ctxt);
+	}
+}
+
+}
+
+Whitespace
+{
+    regexp("[ \\t\\n\\r]+");
+}
+
+Expr(inout Expression expr)
+{
+	OrExpr
+	{
+		OrExpr(expr);
+	}
+	
+	Expr ExprTerminator
+	{
+		Expr(expr);
+	}
+}
+
+ExprTerminator()
+{
+	regexp("[,\}]");
+}
+
+OrExpr(inout Expression value)
+{
+	AndExpr
+	{
+		AndExpr(value);
+	}
+	
+	OrExpr "or" AndExpr
+	{
+		Expression x, y;
+		OrExpr(x);
+		AndExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Or;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+}
+
+AndExpr(inout Expression value)
+{
+	EqualityExpr
+	{
+		EqualityExpr(value);
+	}
+	
+	AndExpr "and" EqualityExpr
+	{
+		Expression x, y;
+		AndExpr(x);
+		EqualityExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.And;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+}
+
+EqualityExpr(inout Expression value)
+{
+	RelationalExpr
+	{
+		RelationalExpr(value);
+	}
+	
+	EqualityExpr "=" RelationalExpr
+	{
+		Expression x, y;
+		EqualityExpr(x);
+		RelationalExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Eq;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+	
+	EqualityExpr "!=" RelationalExpr
+	{
+		Expression x, y;
+		EqualityExpr(x);
+		RelationalExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.NotEq;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+}
+
+RelationalExpr(inout Expression value)
+{
+	AdditiveExpr
+	{
+		AdditiveExpr(value);
+	}
+	
+	RelationalExpr "<" AdditiveExpr	
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Lt;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+	
+	RelationalExpr ">" AdditiveExpr	
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Gr;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+	
+	RelationalExpr "<=" AdditiveExpr
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.LtEq;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+	
+	RelationalExpr ">=" AdditiveExpr
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+		value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.GrEq;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+	}
+}
+
+AdditiveExpr(inout Expression value)
+{
+    AdditiveExpr "+" MulExpr
+    {
+		Expression x, y;
+        AdditiveExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Add;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+
+    AdditiveExpr "-" MulExpr
+    {
+        Expression x, y;
+        AdditiveExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Sub;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+
+    MulExpr
+    { MulExpr(value); }
+}
+
+MulExpr(inout Expression value)
+{
+    MulExpr "*" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Mul;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+	
+	MulExpr "div" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Div;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+	
+	MulExpr "mod" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Mod;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+
+    UnaryExpr
+    { UnaryExpr(value); }
+}
+
+
+UnaryExpr(inout Expression value)
+{
+	"-" UnaryExpr
+	{
+		Expression val;
+        UnaryExpr(val);
+        value.type = ExpressionT.FuncCall;
+		value.func.func = new NegativeFn();
+		value.func.params ~= val;
+	}
+
+	UnionExpr
+	{ UnionExpr(value); }
+}
+
+UnionExpr(inout Expression expr)
+{
+	PathExpr
+	{
+		PathExpr(expr);
+	}
+	
+	UnionExpr "|" PathExpr
+	{
+		Expression expr1, expr2;
+		UnionExpr(expr1);
+		PathExpr(expr2);
+		expr.type = ExpressionT.FuncCall;
+		expr.func.func = new UnionFn(expr1, expr2);
+	}
+}
+
+PathExpr(inout Expression expr)
+{
+	LocationPath
+	{
+		IStep step;
+		LocationPath(step);
+		expr.type = ExpressionT.FuncCall;
+		expr.func.func = new XPathExpressionFn!(false)(step);
+	}
+	
+	FilterExpr
+	{
+		FilterExpr(expr);
+	}
+	
+	FilterExpr "/" RelativeLocationPath
+	{
+		Expression e;
+		IStep step;
+		
+		FilterExpr(e);
+		RelativeLocationPath(step);
+		
+		expr.type = ExpressionT.FuncCall;
+		expr.func.func = new XPathExpressionFn!(true)(step);
+		expr.func.params ~= e;
+	}
+	
+	FilterExpr "//" RelativeLocationPath
+	{
+		Expression e;
+		IStep step, step2;
+		
+		FilterExpr(e);
+		RelativeLocationPath(step2);
+		
+		expr.type = ExpressionT.FuncCall;
+		step = new XPathStep!(DescendantOrSelfAxisViewer);
+		step.setNextStep(step2);
+		expr.func.func = new XPathExpressionFn!(true)(step);
+		expr.func.params ~= e;
+	}
+}
+
+FilterExpr(inout Expression expr)
+{
+	PrimaryExpr
+	{
+		PrimaryExpr(expr);
+	}
+	
+	FilterExpr Predicate
+	{
+		debug assert(false, "TODO");
+	}
+}
+
+
+Predicate(inout Expression expr)
+{
+	"[" Expr "]"
+	{
+		Expr(expr);
+	}
+}
+
+PredicateList(inout PredicateTest[] predicates)
+{
+	Predicate PredicateList
+	{
+		Expression expr;
+		Predicate(expr);
+		auto pred = new PredicateTest(expr);
+		predicates ~= pred;
+		PredicateTest[] plist;
+		PredicateList(plist);
+		predicates ~= plist;
+		
+	}
+	
+	Predicate
+	{
+		Expression expr;
+		Predicate(expr);
+		auto pred = new PredicateTest(expr);
+		predicates ~= pred;
+	}
+	epsilon;
+}
+
+LocationPath(inout IStep step)
+{
+	RelativeLocationPath
+	{
+		RelativeLocationPath(step);
+	}
+	
+	AbsoluteLocationPath
+	{
+		AbsoluteLocationPath(step);
+	}
+}
+
+AbsoluteLocationPath(inout IStep step)
+{
+	"/" RelativeLocationPath
+	{
+		RelativeLocationPath(step);
+	}
+	
+	"/"
+	{
+		//step = new XPathStep!(Axis.self);
+	}
+	
+	AbbreviatedAbsoluteLocationPath
+	{
+		AbbreviatedAbsoluteLocationPath(step);
+	}
+}
+
+AbbreviatedAbsoluteLocationPath(inout IStep step)
+{
+	"//" RelativeLocationPath
+	{
+		step = new XPathStep!(DescendantOrSelfAxisViewer);
+		IStep step2;
+		RelativeLocationPath(step2);
+		step.setNextStep = step2;
+	}
+}
+
+RelativeLocationPath(inout IStep step)
+{
+	Step
+	{
+		Step(step);
+	}
+	
+	RelativeLocationPath "/" Step
+	{
+		IStep step2;
+		RelativeLocationPath(step);
+		Step(step2);
+		step.setNextStep = step2;
+	}
+	
+	AbbreviatedRelativeLocationPath
+	{
+		AbbreviatedRelativeLocationPath(step);
+	}
+}
+
+AbbreviatedRelativeLocationPath(inout IStep step)
+{
+	RelativeLocationPath "//" Step
+	{
+		IStep step2, step3;
+		RelativeLocationPath(step);
+		step2 = new XPathStep!(DescendantOrSelfAxisViewer);
+		Step(step3);
+		step2.setNextStep = step3;
+		step.setNextStep = step2;
+	}
+}
+
+Step(inout IStep step)
+{
+	AxisSpecifier NodeTest PredicateList
+	{
+		Axis axis;
+		AxisSpecifier(axis);
+		ITest test;
+		PredicateTest[] predicates;
+		NodeTest(test);
+		PredicateList(predicates);		
+		
+		switch(axis)
+		{
+		case Axis.ancestor:
+			step = new XPathStep!(AncestorAxisViewer)(test, predicates);
+			break;
+		case Axis.ancestor_or_self:
+			step = new XPathStep!(AncestorOrSelfAxisViewer)(test, predicates);
+			break;
+		case Axis.attribute:
+			step = new XPathStep!(AttributeAxisViewer)(test, predicates);
+			break;
+		case Axis.child:
+			step = new XPathStep!(ChildAxisViewer)(test, predicates);
+			break;
+		case Axis.descendant:
+			step = new XPathStep!(DescendantAxisViewer)(test, predicates);
+			break;
+		case Axis.descendant_or_self:
+			step = new XPathStep!(DescendantOrSelfAxisViewer)(test, predicates);
+			break;
+		case Axis.following:
+			step = new XPathStep!(FollowingAxisViewer)(test, predicates);
+			break;
+		case Axis.following_sibling:
+			step = new XPathStep!(FollowingSiblingAxisViewer)(test, predicates);
+			break;
+		case Axis.namespace:
+			debug assert(false, "namespace axis deprecated");
+			break;
+		case Axis.parent:
+			step = new XPathStep!(ParentAxisViewer)(test, predicates);
+			break;
+		case Axis.preceding:
+			step = new XPathStep!(PrecedingAxisViewer)(test, predicates);
+			break;
+		case Axis.preceding_sibling:
+			step = new XPathStep!(PrecedingSiblingAxisViewer)(test, predicates);
+			break;
+		case Axis.self:
+			step = new XPathStep!(SelfAxisViewer)(test, predicates);
+			break;
+		default:
+			debug assert(false);
+		}
+	}
+	AbbreviatedStep
+	{
+		Axis axis;
+		AbbreviatedStep(axis);
+		switch(axis)
+		{
+		case Axis.parent:
+			step = new XPathStep!(AncestorAxisViewer);
+			break;
+		case Axis.self:
+			step = new XPathStep!(AncestorAxisViewer);
+			break;
+		default:
+			debug assert(false);
+		}
+	}
+}
+
+AbbreviatedStep(out Axis axis)
+{
+	"."
+	{
+		axis = Axis.self;
+	}
+	".."
+	{
+		axis = Axis.parent;
+	}
+}
+
+AxisSpecifier(out Axis axis)
+{
+	AxisName
+	{
+		AxisName(axis);
+	}
+	
+	AbbreviatedAxisSpecifier
+	{
+		bool attr;
+		AbbreviatedAxisSpecifier(attr);
+		if(attr) axis = Axis.attribute;
+		else axis = Axis.child;
+	}
+}
+
+AxisName(out Axis axis)
+{
+	"ancestor::" { axis = Axis.ancestor; }	
+	"ancestor-or-self" { axis = Axis.ancestor_or_self; }	
+	"attribute::" { axis = Axis.attribute; }	
+	"child::" { axis = Axis.child; }	
+	"descendant::" { axis = Axis.descendant; }	
+	"descendant-or-self" { axis = Axis.descendant_or_self; }	
+	"following::" { axis = Axis.following; }	
+	"following-sibling" { axis = Axis.following_sibling; }	
+	"namespace::" { axis = Axis.namespace; }	
+	"parent::" { axis = Axis.parent; }	
+	"preceding::" { axis = Axis.preceding; }	
+	"preceding-sibling" { axis = Axis.preceding_sibling; }	
+	"self::" { axis = Axis.self; }
+}
+
+AbbreviatedAxisSpecifier(out bool attr)
+{
+	"@"
+	{
+		attr = true;
+	}
+	
+	epsilon
+	{
+		attr = false;
+	}
+}
+
+NodeTest(inout ITest test)
+{
+	NameTest
+	{
+		NameTest(test);
+	}
+	
+	NodeType "(" ")"
+	{
+		NodeType(test);
+	}
+	
+	"processing-instruction" "(" Literal ")"
+	{
+		auto piTest = new PIKindTest;
+		Literal(piTest.literal);
+		test = piTest;
+	}
+}
+
+NodeType(inout ITest test)
+{
+	"comment"
+	{
+		test = new CommentKindTest;
+	}
+	
+	"text"
+	{
+		test = new TextKindTest;
+	}
+	
+	"processing-instruction"
+	{
+		test = new PIKindTest;
+	}
+	
+	"node"
+	{
+		test = new NodeKindTest;
+	}
+	
+}
+
+Literal(char[] value)
+{
+	regexp('"[^"]*"')
+	{
+		value = _ST_match[1 .. $-1];
+	}
+	
+	regexp("'[^']*'")
+	{
+		value = _ST_match[1 .. $-1];
+	}
+}
+
+NameTest(inout ITest test)
+{
+	"*"
+	{
+		test = new WildcardTest;
+	}
+	NCName ":*"
+	{
+		char[] prefix;
+		NCName(prefix);
+		test = new WildcardPrefixTest(prefix);	
+	}
+	QName
+	{
+		VarPath path;
+		QName(path);
+		debug assert(path.length);
+		if(path.length == 1)
+			test = new QNameTest(null, path[0]);
+		else if(path.length == 2)
+			test = new QNameTest(path[0], path[1]);
+	}
+}
+
+PrimaryExpr(inout Expression value)
+{
+    regexp("[0-9]+")
+    {
+		long val = atoi(_ST_match);
+		value.type = ExpressionT.Value;
+		value.val.set(val);
+    }
+	
+	regexp("[0-9]+\\.[0-9]+")
+    {
+		double val = Float.parse(_ST_match);
+		value.type = ExpressionT.Value;
+		value.val.set(val);
+    }
+	
+	Literal
+	{
+		char[] val;
+		Literal(val);
+		value.type = ExpressionT.Value;
+		value.val.set(val);
+	}
+	
+	FuncCall
+	{
+		FuncCall(value);
+	}
+	
+	"$" QName
+	{
+		value.type = ExpressionT.Var;
+		QName(value.var);
+	}
+	
+	"$" Path
+	{
+		value.type = ExpressionT.Var;
+		Path(value.var);
+	}
+
+    "(" Expr ")"
+    { Expr(value); }
+}
+
+FuncCall(inout Expression expr)
+{
+	"last" "(" ")"
+	{
+		expr.type = ExpressionT.FuncCall;
+		expr.func.func = new LastFn();
+	}
+	
+	"position" "(" ")"
+	{
+		expr.type = ExpressionT.FuncCall;
+		expr.func.func = new PositionFn();
+	}
+	
+	"true" "(" ")"
+	{
+		expr.type = ExpressionT.Value;
+		expr.val.set(true);
+	}
+	
+	"false" "(" ")"
+	{
+		expr.type = ExpressionT.Value;
+		expr.val.set(false);
+	}
+
+	QName "(" ExprList ")"
+	{
+		expr.type = ExpressionT.FuncCall;
+		ExprList(expr.func.params);
+	}
+}
+
+ExprList(inout Expression[] args)
+{
+	Expr "," ExprList
+	{
+		Expression expr;
+		Expression exprList[];
+		Expr(expr);
+		ExprList(exprList);
+		args ~= expr;
+		args ~= exprList;
+	}
+	
+	Expr
+	{
+		Expression expr;
+		args ~= expr; 
+	}
+	
+	epsilon;
+}
+
+QName(inout VarPath path)
+{
+	NCName
+	{
+		char[] localname;
+		NCName(localname);
+		path.path ~= localname;
+	}
+	
+	NCName ":" NCName = NCName2
+	{
+		char[] prefix, localname;
+		NCName(prefix);
+		NCName2(localname);
+		path.path ~= prefix;
+		path.path ~= localname;
+	}
+}
+
+NCName(out char[] value)
+{
+	//regexp("[A-Z_a-z0xC0-0xEFFFF][A-Za-z0-9\\-_0x0B70x0300-0x036F0x203F-0x2040]*")
+	regexp("[A-Z_a-z0xC0-0xEFFFF][A-Za-z0-9\\-_0xC0-0xEFFFF]*")
+	{
+		value = _ST_match;
+	}
+}
+
+Path(inout VarPath path)
+{
+	regexp("[A-Za-z_][A-Za-z_0-9]*('.'[A-Za-z_][A-Za-z_0-9]*)*")
+	{
+		path = VarPath(_ST_match);
+	}
+}

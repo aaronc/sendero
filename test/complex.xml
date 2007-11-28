@@ -17,8 +17,8 @@
 </d:def>
 <d:def function="validationTest(form)">
 <d:for each="$item in $form.items">
-<d:let name="var" value="_{getVar($item.name)}" />
-<d:let name="validation" value="_{$var.validation}" />
+<d:let name="var" value="getVar($item.name)" />
+<d:let name="validation" value="$var.validation" />
 Validation Rules For Field: _{$item.name} (Found _{$validation.length} rules.)
 <table>
 <th><td>Rule</td><td>Error Message</td><td>Value</td></th>
@@ -49,6 +49,11 @@ _{$name} : _{$opt.msg}
 </d:for>
 _{describeVal("person.name")}
 _{validationTest($form)}
+
+<ul#list>
+<li.name d:for="$name in $names">
+_{$name.first} _{$name.last} _{$name.date}: _{$name.somenumber}</>
+</>
 </body>
 </html>
 

@@ -89,6 +89,23 @@ class JSONObject(Ch = char)
 	//JSONMember!(Ch)[] members;
 	JSONValue!(Ch)[Ch[]] members;
 	
+	JSONValue!(Ch) opIndex(char[] key)
+	{
+		auto pVal = (key in members);
+		if(pVal) return *pVal;
+		return null;
+	}
+	
+	int opApply(int delegate(inout char[] key, inout JSONValue!(Ch) val) dg)
+	{
+		int res;
+		foreach(k, v; members)
+		{
+			if((res == dg(k, v)) != 0) break;
+		}
+		return res;
+	}
+	
 	/**
 	 * Parses the provided text string into a JSON Object.
 	 */
@@ -259,8 +276,52 @@ class JSONObject(Ch = char)
 
 alias JSONObject!(char) JSON;
 
+version(Unittest)
+{
+	
+import tango.io.Stdout;
+import tango.io.File;
+/+import tango.util.time.StopWatch;
+	
+void benchmark()
+{
+	void test(char[] filename)
+	{
+		auto f = new File (filename);
+		auto txt = cast(char[]) f.read;
+		
+		uint n = (100 * 1024 * 1024) / txt.length;
+		auto parser = new JSONParser!(char)(txt);
+		
+		StopWatch watch;
+		watch.start;
+		for(uint i = 0; i < n; ++i)
+		{
+			while(parser.next) {}
+			parser.reset;
+		}
+		float t = watch.stop;
+		long mb = (txt.length * n) / (1024 * 1024);
+		Stdout.formatln("{} {} iterations, {} seconds: {} MB/s", filename, n, t, mb/t);
+		
+		/*auto p = new JSONParser!(char)(txt);
+		while(p.next) {
+			Stdout.formatln("{}:{}", p.type, p.value);
+		}*/
+		
+		auto obj = JSON.parse(txt);
+		Stdout(obj.print).newline.newline;
+	}
+
+	test("test/json/test1.json");
+	test("test/json/test2.json");
+	test("test/json/test3.json");
+}+/
+
 unittest
 {
+	//benchmark;
+	
 	auto obj = JSONObject!(char).parse(TestCase.one);
 	assert(obj);
 	//assert(obj.members[0].name == "glossary");
@@ -278,4 +339,5 @@ unittest
 	
 	assert("title" in o.members);
 	assert("GlossList" in o.members);
+}
 }

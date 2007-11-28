@@ -1,7 +1,6 @@
 module sendero.data.Validation;
 
 import sendero.util.Reflection;
-import sendero.util.ExecutionContext;
 
 struct ValidationOption
 {
@@ -92,7 +91,7 @@ private class ValidationVisitor : IValidator
 
 class ValidationOptionsFor(T)
 {
-	static this()
+	static void init()
 	{
 		auto t = new T;
 		
@@ -107,110 +106,15 @@ class ValidationOptionsFor(T)
 		auto visitor = new ValidationVisitor(ptrMap);
 		
 		T.defineValidation(t, visitor);
-		this.rules = visitor.rules;
+		this.rules_ = visitor.rules;
+		initialized_ = true;
 	}
-	const static Validation[char[]] rules;
-}
-
-class ValidationVarBinding : IObjectBinding
-{
-	VariableBinding opIndex(char[] var)
+	static Validation[char[]] rules_;
+	static bool initialized_; 
+	static Validation[char[]] rules()
 	{
-		if(var == "val")
-		{
-			return val;
-		}
-		else if(var == "msg")
-		{
-			return msg;
-		}
-		else return VariableBinding();
+		if(!initialized_) init;
+		return rules_;
 	}
 	
-	void setPtr(void* ptr) {}
-	
-	VariableBinding msg;
-	VariableBinding val;
-	
-	int opApply (int delegate (inout char[] key, inout VariableBinding val) dg)
-	{
-		int res;
-		
-		char[] name;
-		name = "msg";
-	    if ((res = dg(name, msg)) != 0)
-	    	return res;
-	    
-	    name = "val";
-	    if ((res = dg(name, val)) != 0)
-	    	return res;
-	    
-	    return res;
-	}
-	
-	size_t length()
-	{
-		return 2;
-	}
-}
-
-class ValidationOptionsBinding : IObjectBinding
-{
-	this(Validation rules)
-	{
-		foreach(name, rule; rules)
-		{
-			auto valBinding = new ValidationVarBinding;
-			VariableBinding msg, val;
-			msg.set(rule.msg);
-			switch(name)
-			{
-			case "minLen", "maxLen":
-				val.set(rule.uint_);
-				break;
-			case "minVal", "maxVal":
-				val.set(rule.long_);
-				break;
-			default:
-				val.type = VarT.Null;
-				break;
-			}
-			valBinding.msg = msg;
-			valBinding.val = val;
-			
-			VariableBinding res;
-			res.type = VarT.Object;
-			res.objBinding = valBinding;
-			this.rules[name] = res;
-		}
-	}
-	
-	private VariableBinding[char[]] rules;
-	
-	void setPtr(void* ptr) {}
-	
-	int opApply (int delegate (inout char[] key, inout VariableBinding val) dg)
-	{
-		int res;
-		
-	    foreach(name, var; rules)
-	    {
-	        if ((res = dg(name, var)) != 0)
-	            break;
-	    }
-	
-		return res;
-	}
-	
-	VariableBinding opIndex(char[] name)
-	{
-		auto pVal = (name in rules);
-		if(!pVal) return VariableBinding();
-		return *pVal;
-	}
-	
-	size_t length()
-	{
-		return rules.length;
-	}
 }
