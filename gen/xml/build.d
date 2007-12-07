@@ -13,8 +13,8 @@ void main()
 	auto f = new File("../../sendero/xml/XmlParser.d");
 	f.write(cast(void[])src);
 	
-	//templ = XmlTemplate.get("XmlNodeParser.d.xml");
-	//templ["parserName"] = "XmlNodeParser";
-	//src = templ.render;
-	//Stdout(src);
+	templ = XmlTemplate.get("XmlNodeParser.d.xml");
+	templ["parserName"] = "XmlNodeParser";
+	src = templ.render;
+	Stdout(src);
 }

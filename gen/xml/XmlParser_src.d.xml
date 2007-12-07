@@ -356,8 +356,10 @@ class _{$parserName}(Ch = char)
                        }
                 return doAttributeName();
         }
-        
+ 
+<d:block name="attrValDecl">
         private void doAttributeValue(Ch* q)
+</d:block>       
         {
             auto p = text.eatSpace (q);
             auto quote = *p++;
@@ -366,8 +368,10 @@ class _{$parserName}(Ch = char)
     			case &apos;&quot;&apos;:
     			case &apos;\&apos;&apos;:
     				q = text.forwardLocate(p, quote);
+<d:block name="action_AttrVal">	
     				rawValue = p[0 .. q - p];
     				text.point = q + 1; //Skip end quote
+</d:block>
     			break;
 
     			default: 

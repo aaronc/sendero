@@ -379,7 +379,7 @@ class XmlTemplate
 					retain = true;
 				}
 				
-				void doExtendBlock()
+				void doExtendBlock(ushort d)
 				{
 					char[] name;
 					while(nextAttribute)
@@ -395,7 +395,7 @@ class XmlTemplate
 					auto block = new XmlTemplateNode;
 					block.type = XmlNodeType.Element;
 					
-					processNode(block, depth);
+					processNode(block, d);
 					
 					res.blocks[name] = block;
 				}
@@ -411,7 +411,7 @@ class XmlTemplate
 						retain = false;
 						if(itr.type == XmlTokenType.StartElement && itr.name == "d:block")
 						{
-							doExtendBlock();
+							doExtendBlock(itr.depth);
 						}
 					}
 					retain = true;
@@ -1395,5 +1395,34 @@ unittest
 	benchmark(test);
 	
 	auto gen = XmlTemplate.get("gen/xml/XmlNodeParser.d.xml");
+	
+	StopWatch btWatch;
+	
+	auto bigtable = "<table>"
+		"<tr d:for='$row in $table'>"
+		"<td d:for='$c in $row'>_{$c}</td>"
+		"</tr>"
+		"</table>";
+	
+	
+	ubyte[][] table;
+	for(int i = 0; i < 1000; ++i)
+	{
+		ubyte[] row;
+		for(int j = 1; j <= 10; ++j)
+		{
+			row ~= j;
+		}
+		table ~= row;
+	}
+	ctxt.addVar("table", table);
+	
+	btWatch.start;
+	for(uint i = 0; i < 100; ++i) {
+		auto bigtabletemp = XmlTemplate.compile(bigtable);
+		Stdout(bigtabletemp.render(ctxt));
+	}
+	auto btTime = btWatch.stop;
+	Stdout.formatln("btTime:{}", btTime * 10);
 }
 }

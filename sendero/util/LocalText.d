@@ -137,7 +137,7 @@ package class Message : IMessage
 			o ~= x;
 			break;
 		case(VarT.DateTime):
-			auto x = var.DateTime_;
+			auto x = var.dateTime_;
 			o ~= renderDateTime(x, p, lcl, tz);
 			break;
 		default:

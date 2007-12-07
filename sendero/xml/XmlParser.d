@@ -374,19 +374,17 @@ class XmlParser(Ch = char)
                        }
                 return doAttributeName();
         }
-        
-        private void doAttributeValue(Ch* q)
-        {
+ 
+        private void doAttributeValue(Ch* q){
             auto p = text.eatSpace (q);
             auto quote = *p++;
             switch (quote)
             {
     			case '"':
     			case '\'':
-    				q = text.forwardLocate(p, quote);
+    				q = text.forwardLocate(p, quote);	
     				rawValue = p[0 .. q - p];
-    				text.point = q + 1; //Skip end quote
-    			break;
+    				text.point = q + 1; //Skip end quotebreak;
 
     			default: 
     				doUnexpected("\' or \"");

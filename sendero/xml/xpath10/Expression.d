@@ -356,22 +356,28 @@ class CommentKindTest : ITest
 	}
 }
 
-enum AbbrevAxis {
-	Null,
-	Unknown,
-	Attr
+INodeSetViewer constructNodeSetViewer(NodeSetViewer)(XmlNode node)
+{
+	return new NodeSetViewer(node);
 }
 
-class XPathStep(NodeSetViewer) : IStep
+alias INodeSetViewer function(XmlNode) NodeSetViewerConstructor;
+
+class XPathStep : IStep
 {	
-	this() {}
-	
-	this(ITest test, PredicateTest[] predicates)
+	this(NodeSetViewerConstructor ctr)
 	{
+		this.nodeSetViewerCtr = ctr;
+	}
+	
+	this(NodeSetViewerConstructor ctr, ITest test, PredicateTest[] predicates)
+	{
+		this.nodeSetViewerCtr = ctr;
 		this.test = test;
 		this.predicates = predicates;
 	}
 	
+	NodeSetViewerConstructor nodeSetViewerCtr;
 	IStep nextStep;
 	ITest test;
 	PredicateTest[] predicates;
@@ -413,7 +419,7 @@ class XPathStep(NodeSetViewer) : IStep
 	{
 		if(!ctxt.contextNode) return null;
 		
-		scope nodesetViewer = new NodeSetViewer(ctxt.contextNode);
+		scope nodesetViewer = nodeSetViewerCtr(ctxt.contextNode);
 		
 		XmlNode[] res;
 		

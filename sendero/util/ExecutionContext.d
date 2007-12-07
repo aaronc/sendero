@@ -25,7 +25,7 @@ else {
 	alias char[] Timezone;
 }
 
-enum VarT : ubyte {  Bool, Long, ULong, Double, String, DateTime, Array, Object, Function, Node, Null }; //TODO change Bool to True, False???
+enum VarT : ubyte { Null, Bool, Long, ULong, Double, String, DateTime, Array, Object, Function, Node, Binary }; //TODO change Bool to True, False???
 
 alias VariableBinding Var;
 
@@ -48,10 +48,8 @@ struct VariableBinding
 		ulong ulong_;
 		double double_;
 		char[] string_;
-version(Tango)
-		{DateTime DateTime_;}
-else 
-		{d_time DateTime_;}
+		DateTime dateTime_;
+		ubyte[] binary_;
 	}
 	
 	VarT type = VarT.Null;
@@ -62,54 +60,54 @@ else
 	{
 		propertyService = null;
 		static if(is(X == bool)) {
-			type = VarT.Bool;
+			type = cast(VarT)VarT.Bool;
 			bool_ = val;
 		}
 		else static if(isLongT!(X)) {
-			type = VarT.Long;
+			type = cast(VarT)VarT.Long;
 			long_ = val;
 		}
 		else static if(is(X == ulong)) {
-			type = VarT.ULong;
+			type = cast(VarT)VarT.ULong;
 			ulong_ = val;
 		}
 		else static if(isDoubleT!(X)) {
-			type = VarT.Double;
+			type = cast(VarT)VarT.Double;
 			double_ = val;
 		}
 		else static if(is(X:char[])) {
-			type = VarT.String;
+			type = cast(VarT)VarT.String;
 			string_ = val;
 		}
 		else static if(isDynamicArrayType!(X)) {
-			type = VarT.Array;
+			type = cast(VarT)VarT.Array;
 			arrayBinding = new ArrayVariableBinding!(X)(val);
 		}
 		else static if(isAssocArrayType!(X)) {
-			type = VarT.Object;
+			type = cast(VarT)VarT.Object;
 			objBinding = new AssocArrayVariableBinding!(X)(val);
 		}
 		else static if(is(X == DateTime))
 		{
-			type = VarT.DateTime;
-			DateTime_ = val;
+			type =cast(VarT)VarT.DateTime;
+			dateTime_ = val;
 		}
 		else static if(is(X == Date))
 		{
-			type = VarT.DateTime;
-			DateTime_ = DateTime(val.year, val.month, val.day);
-			DateTime_.addHours(val.hour);
-			DateTime_.addMinutes(val.min);
-			DateTime_.addSeconds(val.sec);
+			type = cast(VarT)VarT.DateTime;
+			dateTime_ = DateTime(val.year, val.month, val.day);
+			dateTime_.addHours(val.hour);
+			dateTime_.addMinutes(val.min);
+			dateTime_.addSeconds(val.sec);
 		}
 		else static if(is(X == Time))
 		{
-			type = VarT.DateTime;
-			DateTime_ = DateTime(val);
+			type = cast(VarT)VarT.DateTime;
+			dateTime_ = DateTime(val);
 		}
 		else static if(is(X == JSONObject!(char)))
 		{
-			type = VarT.Object;
+			type = cast(VarT)VarT.Object;
 			objBinding = new JSONObjectBinding(val);
 		}
 		else static if(is(X == XmlNode))
@@ -119,10 +117,10 @@ else
 		}
 		else static if(is(X == class))
 		{
-			type = VarT.Object;
+			type = cast(VarT)VarT.Object;
 			objBinding = new ClassBinding!(X)(val);
 		}
-		else type = VarT.Null;
+		else type = cast(VarT)VarT.Null;
 	}
 	
 	void opAssign(X)(X x)
@@ -184,7 +182,7 @@ else
 			if(v.type == VarT.Bool) return bool_ == v.bool_;
 			return false;
 		case VarT.DateTime:
-			if(v.type == VarT.DateTime) return DateTime_ == v.DateTime_;
+			if(v.type == VarT.DateTime) return dateTime_ == v.dateTime_;
 			return false;
 		case VarT.Array:
 			if(v.type == VarT.Array) return arrayBinding == v.arrayBinding;
@@ -310,7 +308,7 @@ else
 			if(v.type == VarT.Bool) {if(bool_ < v.bool_) return -1; else if(bool_ > v.bool_) return 1; else return 0;}
 			return 0;
 		case VarT.DateTime:
-			if(v.type == VarT.DateTime) {if(DateTime_ < v.DateTime_) return -1; else if(DateTime_ > v.DateTime_) return 1; else return 0;}
+			if(v.type == VarT.DateTime) {if(dateTime_ < v.dateTime_) return -1; else if(dateTime_ > v.dateTime_) return 1; else return 0;}
 			return 0;
 		default:
 			return 0;
@@ -370,7 +368,7 @@ else
 				}
 			}
 			case VarT.DateTime:
-				res.set(DateTime_ + v.DateTime_); return res;
+				res.set(dateTime_ + v.dateTime_); return res;
 			default:
 				return res;
 			}
@@ -484,7 +482,7 @@ else
 			}
 		}
 		case VarT.DateTime:
-			res.set(DateTime_ - v.DateTime_); return res;
+			res.set(dateTime_ - v.dateTime_); return res;
 		default:
 			return res;
 		}
@@ -1568,7 +1566,7 @@ class DateTimePropertyService : IPropertyService
 	{
 		if(var.type != VarT.DateTime) return VariableBinding();
 		
-		auto dateTime = var.DateTime_;
+		auto dateTime = var.dateTime_;
 		
 		VariableBinding res;
 		switch(name)
@@ -1878,7 +1876,7 @@ class StringCat : IFunctionBinding
 			res ~= p.string_;
 		}
 		VariableBinding var;
-		var.type = VarT.String;
+		var.type = cast(VarT)VarT.String;
 		var.string_ = res;
 		return var;
 	}
