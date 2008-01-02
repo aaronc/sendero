@@ -62,7 +62,7 @@ class ThreadSafeQueue(T)
 		}
 		catch(Exception ex)
 		{
-			debug debugLog.error("dequeue exception " ~ ex.toUtf8);
+			debug debugLog.error("dequeue exception " ~ ex.toString);
 			return null;
 		}
 	}
@@ -97,7 +97,7 @@ class ThreadSafeQueue(T)
 		}
 		catch(Exception ex)
 		{
-			debug debugLog.error("enqueue exception " ~ ex.toUtf8);
+			debug debugLog.error("enqueue exception " ~ ex.toString);
 		}
 	}
 	

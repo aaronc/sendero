@@ -48,7 +48,7 @@ class ReflectionOf(T) {
 	}*/
 	
 	const static int limit = 64;
-	static FieldInfo[] fields_ = null;
+	private static FieldInfo[] fields_ = null;
 	static FieldInfo[] fields()
 	{
 		if(!fields_) fields_ = doReflect;
@@ -203,6 +203,26 @@ template Reflect(T)
 		mixin(Reflector!("62"));
 		mixin(Reflector!("63"));
 		return info;
+	}
+}
+
+class ClassMap(T)
+{
+	private static FieldInfo[char[]] map_ = null;
+	static FieldInfo[char[]] get() {
+		if(!map_) { map = doMap; }
+		return map_;
+	}
+	
+	private static FieldInfo[char[]] doMap()
+	{
+		FieldInfo[char[]] map;
+		auto fields = ReflectionOf!(T).fields;
+		foreach(f; fields)
+		{
+			map[f.name] = f;
+		}
+		return map;
 	}
 }
 

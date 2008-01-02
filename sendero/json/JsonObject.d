@@ -11,6 +11,8 @@ import sendero.util.StringCharIterator;
 
 import Float = tango.text.convert.Float;
 
+import sendero.util.ArrayWriter;
+
 /**
  * Enumerates the seven acceptable JSON value types.
  */
@@ -196,7 +198,7 @@ class JSONObject(Ch = char)
 	
 	Ch[] print()
 	{
-		Ch[] res;
+		ArrayWriter!(Ch) res;
 		
 		Ch[] tab;
 		
@@ -236,15 +238,36 @@ class JSONObject(Ch = char)
 				res ~= tab ~ "\n]\n";
 			}
 			
+			Ch[] escapeString(Ch[] str)
+			{
+				auto res = new ArrayWriter!(Ch);
+				foreach(c; str)
+				{
+					switch(c)
+					{
+					case '\"': res ~= "\\\""; break;
+					case '\\': res ~= "\\\\"; break;
+					case '/': res ~= "\\/"; break;
+					case '\b': res ~= "\\\b"; break;
+					case '\f': res ~= "\\\f"; break;
+					case '\n': res ~= "\\\n"; break;
+					case '\r': res ~= "\\\r"; break;
+					case '\t': res ~= "\\\t"; break;
+					default: res ~= c; break;
+					}
+				}
+				return res.get;
+			}
+			
 			with(JSONValueType)
 			{
 				switch(val.type)
 				{
 				case String:
-					res ~= "\"" ~ val.getString ~ "\"";
+					res ~= "\"" ~ escapeString(val.getString) ~ "\"";
 					break;
 				case Number:
-					res ~= Float.toUtf8(val.getNumber);
+					res ~= Float.toString(val.getNumber);
 					break;
 				case Object:
 					printObj(val.getObject);
@@ -270,7 +293,7 @@ class JSONObject(Ch = char)
 		val = this;
 		printVal(val);
 		
-		return res;
+		return res.get;
 	}
 }
 

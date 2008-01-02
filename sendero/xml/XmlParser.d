@@ -210,7 +210,7 @@ class XmlParser(Ch = char)
         
         private bool doUnexpected(char[] msg = null)
         {
-                log.warn("Unexpected event " ~ msg ~ " " ~ Integer.toUtf8(type));
+                log.warn("Unexpected event " ~ msg ~ " " ~ Integer.toString(type));
                 err = true;
                 return false;
         }
@@ -459,7 +459,7 @@ class XmlParser(Ch = char)
 {
 import tango.io.File;
 import tango.io.Stdout;
-import tango.util.time.StopWatch;
+import tango.time.StopWatch;
 import tango.util.log.ConsoleAppender;
 
 void benchmarkSenderoReader (int iterations, char[] filename = "othello.xml") 
@@ -501,7 +501,7 @@ void testParser(Ch)(XmlParser!(Ch) itr)
 {
   /*      assert(itr.next);
         assert(itr.value == "");
-        assert(itr.type == XmlTokenType.Declaration, Integer.toUtf8(itr.type));
+        assert(itr.type == XmlTokenType.Declaration, Integer.toString(itr.type));
         assert(itr.next);
         assert(itr.value == "version");
         assert(itr.next);
@@ -517,7 +517,7 @@ void testParser(Ch)(XmlParser!(Ch) itr)
         assert(itr.localName == "attr");
         assert(itr.value == "1");
         assert(itr.next);
-        assert(itr.type == XmlTokenType.Attribute, Integer.toUtf8(itr.type));
+        assert(itr.type == XmlTokenType.Attribute, Integer.toString(itr.type));
         assert(itr.localName == "attr2");
         assert(itr.value == "two");
         assert(itr.next);

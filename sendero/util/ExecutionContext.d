@@ -7,10 +7,9 @@ import sendero.data.Validation;
 import sendero.xml.XmlNode;
 
 
-public import tango.core.Type;
-public import tango.util.time.Date;
-public import tango.util.time.DateTime;
-import tango.core.Traits;
+public import tango.core.Traits;
+public import tango.group.time;
+//public import tango.time.Date;
 import tango.text.Util;
 debug import tango.io.Stdout;
 
@@ -48,7 +47,7 @@ struct VariableBinding
 		ulong ulong_;
 		double double_;
 		char[] string_;
-		DateTime dateTime_;
+		Time dateTime_;
 		ubyte[] binary_;
 	}
 	
@@ -87,12 +86,12 @@ struct VariableBinding
 			type = cast(VarT)VarT.Object;
 			objBinding = new AssocArrayVariableBinding!(X)(val);
 		}
-		else static if(is(X == DateTime))
+		else static if(is(X == Time))
 		{
-			type =cast(VarT)VarT.DateTime;
+			type = cast(VarT)VarT.DateTime;
 			dateTime_ = val;
 		}
-		else static if(is(X == Date))
+	/*	else static if(is(X == Date))
 		{
 			type = cast(VarT)VarT.DateTime;
 			dateTime_ = DateTime(val.year, val.month, val.day);
@@ -104,7 +103,7 @@ struct VariableBinding
 		{
 			type = cast(VarT)VarT.DateTime;
 			dateTime_ = DateTime(val);
-		}
+		}*/
 		else static if(is(X == JSONObject!(char)))
 		{
 			type = cast(VarT)VarT.Object;
@@ -182,7 +181,7 @@ struct VariableBinding
 			if(v.type == VarT.Bool) return bool_ == v.bool_;
 			return false;
 		case VarT.DateTime:
-			if(v.type == VarT.DateTime) return dateTime_ == v.dateTime_;
+			if(v.type == VarT.DateTime) return dateTime_ == v.dateTime_ ? true : false;
 			return false;
 		case VarT.Array:
 			if(v.type == VarT.Array) return arrayBinding == v.arrayBinding;
@@ -368,7 +367,7 @@ struct VariableBinding
 				}
 			}
 			case VarT.DateTime:
-				res.set(dateTime_ + v.dateTime_); return res;
+				res.set(dateTime_ + v.dateTime_.span); return res;
 			default:
 				return res;
 			}
@@ -1566,31 +1565,29 @@ class DateTimePropertyService : IPropertyService
 	{
 		if(var.type != VarT.DateTime) return VariableBinding();
 		
-		auto dateTime = var.dateTime_;
+		//auto dateTime = var.dateTime_;
+		auto dt = Clock.toDate(var.dateTime_);
 		
 		VariableBinding res;
 		switch(name)
 		{
 		case "year":
-			res.set(dateTime.year);
+			res.set(dt.date.year);
 			break;
 		case "month":
-			res.set(dateTime.month);
+			res.set(dt.date.month);
 			break;
 		case "day":
-			res.set(dateTime.day);
+			res.set(dt.date.day);
 			break;
 		case "hour":
-			res.set(dateTime.hour);
+			res.set(dt.time.hours);
 			break;
 		case "minute":
-			res.set(dateTime.minute);
+			res.set(dt.time.minutes);
 			break;
 		case "second":
-			res.set(dateTime.second);
-			break;
-		case "millisecond":
-			res.set(dateTime.millisecond);
+			res.set(dt.time.seconds);
 			break;
 		default:
 			res.type = VarT.Null;
@@ -1827,7 +1824,7 @@ class Now : IFunctionBinding
 	VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
 	{
 		VariableBinding var;
-		var.set(DateTime.now);
+		var.set(Clock.now);
 		return var;
 	}
 }

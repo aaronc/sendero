@@ -5,10 +5,10 @@ import sendero.xml.XmlParser;
 
 struct QName
 {
-	string prefix;
-	string localName;
+	char[] prefix;
+	char[] localName;
 	
-	string print()
+	char[] print()
 	{
 		if(prefix.length) {
 			return prefix ~ ":" ~ localName;
@@ -290,27 +290,27 @@ class XmlNode
 {
 public:
 	XmlNodeType type;
-	string prefix;
-	string localName;
+	char[] prefix;
+	char[] localName;
 	uint uriID = 0;
 	
-	final string name()
+	final char[] name()
     {
     	if(prefix.length)
     		return prefix ~ ":" ~ localName;
     	return localName;
     }
 	
-	string rawValue;
+	char[] rawValue;
 
-	final string value()
+	final char[] value()
 	{
 		if(type == XmlNodeType.Data || type == XmlNodeType.Attribute)
     		return decodeBuiltinEntities!(char)(rawValue);
     	return rawValue;
 	}
 	
-	final void value(string val)
+	final void value(char[] val)
 	{
 		rawValue = encodeBuiltinEntities!(char)(val);
 	}
@@ -419,7 +419,7 @@ public:
 		}		
 	}
 	
-	void appendAttribute(string prefix, string localName, string value, uint uriID = 0)
+	void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
 	{
 		/*QName name;
 		name.prefix = prefix;
@@ -456,12 +456,12 @@ private:
 	XmlNode lastAttr_ = null;
 	uint[char[]] namespaceURIs;
 	//XmlNode[] children;
-	//string[QName] attributes;
+	//char[][QName] attributes;
 //	QName name;
-//	string value;
+//	char[] value;
 }
 
-XmlNode XmlElement(string prefix, string localName, XmlNode contents = null)
+XmlNode XmlElement(char[] prefix, char[] localName, XmlNode contents = null)
 {
 	auto node = new XmlNode;
 	node.type = XmlNodeType.Element;
@@ -470,7 +470,7 @@ XmlNode XmlElement(string prefix, string localName, XmlNode contents = null)
 	return node;
 }
 
-XmlNode XmlData(string data)
+XmlNode XmlData(char[] data)
 {
 	auto node = new XmlNode;
 	node.type = XmlNodeType.Data;
@@ -478,7 +478,7 @@ XmlNode XmlData(string data)
 	return node;
 }
 
-XmlNode XmlPI(string pi)
+XmlNode XmlPI(char[] pi)
 {
 	auto node = new XmlNode;
 	node.type = XmlNodeType.PI;
@@ -486,7 +486,7 @@ XmlNode XmlPI(string pi)
 	return node;
 }
 
-XmlNode XmlDoctype(string doctype)
+XmlNode XmlDoctype(char[] doctype)
 {
 	auto node = new XmlNode;
 	node.type = XmlNodeType.Doctype;
@@ -494,7 +494,7 @@ XmlNode XmlDoctype(string doctype)
 	return node;
 }
 
-XmlNode XmlComment(string comment)
+XmlNode XmlComment(char[] comment)
 {
 	auto node = new XmlNode;
 	node.type = XmlNodeType.Comment;
@@ -505,7 +505,7 @@ XmlNode XmlComment(string comment)
 const char[] xmlURI = "http://www.w3.org/XML/1998/namespace";
 const char[] xmlnsURI = "http://www.w3.org/2000/xmlns/";
 
-XmlNode parseXmlTree(string xml)
+XmlNode parseXmlTree(char[] xml)
 {
 	auto itr = new XmlParser!(char)(xml);
 //	XmlParser!(char) itr;
@@ -637,9 +637,9 @@ XmlNode parseXmlTree(string xml)
 	return doc;
 }
 
-string print(XmlNode root)
+char[] print(XmlNode root)
 {
-	string res;
+	char[] res;
 	void printNode(XmlNode node)
 	{
 		if(node.type == XmlNodeType.Document)
@@ -726,7 +726,7 @@ version(Unittest)
 	
 	import tango.io.Stdout;
 	import tango.io.File;
-	import tango.util.time.StopWatch;
+	import tango.time.StopWatch;
 	unittest
 	{
 		auto doc = parseXmlTree(testXML);

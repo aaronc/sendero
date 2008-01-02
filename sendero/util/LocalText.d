@@ -21,8 +21,7 @@ else {
 	alias char[] Timezone;
 }
 
-import tango.util.time.DateTime;
-import tango.util.time.Date;
+import tango.group.time;
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
 import Text = tango.text.Util;
@@ -200,10 +199,10 @@ package class Message : IMessage
 			
 			auto dst = new UString(100);
 			fmt.format(dst, x);
-			return dst.toUtf8;
+			return dst.toString;
 		}
 		else {
-			return Integer.toUtf8(x);
+			return Integer.toString(x);
 		}
 	}
 	
@@ -221,14 +220,14 @@ package class Message : IMessage
 			
 			auto dst = new UString(100);
 			fmt.format(dst, x);
-			return dst.toUtf8;
+			return dst.toString;
 		}
 		else {
-			return Float.toUtf8(x);
+			return Float.toString(x);
 		}
 	}
 	
-	static char[] renderDateTime(inout DateTime dt, inout Param p, Locale lcl, Timezone tz)
+	static char[] renderDateTime(inout Time t, inout Param p, Locale lcl, Timezone tz)
 	{
 		version(ICU) {
 			UDateFormat udf;
@@ -306,9 +305,10 @@ package class Message : IMessage
 			}
 			
 			auto dst = new UString(100);
-			UCalendar.UDate udat = cast(UCalendar.UDate)((dt.ticks - 621355788e9) / 1e4);
+			//UCalendar.UDate udat = cast(UCalendar.UDate)((t.ticks - 621355788e9) / 1e4);
+			UCalendar.UDate udat = cast(UCalendar.UDate)((t.ticks - Time.epoch1970) / 1e4);
 			udf.format(dst, udat);
-			return dst.toUtf8;
+			return dst.toString;
 		}
 		else {
 			char[] res;
@@ -319,20 +319,20 @@ package class Message : IMessage
 				switch(p.secondaryFormat)
 				{
 				case DATE_STYLE_SHORT:
-					return formatDateTime(res, dt, "d");
+					return formatDateTime(res, t, "d");
 					break;
 				case DATE_STYLE_LONG:
-					return formatDateTime(res, dt, "D");
+					return formatDateTime(res, t, "D");
 					break;
 				case DATE_STYLE_FULL:
-					return formatDateTime(res, dt, "D");
+					return formatDateTime(res, t, "D");
 					break;
 				case DATE_STYLE_CUSTOM:
-					return formatDateTime(res, dt, p.formatString);
+					return formatDateTime(res, t, p.formatString);
 					break;
 				case DATE_STYLE_MEDIUM:
 				default:
-					return formatDateTime(res, dt, "D");
+					return formatDateTime(res, t, "D");
 					break;
 				}
 				break;
@@ -341,20 +341,20 @@ package class Message : IMessage
 				switch(p.secondaryFormat)
 				{
 				case DATE_STYLE_SHORT:
-					return formatDateTime(res, dt, "t");
+					return formatDateTime(res, t, "t");
 					break;
 				case DATE_STYLE_LONG:
-					return formatDateTime(res, dt, "T");
+					return formatDateTime(res, t, "T");
 					break;
 				case DATE_STYLE_FULL:
-					return formatDateTime(res, dt, "T");
+					return formatDateTime(res, t, "T");
 					break;
 				case DATE_STYLE_CUSTOM:
-					return formatDateTime(res, dt, p.formatString);
+					return formatDateTime(res, t, p.formatString);
 					break;
 				case DATE_STYLE_MEDIUM:
 				default:
-					return formatDateTime(res, dt, "t");
+					return formatDateTime(res, t, "t");
 					break;
 				}
 				break;
@@ -364,20 +364,20 @@ package class Message : IMessage
 				switch(p.secondaryFormat)
 				{
 				case DATE_STYLE_SHORT:
-					return formatDateTime(res, dt, "g");
+					return formatDateTime(res, t, "g");
 					break;
 				case DATE_STYLE_LONG:
-					return formatDateTime(res, dt, "G");
+					return formatDateTime(res, t, "G");
 					break;
 				case DATE_STYLE_FULL:
-					return formatDateTime(res, dt, "G");
+					return formatDateTime(res, t, "G");
 					break;
 				case DATE_STYLE_CUSTOM:
-					return formatDateTime(res, dt, p.formatString);
+					return formatDateTime(res, t, p.formatString);
 					break;
 				case DATE_STYLE_MEDIUM:
 				default:
-					return formatDateTime(res, dt, "g");
+					return formatDateTime(res, t, "g");
 					break;
 				}
 				break;

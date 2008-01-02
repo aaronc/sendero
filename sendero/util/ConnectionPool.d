@@ -73,7 +73,7 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 	}
 }
 
-version(Unittest)
+/+version(Unittest)
 {
 	import sendero.data.backends.Sqlite;
 	class SqliteTestProvider
@@ -170,4 +170,4 @@ unittest
 	}
 	appender.close;
 }
-}
+}+/

@@ -2,6 +2,8 @@ module sendero.util.UrlStack;
 
 import sendero.util.collection.Stack;
 
+import Util = tango.text.Util;
+
 class UrlStack : Stack!(char[])
 {
 	private void pushHead(char[] token)
@@ -33,7 +35,7 @@ class UrlStack : Stack!(char[])
 	
 	char[] origUrl;
 	
-	static UrlStack parse(char[] url)
+	static UrlStack parseUrl(char[] url)
 	{
 		uint i = 0;
 		uint len = url.length;
@@ -61,6 +63,18 @@ class UrlStack : Stack!(char[])
 		if(cur.length)
 			p.pushHead(cur);
 		
+		return p;
+	}
+	
+	static UrlStack parseDotpath(char[] dotPath)
+	{
+		auto tokens = Util.split(dotPath, ".");
+		auto p = new UrlStack;
+		p.origUrl = dotPath;
+		foreach_reverse(t; tokens)
+		{
+			p.push(t);
+		}
 		return p;
 	}
 	
@@ -102,7 +116,19 @@ class UrlStack : Stack!(char[])
 		assert(p.empty);
 		assert(p.top == null);
 		
-		p = UrlStack.parse("/home/sendero/hello");
+		p = UrlStack.parseUrl("/home/sendero/hello");
+		assert(!p.empty);
+		assert(p.top == "home");
+		p.pop;
+		assert(!p.empty);
+		assert(p.top == "sendero");
+		p.pop;
+		assert(!p.empty);
+		assert(p.top == "hello");
+		p.pop;
+		assert(p.empty);
+		
+		p = UrlStack.parseDotpath("home.sendero.hello");
 		assert(!p.empty);
 		assert(p.top == "home");
 		p.pop;

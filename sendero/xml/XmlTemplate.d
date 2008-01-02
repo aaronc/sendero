@@ -796,7 +796,7 @@ class XmlTemplate
 					debug assert(false, itr.prefix ~ ":" ~ itr.localName ~ "=" ~ itr.rawValue);
 					break;
 				default:
-					assert(false, "Unhandled node type " ~ Integer.toUtf8(itr.type));
+					assert(false, "Unhandled node type " ~ Integer.toString(itr.type));
 				}
 				curElem.elem.children ~= node;
 			}
@@ -859,11 +859,16 @@ class XmlTemplate
 		copyNode(newRoot, base);
 		base = newRoot;
 	}*/
-
+	
 	char[] render(ExecutionContext ctxt, XmlTemplate child = null)
 	{
-		size_t growSize = cast(size_t)(origLen * 0.2);
-		auto str = new ArrayWriter!(char)(origLen + growSize, growSize * 2);
+		return renderNode(base, ctxt, this, child);
+	}
+
+	static char[] renderNode(XmlTemplateNode baseNode, ExecutionContext ctxt, XmlTemplate inst, XmlTemplate child = null)
+	{
+		size_t growSize = cast(size_t)(inst.origLen * 0.2);
+		auto str = new ArrayWriter!(char)(inst.origLen + growSize, growSize * 2);
 		bool superNode = false;
 		XmlTemplateNode parentBlock = null;
 		
@@ -1003,7 +1008,7 @@ class XmlTemplate
 						auto path = a.expr.exec(ctxt);
 						auto templ = XmlTemplate.get(path);
 						templ.ctxt = ctxt;
-						if(templ) str ~= templ.render(this);
+						if(templ) str ~= templ.render(inst);
 					}
 					
 					void doBlock()
@@ -1190,7 +1195,7 @@ class XmlTemplate
 			}
 		}
 		
-		renderNode(base);
+		renderNode(baseNode);
 		return str.get;
 	}
 	
@@ -1201,12 +1206,14 @@ class XmlTemplate
 		Time lastModified;
 	}
 	
+	private static char[] searchPath;
+	
 	private static XmlTemplateCache[char[]] cache;
-	static XmlTemplateInstance get(char[] path)
+	static XmlTemplate getTemplate(char[] path)
 	{
-		auto pt = (path in cache);
+		auto pt = (searchPath ~ path in cache);
 		if(!pt) {
-			auto fp = new FilePath(path);
+			auto fp = new FilePath(searchPath ~ path);
 			scope f = new File(fp);
 			if(!f) throw new Exception("Template not found");
 			auto txt = cast(char[])f.read;
@@ -1218,7 +1225,7 @@ class XmlTemplate
 			templCache.lastModified = fp.modified;		
 			cache[path] = templCache;
 			
-			return new XmlTemplateInstance(templ);
+			return templ;
 		}
 		
 		with(*pt) {
@@ -1228,9 +1235,21 @@ class XmlTemplate
 				templ = XmlTemplate.compile(txt);
 				lastModified = path.modified;
 			}
-			return new XmlTemplateInstance(templ);
+			return templ;
 		}
 	}
+	
+	static XmlTemplateInstance get(char[] path)
+	{
+		return new XmlTemplateInstance(getTemplate(path));
+	}
+	
+	static void setSearchPath(char[] path)
+	{
+		searchPath = path;
+	}
+	
+	XmlTemplateNode[char[]] getBlocks() { return blocks; }
 }
 
 class XmlTemplateInstance
