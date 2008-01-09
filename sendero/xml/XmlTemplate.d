@@ -7,8 +7,8 @@ import sendero.util.collection.Stack;
 import sendero.util.StringCharIterator;
 import sendero.json.JsonObject;
 
-import sendero.util.LocalText;
-import sendero.util.ExecutionContext;
+import sendero.vm.LocalText;
+import sendero.vm.ExecutionContext;
 
 import tango.text.Util;
 import tango.io.File;
@@ -17,7 +17,7 @@ import tango.io.FilePath;
 debug import tango.io.Stdout;
 
 enum XmlTemplateNodeType { Element, ForElement, IfElement, Data, CData, Comment, PI, Doctype };
-enum XmlTemplateActionType { If, For, AssocFor, Def, List, DefObject, Include, Import, Extend, Block, Super, Attr, Attrs, Element, Choice, Let};
+enum XmlTemplateActionType { If, For, AssocFor, Def, List, DefObject, Include, Import, Extend, Block, Super, Attr, Attrs, Element, Choice, Let, Errors};
 
 /*
  * Elements/Attributes:
@@ -85,10 +85,53 @@ struct AttrDef
 
 struct ChoiceDef
 {
-	Message expr;
+	Expression expr;
 	XmlTemplateNode[char[]] choices;
 	XmlTemplateNode otherwise;
 }
+
+struct ErrorDef
+{
+	char[] cls;
+	XmlTemplateNode[char[]] errors;
+}
+
+/+interface IXmlTemplateAction
+{
+	void exec();
+}
+
+class ForAction : IXmlTemplateAction
+{
+	this(VarPath var, char[] localName)
+	{
+		this.var = var;
+		this.localName = localName;
+	}
+	
+	VarPath var;
+	char[] localName;
+	
+	void exec(ExecutionContext ctxt)
+	{
+		auto var = ctxt.getVar(var);
+		if(var.type != VarT.Array) return;
+		
+		foreach(v; var.arrayBinding)
+		{
+			//auto curCtxt = ctxt;
+			scope localCtxt = new ExecutionContext(ctxt);
+			//ctxt = localCtxt;
+			
+			localCtxt.addVar(localName, v);
+			localCtxt.addVar("__loopN__", i);
+					
+			renderElement(i + 1);
+			
+			//ctxt = curCtxt;
+			++i;
+		}
+}+/
 
 struct XmlTemplateAction
 {
@@ -102,6 +145,7 @@ struct XmlTemplateAction
 		LetDef let;
 		AttrDef attr;
 		ChoiceDef choice;
+		ErrorDef errors;
 	}
 	
 	void serialize(Ar)(Ar ar, short ver)
@@ -123,20 +167,11 @@ struct XmlTemplateElementNode
 	}
 }
 
-/*struct XmlTemplateForNode
+struct XmlTemplateErrors
 {
-	char[] name;
-	char[][char[]] attributes;
-	char[] var;
-	char[] list;
-}
-
-struct XmlTemplateActionElement
-{
-	char[] name;
-	char[][char[]] attributes;
+	char[] id;
 	
-}*/
+}
 
 struct QName
 {
@@ -213,7 +248,7 @@ class XmlTemplateFunction : IFunctionBinding
 		}
 		VariableBinding var;
 		var.type = VarT.String;
-		var.set(templ.render(ctxt));
+		var.set(templ.render(ctxt, null));
 		return var;
 	}
 }
@@ -224,11 +259,22 @@ class XmlTemplate
 	private FunctionBindingContext functionCtxt;
 	private size_t origLen;
 	private XmlTemplateNode[char[]] blocks;
+	private XmlTemplateNode[char[]][char[]] errorBlocks;
 	private Message[char[]] object;
 	
 	private this()
 	{
 		functionCtxt = new FunctionBindingContext;
+	}
+	
+	debug(Log)
+	{
+		import tango.util.log.Log;
+		private static Logger log;
+		static this()
+		{
+			log = Log.getLogger("sendero.xml.XmlTemplate");
+		}
 	}
 	
 	static XmlTemplate compile(char[] templ)
@@ -452,7 +498,7 @@ class XmlTemplate
 				{
 					XmlTemplateAction action;
 					action.action = XmlTemplateActionType.Choice;
-					action.choice.expr = parseMessage(expr, res.functionCtxt);
+					parseExpression(expr, action.choice.expr, res.functionCtxt);
 					while((retain || itr.next) && itr.depth > depth) {
 						retain = false;
 						if(itr.type == XmlNodeType.Element && itr.prefix == "d")
@@ -465,7 +511,6 @@ class XmlTemplate
 									if(itr.localName == "val")
 									{
 										val = itr.value;
-										break;
 									}
 								}
 								auto x = new XmlTemplateNode;
@@ -484,6 +529,24 @@ class XmlTemplate
 					}
 					retain = true;
 					curElem.elem.actions ~= action;
+				}
+				
+				void doErrors(char[] cls)
+				{
+					XmlTemplateAction action;
+					action.action = XmlTemplateActionType.Errors;
+					action.errors.cls = cls;
+					curElem.elem.actions ~= action;
+					res.errorBlocks[cls] = action.errors.errors;
+				}
+				
+				void doError(char[] id)
+				{
+					auto parent = stack.top;
+					if(parent && parent.elem.actions.length && parent.elem.actions[0].action ==  XmlTemplateActionType.Errors)
+					{
+						parent.elem.actions[0].errors.errors[id] = curElem;
+					}
 				}
 				
 				//if(itr.namespace == "http://www.dsource.org/projects/sendero") //TODO add namespace awareness to parser
@@ -596,10 +659,31 @@ class XmlTemplate
 							if(itr.localName == "expr")
 							{
 								val = itr.value;
-								break;
 							}
 						}
 						if(val.length) doChoice(val); 
+						break;
+					case "errors":
+						char[] cls;
+						while(nextAttribute)
+						{
+							if(itr.localName == "class")
+							{
+								cls = itr.value;
+							}
+						}
+						if(cls.length) doErrors(cls); 
+						break;
+					case "error":
+						char[] id;
+						while(nextAttribute)
+						{
+							if(itr.localName == "id")
+							{
+								id = itr.value;
+							}
+						}
+						if(id.length) doError(id); 
 						break;
 					case "text":
 					default:
@@ -860,17 +944,52 @@ class XmlTemplate
 		base = newRoot;
 	}*/
 	
-	char[] render(ExecutionContext ctxt, XmlTemplate child = null)
+	char[] render(ExecutionContext ctxt, ErrorMap errorMap, XmlTemplate child = null)
 	{
-		return renderNode(base, ctxt, this, child);
+		return renderNode(base, ctxt, this, errorMap, child);
 	}
 
-	static char[] renderNode(XmlTemplateNode baseNode, ExecutionContext ctxt, XmlTemplate inst, XmlTemplate child = null)
-	{
+	static char[] renderNode(XmlTemplateNode baseNode, ExecutionContext ctxt, XmlTemplate inst, ErrorMap errorMap, XmlTemplate child = null)
+	{		
 		size_t growSize = cast(size_t)(inst.origLen * 0.2);
 		auto str = new ArrayWriter!(char)(inst.origLen + growSize, growSize * 2);
 		bool superNode = false;
 		XmlTemplateNode parentBlock = null;
+		
+		void dumpNode(XmlTemplateNode node)
+		{
+			void printActions(XmlTemplateAction[] actions)
+			{
+				foreach(a; actions)
+				{
+					str ~= "{" ~ Integer.toString(a.action) ~ "}";
+				}
+			}
+			
+			switch(node.type)
+			{
+			case XmlNodeType.Element:
+				str ~= "<" ~ node.elem.qname.print ~ " ";
+				printActions(node.elem.actions);
+				if(node.elem.children.length)
+				{
+					str ~= ">";
+					foreach(x; node.elem.children)
+					{
+						dumpNode(x);
+					}
+					str ~= "</" ~ node.elem.qname.print ~ ">";
+				}
+				else
+				{
+					str ~= " />";
+				}
+				break;
+			case XmlNodeType.Data:
+				str ~= "[[DATA]]";
+				break;
+			}
+		}
 		
 		void renderNode(inout XmlTemplateNode x)
 		{
@@ -996,6 +1115,7 @@ class XmlTemplate
 						auto path = a.expr.exec(ctxt);
 						auto templ = XmlTemplate.get(path);
 						templ.ctxt = ctxt;
+						templ.errors = errorMap;
 						ctxt.runtimeImports ~= templ.templ.functionCtxt;
 						if(templ) str ~= templ.render;
 					}
@@ -1076,8 +1196,8 @@ class XmlTemplate
 					void doChoice()
 					{
 						XmlTemplateAction a = node.elem.actions[i];
-						if(!a.choice.expr) return;
-						auto val = a.choice.expr.exec(ctxt);
+						//if(!a.choice.expr) return;
+						/+auto val = a.choice.expr.exec(ctxt);
 						
 						auto pNode = (val in a.choice.choices);
 						if(pNode) {
@@ -1085,7 +1205,26 @@ class XmlTemplate
 						}
 						else if(a.choice.otherwise) {
 							renderNode(a.choice.otherwise);
-						}					
+						}+/
+					}
+					
+					void doErrors()
+					{
+						if(!errorMap.length)
+							return;
+						
+						XmlTemplateAction a = node.elem.actions[i];
+						auto eMap = a.errors.cls in errorMap;
+						if(eMap) {
+							foreach(eKey; eMap.keys)
+							{
+								auto e = eKey in a.errors.errors;
+								if(e)
+								{
+									renderNode(*e);
+								}
+							}
+						}
 					}
 					
 					//Do Current Action
@@ -1116,6 +1255,8 @@ class XmlTemplate
 							return doAttr();
 						case XmlTemplateActionType.Choice:
 							return doChoice();
+						case XmlTemplateActionType.Errors:
+							return doErrors();
 						default:
 							break;
 						}
@@ -1196,6 +1337,11 @@ class XmlTemplate
 		}
 		
 		renderNode(baseNode);
+		
+		str ~= "<pre>";
+		dumpNode(baseNode);
+		str ~= "</pre>";
+		
 		return str.get;
 	}
 	
@@ -1252,7 +1398,35 @@ class XmlTemplate
 	XmlTemplateNode[char[]] getBlocks() { return blocks; }
 }
 
-class XmlTemplateInstance
+alias char[][char[]][char[]] ErrorMap;
+
+abstract class AbstractTemplateInstance
+{
+	protected this()
+	{
+		ctxt = new ExecutionContext;
+	}
+	
+	protected ExecutionContext ctxt;
+	protected ErrorMap errors;
+	
+	void opIndexAssign(T)(T t, char[] name)
+	{
+		ctxt.addVar(name, t);
+	}
+	
+	void use(T)(T t)
+	{
+		ctxt.addVarAsRoot(t);
+	}
+	
+	void setError(char[] cls, char[] id)
+	{
+		errors[cls][id] = id;
+	}
+}
+
+class XmlTemplateInstance : AbstractTemplateInstance
 {
 	private this() {}
 	
@@ -1265,24 +1439,14 @@ class XmlTemplateInstance
 	private XmlTemplate templ;
 	private ExecutionContext ctxt;
 	
-	void opIndexAssign(T)(T t, char[] name)
-	{
-		ctxt.addVar(name, t);
-	}
-	
-	void use(T)(T t)
-	{
-		ctxt.addVarAsRoot(t);
-	}
-	
 	char[] render()
 	{
-		return templ.render(ctxt);
+		return templ.render(ctxt, errors);
 	}
 	
 	private char[] render(XmlTemplate child)
 	{
-		return templ.render(ctxt, child);
+		return templ.render(ctxt, errors, child);
 	}
 }
 
@@ -1290,7 +1454,7 @@ version(Unittest)
 {
 	import tango.io.Stdout;
 	import sendero.data.Validation;
-	import tango.util.time.StopWatch;
+	import tango.time.StopWatch;
 	import Integer = tango.text.convert.Integer;
 	//import tango.text.locale.Convert, tango.text.locale.Core;
 	
@@ -1356,43 +1520,51 @@ unittest
 	n.first = "John";
 	n.last = "Doe";
 	n.somenumber = 1234567;
-	n.date = DateTime(1976, 3, 17);
+	n.date.date.year = 1976;
+	n.date.date.month = 3;
+	n.date.date.day = 17;
 	names ~= n;
 	n = new Name;
 	n.first = "Jackie";
 	n.last = "Smith";
 	n.somenumber = 7654321;
-	n.date = DateTime(1942, 10, 14);
+	n.date.date.year = 1942;
+	n.date.date.month = 10;
+	n.date.date.day = 14;
 	names ~= n;
 	n = new Name;
 	n.first = "Joe";
 	n.last = "Schmoe";
 	n.somenumber = 7654321;
-	n.date = DateTime(1967, 3, 3);
+	n.date.date.year = 1967;
+	n.date.date.month = 3;
+	n.date.date.day = 3;
 	names ~= n;
 	n = new Name;
 	n.first = "Pete";
 	n.last = "This Is Neat";
 	n.somenumber = 7654321;
-	n.date = DateTime(1967, 3, 3);
+	n.date.date.year = 1967;
+	n.date.date.month = 3;
+	n.date.date.day = 3;
 	names ~= n;
 	
 	ctxt.addVar("names", names);
 	
 	ctxt.addVar("myHeading", "Hello World!! again...");
 	
-	Stdout(ctempl.render(ctxt)).newline;
+	Stdout(ctempl.render(ctxt, null)).newline;
 	
 	char[] textTempl = "Here is a list of items: <d:list each=\"$x in $items\" sep=\", \">_{$x}</d:list>.";
 	
 	auto ctextTempl = XmlTemplate.compile(textTempl);
-	Stdout(ctextTempl.render(ctxt)).newline;
+	Stdout(ctextTempl.render(ctxt, null)).newline;
 	
 	char[] nestedFuncs = "<div><d:def function=\"func()\"><d:def function=\"nestedFunc(x)\">_{$x}</d:def>_{nestedFunc('one')} _{nestedFunc('two')}</d:def>"
 		"_{func()}</div>";
 	
 	auto cnestedFuncs = XmlTemplate.compile(nestedFuncs);
-	Stdout(cnestedFuncs.render(ctxt)).newline;
+	Stdout(cnestedFuncs.render(ctxt, null)).newline;
 	
 	/*auto derived = XmlTemplate.get("derivedtemplate.xml");
 	derived["name"] = "bob";
@@ -1439,7 +1611,7 @@ unittest
 	btWatch.start;
 	for(uint i = 0; i < 100; ++i) {
 		auto bigtabletemp = XmlTemplate.compile(bigtable);
-		Stdout(bigtabletemp.render(ctxt));
+		Stdout(bigtabletemp.render(ctxt, null));
 	}
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime * 10);

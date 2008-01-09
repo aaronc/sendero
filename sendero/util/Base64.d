@@ -74,7 +74,7 @@ char[] base64Encode(bool MIME = false)(ubyte[] src, char[] dest = null)
 		
 		uint n = src[i];    n <<= 8;
 		n += src[i+1];      n <<= 8;
-		debug assert(j + 3 < destLen, Integer.toUtf8(src.length) ~ ":" ~ Integer.toUtf8(destLen));
+		debug assert(j + 3 < destLen, Integer.toString(src.length) ~ ":" ~ Integer.toString(destLen));
 		
 		dest[j] = lookupBase64Encode[ n >>> 18 & 63 ];
 		dest[j + 1] = lookupBase64Encode[ n >>> 12 & 63 ];
@@ -210,7 +210,7 @@ ubyte[] base64Decode(char[] src, ubyte[] dest = null)
 				++i;
 			}
 			if(x == 255 || x == 101) break;
-			debug assert(c < 4, Integer.toUtf8(c));
+			debug assert(c < 4, Integer.toString(c));
 			buf[c] = x;
 		}
 		
@@ -256,7 +256,7 @@ char[] intToBase64(X)(X x, char[] dest = null)
 	
 	for(int i = n - 1; i >= 0; --i)
 	{
-		debug assert(i < n, Integer.toUtf8(n) ~ ":" ~ Integer.toUtf8(i));
+		debug assert(i < n, Integer.toString(n) ~ ":" ~ Integer.toString(i));
 		//debug Stdout.formatln("{},{},{}", i, x, x & 63);
 		dest[i] = lookupBase64Encode[x & 63];
 		x >>>= 6;
@@ -357,25 +357,25 @@ unittest
 	auto ulB64 = intToBase64(ul);
 	ulong ul2;
 	assert(base64ToInt(ulB64, ul2));
-	assert(ul == ul2, Integer.toUtf8(ul2));
+	assert(ul == ul2, Integer.toString(ul2));
 	
 	uint ui = 4007639867;
 	auto uiB64 = intToBase64(ui);
 	uint ui2;
 	assert(base64ToInt(uiB64, ui2));
-	assert(ui == ui2, Integer.toUtf8(ui2));
+	assert(ui == ui2, Integer.toString(ui2));
 	
 	ushort us = 17689;
 	auto usB64 = intToBase64(us);
 	ushort us2;
 	assert(base64ToInt(usB64, us2));
-	assert(us == us2, Integer.toUtf8(us2));
+	assert(us == us2, Integer.toString(us2));
 	
 	int i = -46389236;
 	auto iB64 = intToBase64(i);
 	int i2;
 	assert(base64ToInt(iB64, i2));
-	assert(i == i2, Integer.toUtf8(i2));
+	assert(i == i2, Integer.toString(i2));
 	
 	char[] b64 = "c2RsZ2toS0hES1NKR0Jqa2RmZ2gyOTM4NTZrc2pnaEtKR0dramZkc2c=";
 	ubyte[] src = cast(ubyte[])"sdlgkhKHDKSJGBjkdfgh293856ksjghKJGGkjfdsg";

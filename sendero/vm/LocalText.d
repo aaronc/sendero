@@ -1,6 +1,6 @@
-module sendero.util.LocalText;
+module sendero.vm.LocalText;
 
-import sendero.util.ExecutionContext;
+import sendero.vm.ExecutionContext;
 //import sendero.util.FunctionBindingContext;
 import sendero.util.StringCharIterator;
 
@@ -95,7 +95,7 @@ interface IMessage
 	char[] exec(ExecutionContext ctxt);
 }
 
-package class Message : IMessage
+class Message : IMessage
 {
 	char[] msg;
 	Param[] params;
@@ -566,7 +566,7 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 	parseExpr(expression);
 }
 
-public Message parseMessage(char[] msg, FunctionBindingContext ctxt)
+Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 {
 	auto itr = new StringCharIterator!(char)(msg);
 	

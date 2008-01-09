@@ -317,6 +317,11 @@ public:
 	
 	final INodeSetViewer children() {return new ChildAxisViewer(this);}
 	final INodeSetViewer attributes() {return new AttributeAxisViewer(this);}
+	final XmlNode parent() { return parent_; }
+	final XmlNode firstChild() { return firstChild_; }
+	final XmlNode lastChild() { return lastChild_; }
+	final XmlNode prevSibling() { return prevSibling_; }
+	final XmlNode nextSibling() { return nextSibling_; }
 	
 	final void append(XmlNode node)
 	{
@@ -401,25 +406,47 @@ public:
 			parent_ = null;
 			
 		}
-		else if(prevSibling_)
+		else if(type != XmlNodeType.Attribute)
 		{
-			debug assert(parent_.lastChild_ == this);
-			parent_.lastChild_ = prevSibling_;
-			prevSibling_.nextSibling_ = null;
-			prevSibling_ = null;
-			parent_ = null;
+			if(prevSibling_)
+			{
+				debug assert(parent_.lastChild_ == this);
+				parent_.lastChild_ = prevSibling_;
+				prevSibling_.nextSibling_ = null;
+				prevSibling_ = null;
+				parent_ = null;
+			}
+			else
+			{
+				debug assert(parent_.firstChild_ == this);
+				debug assert(parent_.lastChild_ == this);
+				parent_.firstChild_ = null;
+				parent_.lastChild_ = null;
+				parent_ = null;
+			}
 		}
 		else
 		{
-			debug assert(parent_.firstChild_ == this);
-			debug assert(parent_.lastChild_ == this);
-			parent_.firstChild_ = null;
-			parent_.lastChild_ = null;
-			parent_ = null;
-		}		
+			if(prevSibling_)
+			{
+				debug assert(parent_.lastAttr_ == this);
+				parent_.lastAttr_ = prevSibling_;
+				prevSibling_.nextSibling_ = null;
+				prevSibling_ = null;
+				parent_ = null;
+			}
+			else
+			{
+				debug assert(parent_.firstAttr_ == this);
+				debug assert(parent_.lastAttr_ == this);
+				parent_.firstAttr_ = null;
+				parent_.lastAttr_ = null;
+				parent_ = null;
+			}
+		}
 	}
 	
-	void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
+	final void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
 	{
 		/*QName name;
 		name.prefix = prefix;
@@ -540,7 +567,7 @@ XmlNode parseXmlTree(char[] xml)
 				auto pURI = itr.prefix in inscopeNSs;
 				if(pURI) node.uriID = *pURI;
 				else {
-					debug assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
+					debug(XmlNamespaces) assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
 					node.uriID = 0;
 				}
 			}
@@ -585,7 +612,7 @@ XmlNode parseXmlTree(char[] xml)
 				auto pURI = itr.prefix in inscopeNSs;
 				if(pURI) cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, *pURI);
 				else {
-					debug assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
+					debug(XmlNamespaces) assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
 					cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, 0);
 				}
 			}
@@ -729,8 +756,8 @@ version(Unittest)
 	import tango.time.StopWatch;
 	unittest
 	{
-		auto doc = parseXmlTree(testXML);
-		Stdout(print(doc)).newline;
+		//auto doc = parseXmlTree(testXML);
+		//Stdout(print(doc)).newline;
 		//benchmarkSenderoNodeParser(100, "hamlet.xml");
 	}
 }
