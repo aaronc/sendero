@@ -26,60 +26,70 @@ alias JSONValueType JSONType;
  */
 class JSONValue(Ch = char)
 {
-	private union Data
+	private union
 	{
-		real number;
-		Ch[] string;
-		JSONValue!(Ch)[] array;
-		JSONObject!(Ch) object;
+		real number_;
+		Ch[] string_;
+		JSONValue!(Ch)[] array_;
+		JSONObject!(Ch) object_;
 	}
-	private Data data_;
+	//private Data data_;
 	
 	private JSONValueType type_ = JSONValueType.Null;
 	JSONValueType type() {return type_;}
 	
 	Ch[] getString()
 	{
-		return type_ == JSONValueType.String ? data_.string : null;
+		return type_ == JSONValueType.String ? string_ : null;
 	}
 	
 	void opAssign(Ch[] str)
 	{
 		type_ = JSONValueType.String;
-		data_.string = str;
+		string_ = str;
 	}
 	
 	JSONObject!(Ch) getObject()
 	{
-		return type_ == JSONValueType.Object ? data_.object : null;
+		return type_ == JSONValueType.Object ? object_ : null;
 	}
 	
 	void opAssign(JSONObject!(Ch) obj)
 	{
 		type_ = JSONValueType.Object;
-		data_.object = obj;
+		object_ = obj;
 	}
 	
 	real getNumber()
 	{
-		return type_ == JSONValueType.Number ? data_.number : 0;
+		return type_ == JSONValueType.Number ? number_ : 0;
 	}
 	
 	void opAssign(real num)
 	{
 		type_ = JSONValueType.Number;
-		data_.number = num;
+		number_ = num;
+	}
+	
+	void opAssign(bool b)
+	{
+		type_ = b ? JSONValueType.True : JSONValueType.False;		
 	}
 	
 	JSONValue!(Ch)[] getArray()
 	{
-		return type_ == JSONValueType.Array ? data_.array : null;
+		return type_ == JSONValueType.Array ? array_ : null;
 	}
 	
 	void opAssign(JSONValue!(Ch)[] arr)
 	{
 		type_ = JSONValueType.Array;
-		data_.array = arr;
+		array_ = arr;
+	}
+	
+	void setNull()
+	{
+		type_ = JSONValueType.Null;
 	}
 }
 
@@ -88,7 +98,6 @@ class JSONValue(Ch = char)
  */
 class JSONObject(Ch = char)
 {
-	//JSONMember!(Ch)[] members;
 	JSONValue!(Ch)[Ch[]] members;
 	
 	JSONValue!(Ch) opIndex(char[] key)
@@ -98,12 +107,18 @@ class JSONObject(Ch = char)
 		return null;
 	}
 	
+	void opIndexAssign(JSONValue!(Ch) val, char[] key)
+	{
+		members[key] = val;
+	}
+	
 	int opApply(int delegate(inout char[] key, inout JSONValue!(Ch) val) dg)
 	{
 		int res;
 		foreach(k, v; members)
 		{
-			if((res == dg(k, v)) != 0) break;
+			//debug assert(v !is null, key);
+			if((res = dg(k, v)) != 0) break;
 		}
 		return res;
 	}
@@ -139,13 +154,11 @@ class JSONObject(Ch = char)
 			else if(p.type != JSONTokenType.Name)
 				return null;
 			
-//			auto m = new JSONMember!(Ch);
-			//m.name = p.value;
 			Ch[] name = p.value;
 			
 			if(!p.next)
 				return null;
-			//m.value = parseValue(p);
+			
 			o.members[name] = parseValue(p);
 		}
 		return o;
@@ -198,26 +211,26 @@ class JSONObject(Ch = char)
 	
 	Ch[] print()
 	{
-		ArrayWriter!(Ch) res;
-		
-		Ch[] tab;
+		auto res = new ArrayWriter!(Ch)(100, 100);
 		
 		void printVal(JSONValue!(Ch) val)
 		{
+			if(val is null) return;
+			
 			void printObj(JSONObject!(Ch) obj)
 			{
+				if(obj is null) return;
+				
 				bool first = true;
-				res ~= tab ~ "\n{\n";
-				//tab ~= " ";
+				res ~= "{";
 				foreach(k, v; obj.members)
 				{
-					if(!first) res ~= ",\n";
-					res ~= tab ~ "\"" ~ k ~ "\":";
+					if(!first) res ~= ",";
+					res ~= "\"" ~ k ~ "\":";
 					printVal(v);
 					first = false;
 				}
-				//tab = tab[0 .. $-1];
-				res ~= tab ~ "\n}\n";
+				res ~= "}";
 				
 			}
 			
@@ -225,17 +238,14 @@ class JSONObject(Ch = char)
 			{
 				
 				bool first = true;
-				res ~= tab ~ "\n[\n";
-				//tab ~= " ";
+				res ~= "[";
 				foreach(v; arr)
 				{
-					if(!first) res ~= ",\n";
-					res ~= tab;
+					if(!first) res ~= ",";
 					printVal(v);
 					first = false;
 				}
-				//tab = tab[0 .. $-1];
-				res ~= tab ~ "\n]\n";
+				res ~= "]";
 			}
 			
 			Ch[] escapeString(Ch[] str)
@@ -270,6 +280,8 @@ class JSONObject(Ch = char)
 					res ~= Float.toString(val.getNumber);
 					break;
 				case Object:
+					auto obj = val.getObject;
+					debug assert(obj !is null);
 					printObj(val.getObject);
 					break;
 				case Array:

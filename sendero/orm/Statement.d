@@ -232,24 +232,6 @@ char[] createSelectList(T...)()
 	
 	return res[0 .. $ - 1];
 }
-
-/+char[] createUpdate(T...)(char[] where = null)
-{
-	char[] res = "UPDATE " ~ T.stringof ~ " SET ";
-	static if(T.length > 0) {
-		auto fields = ReflectionOf!(T[0]).fields;
-		foreach(f; fields)
-		{
-			res ~= "'" ~ T[0].stringof ~ "'.'" ~ f.name ~ "' = ?,";
-		}
-	}
-	
-	res = res[0 .. $ - 1];
-	
-	if(where) res ~= " " ~ where;
-	
-	return res;
-}+/
 	
 unittest
 {

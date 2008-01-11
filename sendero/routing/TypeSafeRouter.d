@@ -1,121 +1,113 @@
 module sendero.routing.TypeSafeRouter;
 
-import sendero.routing.TypeSafeHttpFunctionWrapper;
-
 public import sendero.routing.Common;
+import sendero.routing.TypeSafeHttpFunctionWrapper;
 
 const ubyte GET = 0;
 const ubyte POST = 1;
 const ubyte ALL = 2;
 
-//alias Ret delegate(UrlStack url) RoutingFunc(Ret);
-//alias Ret delegate(char[] param, UrlStack url) ParamRoutingFunc(Ret);
-
-/*class RoutingFunctionWrapper(Ret) : IFunctionWrapper!(Ret)
+template TypeSafeRouterDef(Ret, Req)
 {
-	this()
+	alias IFunctionWrapper!(Ret, Req) Routing;
+	
+	private struct Routes
 	{
+		void setRoute(char[] route, Routing routing)
+		{
+			if(route == "*") starRoute = routing;
+			else if(!route.length) defRoute = routing;
+			else routes[route] = routing;
+		}
 		
+		Routing[char[]] routes;
+		Routing starRoute = null;
+		Routing defRoute = null;
 	}
 	
-	Ret exec(Param[char[]] params)
-	{
-		
-	}
-}
-
-class ParamRoutingFunctionWrapper(Ret) : IFunctionWrapper!(Ret)
-{
-	this()
-	{
-		
-	}
+	Routes getRoutes;
+	Routes postRoutes;
 	
-	Ret exec(Param[char[]] params)
+	static TypeSafeRouter!(Ret, Req) opCall()
 	{
-		
-	}
-}*/
-
-struct TypeSafeRouter(Ret)
-{
-	private struct Routing
-	{
-		IFunctionWrapper!(Ret) fn;
-		ubyte allowedMethod;
-	}
-	
-	private Routing[char[]] routes;
-	private Routing starRoute;
-	private Routing defRoute;
-	
-	static TypeSafeRouter!(Ret) opCall()
-	{
-		TypeSafeRouter!(Ret) router;
+		TypeSafeRouter!(Ret, Req) router;
 		return router;
 	}
 	
 	void map(T)(ubyte method, char[] route, T t, char[][] paramNames)
 	{
 		Routing routing;
-		routing.fn = new FunctionWrapper!(T)(t, paramNames);
-		routing.allowedMethod = method;
-		if(route == "*") starRoute = routing;
-		else if(!route.length) defRoute = routing;
-		else routes[route] = routing;
+		routing = new FunctionWrapper!(T, Req)(t, paramNames);
+		
+		switch(method)
+		{
+		case GET:
+			getRoutes.setRoute(route, routing);
+			break;
+		case POST:
+			postRoutes.setRoute(route, routing);
+			break;
+		case ALL:
+			getRoutes.setRoute(route, routing);
+			postRoutes.setRoute(route, routing);
+			break;
+		default: assert(false, "Unknown routing method");
+		}
 	}
 	
-	private bool authorize(ubyte allowedMethod, HttpMethod method)
-	{
-		if(method == HttpMethod.Get) {
-			return allowedMethod == GET || allowedMethod == ALL; 
-		}
-		else if(method == HttpMethod.Post) {
-			return allowedMethod == POST || allowedMethod == ALL;
-		}
-	}
-	
-	Ret route(Request routeParams)
+	Ret route(Req routeParams)
 	{
 		debug assert(routeParams);
 		debug assert(routeParams.url);
 		auto token = routeParams.url.top;
 		
+		Routes* pRoutes;
+		switch(routeParams.method)
+		{
+		case HttpMethod.Get: pRoutes = &getRoutes; break;
+		case HttpMethod.Post: pRoutes = &postRoutes; break;
+		default: assert(false, "Unknown routing method");
+		}
+		
 		if(!token) {
-			if(!defRoute.fn || !authorize(defRoute.allowedMethod, routeParams.method)) {
+			if(!pRoutes.defRoute) {
 				debug assert(false);
 				throw new Exception("Default route access violation");
 			}
 			
-			return defRoute.fn.exec(routeParams);
+			return pRoutes.defRoute.exec(routeParams);
 		}
 		
 		routeParams.url.pop;
 		
-		auto routing = token in routes;
+		auto routing = token in pRoutes.routes;
 		if(!routing) {
-			if(!starRoute.fn || !authorize(starRoute.allowedMethod, routeParams.method)) {
+			if(!pRoutes.starRoute) {
 				debug assert(false);
-				throw new Exception("Star route access violation");
+				throw new Exception("Star route access violation: " ~ token);
 			}
 			
 			routeParams.lastToken = token;
 			
-			return starRoute.fn.exec(routeParams);
+			return pRoutes.starRoute.exec(routeParams);
 		}
 		
-		if(!authorize(routing.allowedMethod, routeParams.method)) {
-			debug assert(false);
-			throw new Exception("Mapped route access violation");
-		}
-		return routing.fn.exec(routeParams);
+		return routing.exec(routeParams);
 	}
+}
+
+struct TypeSafeRouter(Ret, Req)
+{
+	mixin TypeSafeRouterDef!(Ret, Req);
 }
 
 version(Unittest)
 {
 
-alias TypeSafeRouter!(char[]) Router;
+import sendero.routing.Request;
+
+
+alias TypeSafeRouter!(char[], Request) Router;
 	
 class Ctlr
 {

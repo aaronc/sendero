@@ -6,10 +6,6 @@ import tango.core.Traits;
 import sendero.util.Convert;
 import sendero.routing.Common;
 
-interface IFunctionWrapper(Ret)
-{
-	Ret exec(Request);
-}
 
 template ConvClassParam(char[] n) {
 	const char[] ConvClassParam = "static if(val.tupleof.length > " ~ n ~ ") {"
@@ -97,7 +93,7 @@ template ConvertParam(char[] n) {
 	"}";
 }
 
-class FunctionWrapper(T) : IFunctionWrapper!(ReturnTypeOf!(T))
+class FunctionWrapper(T, Req) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 {
 	alias ParameterTupleOf!(T) P;
 	alias ReturnTypeOf!(T) Ret;
@@ -113,48 +109,47 @@ class FunctionWrapper(T) : IFunctionWrapper!(ReturnTypeOf!(T))
 	private FnT fn;	
 	private char[][] paramNames;
 	
-	Ret exec(Request routeParams)
+	Ret exec(Req routeParams)
 	{
 		debug assert(routeParams);
 		auto params = routeParams.params;
 		
-		if(paramNames.length != P.length)
-			throw new Exception("Incorrect number of parameters");
-		
 		P p;
-		Param* pParam;
 		
-		
-		static if(P.length > 0) {
-			static if(is(P[0] == Request)) {
-				p[0] = routeParams;
-			}
-			else {
+		static if(P.length == 1 && is(P[0] == Req)) {
+			p[0] = routeParams;
+		}
+		else
+		{
+			if(paramNames.length < P.length)
+				throw new Exception("Incorrect number of parameters: " ~ P.stringof);
+			
+			Param* pParam;
+			
+			static if(P.length > 0) {
 				pParam = paramNames[0] in params;
 				if(pParam) {
 					convertParam(p[0], *pParam);
 				}
 				else p[0] = P[0].init;
 			}
+			//mixin(ConvertParam!("0"));
+			mixin(ConvertParam!("1"));
+			mixin(ConvertParam!("2"));
+			mixin(ConvertParam!("3"));
+			mixin(ConvertParam!("4"));
+			mixin(ConvertParam!("5"));
+			mixin(ConvertParam!("6"));
+			mixin(ConvertParam!("7"));
+			mixin(ConvertParam!("8"));
+			mixin(ConvertParam!("9"));
+			mixin(ConvertParam!("10"));
+			mixin(ConvertParam!("11"));
+			mixin(ConvertParam!("12"));
+			mixin(ConvertParam!("13"));
+			mixin(ConvertParam!("14"));
+			mixin(ConvertParam!("15"));
 		}
-		
-		
-		//mixin(ConvertParam!("0"));
-		mixin(ConvertParam!("1"));
-		mixin(ConvertParam!("2"));
-		mixin(ConvertParam!("3"));
-		mixin(ConvertParam!("4"));
-		mixin(ConvertParam!("5"));
-		mixin(ConvertParam!("6"));
-		mixin(ConvertParam!("7"));
-		mixin(ConvertParam!("8"));
-		mixin(ConvertParam!("9"));
-		mixin(ConvertParam!("10"));
-		mixin(ConvertParam!("11"));
-		mixin(ConvertParam!("12"));
-		mixin(ConvertParam!("13"));
-		mixin(ConvertParam!("14"));
-		mixin(ConvertParam!("15"));
 		
 		return fn(p);
 	}
@@ -163,6 +158,8 @@ class FunctionWrapper(T) : IFunctionWrapper!(ReturnTypeOf!(T))
 version(Unittest)
 {
 
+import sendero.routing.Request;
+	
 struct Address
 {
 	char[] address;
@@ -182,7 +179,7 @@ char[] test(char[] x, int y, Address address)
 
 unittest
 {
-	auto fn = new FunctionWrapper!(typeof(&test))(&test, ["x", "y", "address"]);
+	auto fn = new FunctionWrapper!(typeof(&test), Request)(&test, ["x", "y", "address"]);
 	auto routeParams = Request.parse(HttpMethod.Get, "/", "x=Hello&y=1&address.address=1+First+St.&address.city=Somewhere&address.state=NY");
 	auto res = fn.exec(routeParams);
 	assert(res == "Hello1\n1 First St.\nSomewhere\nNY", res);

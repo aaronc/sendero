@@ -4,7 +4,7 @@ import tango.io.File;
 import tango.util.log.Log;
 import tango.util.log.ConsoleAppender;
 
-void main(string[] args)
+void main(char[][] args)
 {
 	if(args.length < 2) return;
 	auto f = new File(args[1]);
@@ -17,7 +17,7 @@ void main(string[] args)
 	Stdout("<html><body><table width='100%'>");
 	Stdout("<tr align='left'><th>Prefix</th><th>LocalName</th><th>RawValue</th><th>Type</th><th>Depth</th></tr>");
 	while(itr.next) {
-		string type;
+		char[] type;
 		with(XmlTokenType)
 		{
 		switch(itr.type)

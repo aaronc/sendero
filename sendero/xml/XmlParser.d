@@ -82,12 +82,12 @@ class XmlParser(Ch = char)
             {
                 prefix = p[0 .. q - p];
                 q = text.eatAttrName (p = q + 1);
-                localName = p[0 .. q - p];}
+                localName = p[0 .. q - p];            }
             else 
             {
 				prefix = null;
-                localName = p[0 .. q - p];}
-            type = XmlTokenType.Attribute;if (*q <= 32) 
+                localName = p[0 .. q - p];            }
+            type = XmlTokenType.Attribute;            if (*q <= 32) 
             {
             do {
 	        	if (++q >= text.end)                                      
@@ -96,8 +96,8 @@ class XmlParser(Ch = char)
         	}
             
 			if (*q is '=')
-				doAttributeValue (q + 1);
-			return true;
+				return doAttributeValue (q + 1);
+			return false;
         }
 
         private bool doEndEmptyElement()
@@ -146,7 +146,7 @@ class XmlParser(Ch = char)
                 {
 					type = XmlTokenType.CData;
                     rawValue = p [0 .. text.point - p];
-                    //prefix = null;text.point += 3;                      
+                    //prefix = null;                    text.point += 3;                      
                     return true;
                 }
                 ++text.point;
@@ -375,7 +375,7 @@ class XmlParser(Ch = char)
                 return doAttributeName();
         }
  
-        private void doAttributeValue(Ch* q){
+        private bool doAttributeValue(Ch* q)        {
             auto p = text.eatSpace (q);
             auto quote = *p++;
             switch (quote)
@@ -384,10 +384,10 @@ class XmlParser(Ch = char)
     			case '\'':
     				q = text.forwardLocate(p, quote);	
     				rawValue = p[0 .. q - p];
-    				text.point = q + 1; //Skip end quotebreak;
+    				text.point = q + 1; //Skip end quote    				return true;
 
     			default: 
-    				doUnexpected("\' or \"");
+    				return doUnexpected("\' or \"");
         	}
         }
         

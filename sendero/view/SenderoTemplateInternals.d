@@ -272,17 +272,19 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 		
 		if(!p.forwardLocate('i')) return super.process(node, tmpl);
 		if(p[0 .. 3] != "in ") return super.process(node, tmpl);
-		if(!p.forwardLocate('$')) return super.process(node, tmpl);
-		++p;
 		
+		p += 3;
 		auto loc = p.location;
-		varName = VarPath(p.randomAccessSlice(loc, p.length));
+		auto e = p.randomAccessSlice(loc, p.length);
+		
+		Expression expr;
+		parseExpression(e, expr, tmpl.functionCtxt);
 		
 		char[] sep;
 		//debug if(getAttr(node, "sep", sep)) assert(false, "List For not implemented yet");
 		//debug if(localVarName2.length) assert(false, "Assoc For not implemented yet");
 		
-		auto forNode = new SenderoForNode!(TemplateCtxt)(varName, localVarName1);
+		auto forNode = new SenderoForNode!(TemplateCtxt)(expr, localVarName1);
 		
 		foreach(child; node.children)
 		{
@@ -295,19 +297,19 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 
 class SenderoForNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {
-	this(VarPath varName, char[] localVarName)
+	this(Expression expr, char[] localVarName)
 	{
-		this.varName = varName;
+		this.expr = expr;
 		this.localVarName = localVarName;
 	}
 	
-	protected VarPath varName;
+	protected Expression expr;
 	protected char[] localVarName;
 	ITemplateNode!(TemplateCtxt)[] children;
 	
 	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
 	{
-		auto var = ctxt.execCtxt.getVar(varName);
+		auto var = expr.exec(ctxt.execCtxt);
 		if(var.type != VarT.Array) return;
 		
 		uint i = 0; uint last = var.arrayBinding.length - 1;

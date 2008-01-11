@@ -119,7 +119,10 @@ struct VariableBinding
 			type = cast(VarT)VarT.Object;
 			objBinding = new ClassBinding!(X)(val);
 		}
-		else type = cast(VarT)VarT.Null;
+		else {
+			debug assert(false, "Unable to bind variable");
+			type = cast(VarT)VarT.Null;
+		}
 	}
 	
 	void opAssign(X)(X x)

@@ -3,7 +3,7 @@ module sendero.util.Serialization;
 import tango.io.protocol.Writer, tango.io.protocol.Reader;
 import tango.io.protocol.model.IProtocol;
 import tango.io.protocol.EndianProtocol;
-import tango.io.Conduit;
+import tango.io.Conduit, tango.io.Buffer;
 import tango.core.Traits;
 
 /**
@@ -97,6 +97,11 @@ template isHandledType(T)
 								is(T == bool);
 }
 
+template isWritableAndReadable(T)
+{
+	const bool isWritableAndReadable = is(T:IWritable) && is(T:IReadable);
+}
+
 class ArchiveException : Exception
 {
 	this(char[] msg)
@@ -159,7 +164,11 @@ class SimpleBinaryOutArchiver
 	
 	SimpleBinaryOutArchiver put(T)(T t, char[] name = null)
 	{
-		static if(is(T == class) || ( is(T == interface) && is(typeof(T.classid)) ) )
+		static if(isHandledType!(T))
+		{
+			writer (t);
+		}
+		else static if(is(T == class) || ( is(T == interface) && is(typeof(T.classid)) ) )
 		{
 			uint* ptrIdx = (cast(void*)t in ptrs);
 			if(ptrIdx) {
@@ -228,11 +237,12 @@ class SimpleBinaryOutArchiver
 		}
 		else static if(isAssocArrayType!(T))
 		{
-			writer(t.length);
+			uint len = t.length;
+			writer(len);
 			foreach(k, v; t)
 			{
-				put(k);
-				put(v);
+				put (k);
+				put (v);
 			}
 		}
 		else static if(isDynamicArrayType!(T))
@@ -243,7 +253,9 @@ class SimpleBinaryOutArchiver
 			}
 			else
 			{
-				writer(t.length);
+				uint len = t.length;
+				
+				writer(len);
 				foreach(x; t)
 				{
 					put(x);
@@ -253,10 +265,6 @@ class SimpleBinaryOutArchiver
 		else static if(isComplexType!(T))
 		{
 			writer (t.re) (t.im);
-		}
-		else static if(isHandledType!(T))
-		{
-			writer (t);
 		}
 		else static if(isPointerType!(T))
 		{
@@ -304,21 +312,6 @@ class SimpleBinaryInArchiver
 	{
 		const ubyte oppositeEndiannessMarker = 0;
 	}
-	
-	this (IBuffer buffer)
-    {
-		reader = new Reader(buffer);
-		ubyte endianMarker;
-    	reader(endianMarker);
-		
-		if(endianMarker == oppositeEndiannessMarker)
-		{
-			auto endian = new EndianProtocol(buffer);
-			reader = new Reader(endian);
-		}
-		
-		init;
-    }
 
     this (IProtocol protocol)
     {
@@ -329,6 +322,27 @@ class SimpleBinaryInArchiver
 		if(endianMarker == oppositeEndiannessMarker)
 		{
 			auto endian = new EndianProtocol(protocol.buffer);
+			reader = new Reader(endian);
+		}
+		
+		init;
+    }
+    
+    this (InputStream inputStream)
+    {
+    	reader = new Reader(inputStream);
+		ubyte endianMarker;
+    	reader(endianMarker);
+		
+		if(endianMarker == oppositeEndiannessMarker)
+		{
+			void[] data;
+			auto buffer = cast(IBuffer) inputStream;
+			if(!buffer) {
+				uint len = inputStream.read(data);
+				buffer = new Buffer(data);
+			}
+			auto endian = new EndianProtocol(buffer);
 			reader = new Reader(endian);
 		}
 		
@@ -377,7 +391,11 @@ class SimpleBinaryInArchiver
 	
 	SimpleBinaryInArchiver get(T)(inout T t, char[] name = null)
 	{
-		static if(is(T == class) || ( is(T == interface) && is(typeof(T.classid)) ) )
+		static if(isHandledType!(T))
+		{
+			reader(t);
+		}
+		else static if(is(T == class) || ( is(T == interface) && is(typeof(T.classid)) ) )
 		{
 			byte tag, v;
 			reader(tag);
@@ -439,14 +457,8 @@ class SimpleBinaryInArchiver
 		}
 		else static if(is(T == struct))
 		{
-			byte v = 0;
-			static if(is(typeof(t.classVersion)))
-			{
-				v = t.classVersion;
-			}
-			
-			writer(v);
-			
+			byte v;
+			reader (v);
 			t.serialize(this, v);
 		}
 		else static if(isAssocArrayType!(T))
@@ -473,6 +485,7 @@ class SimpleBinaryInArchiver
 			{
 				uint len;
 				reader(len);
+				
 				t.length = len;
 				for(uint i = 0; i < len; ++i)
 				{
@@ -483,10 +496,6 @@ class SimpleBinaryInArchiver
 		else static if(isComplexType!(T))
 		{
 			reader (t.re) (t.im);
-		}
-		else static if(isHandledType!(T))
-		{
-			reader(t);
 		}
 		else static if(isPointerType!(T))
 		{	
@@ -558,7 +567,6 @@ version(Unittest)
 			ar (z);
 		}
 	}
-}
 
 unittest
 {
@@ -625,4 +633,6 @@ unittest
 	
 	assert(cCopy.x == c.x);
 	assert(cCopy.z == c.z);
+}
+
 }
