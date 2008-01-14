@@ -1,4 +1,4 @@
-module sendero.orm.Statement;
+module sendero.db.Statement;
 
 import dbi.PreparedStatement;
 

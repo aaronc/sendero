@@ -1,10 +1,10 @@
-module sendero.orm.DBProvider;
+module sendero.db.DBProvider;
 
 import dbi.PreparedStatement;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
 
-public import sendero.orm.Statement;
+public import sendero.db.Statement;
 
 
 /*
