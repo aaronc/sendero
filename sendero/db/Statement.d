@@ -39,7 +39,12 @@ class Statement
 		this.inst = container;
 	}
 	
-	StatementContainer inst;
+	private StatementContainer inst;
+	
+	IPreparedStatement statement()
+	{
+		return inst.stmt;
+	}
 	
 	void prefetchAll()
 	{
