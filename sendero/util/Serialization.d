@@ -4,7 +4,38 @@ import tango.io.protocol.Writer, tango.io.protocol.Reader;
 import tango.io.protocol.model.IProtocol;
 import tango.io.protocol.EndianProtocol;
 import tango.io.Conduit, tango.io.Buffer;
+import tango.io.FileConduit;
 import tango.core.Traits;
+
+bool loadFromFile(T)(inout T t, char[] filename)
+{
+	auto infile = new FileConduit(filename, FileConduit.ReadExisting);
+	if(!infile)
+		return false;
+	
+	auto deserializer = new SimpleBinaryInArchiver(infile);
+	deserializer (t);
+	
+	infile.close;
+	
+	return true;
+}
+
+bool saveToFile(T)(T t, char[] filename)
+{
+	auto outfile = new FileConduit(filename, FileConduit.WriteCreate);
+	if(!outfile)
+		return false;
+	
+	auto serializer = new SimpleBinaryOutArchiver(outfile);
+	serializer (t);
+	
+	serializer.flush;
+	outfile.flush;
+	outfile.close;
+	
+	return true;
+}
 
 /**
  *  
@@ -296,6 +327,11 @@ class SimpleBinaryOutArchiver
 	}
 	
 	bool loading() {return false;}
+	
+	void flush()
+	{
+		writer.flush;
+	}
 }
 
 class SimpleBinaryInArchiver
