@@ -15,8 +15,8 @@ template TypeSafeRouterDef(Ret, Req)
 	{
 		void setRoute(char[] route, Routing routing)
 		{
-			if(route == "*") starRoute = routing;
-			else if(!route.length) defRoute = routing;
+			if(!route.length) defRoute = routing;
+			else if(route == "*") starRoute = routing;
 			else routes[route] = routing;
 		}
 		
@@ -27,6 +27,7 @@ template TypeSafeRouterDef(Ret, Req)
 	
 	Routes getRoutes;
 	Routes postRoutes;
+	Routing errHandler;
 	
 	static TypeSafeRouter!(Ret, Req) opCall()
 	{
@@ -51,48 +52,69 @@ template TypeSafeRouterDef(Ret, Req)
 			getRoutes.setRoute(route, routing);
 			postRoutes.setRoute(route, routing);
 			break;
-		default: assert(false, "Unknown routing method");
+		default: throw new Exception("Unknown routing method");
 		}
 	}
 	
-	Ret route(Req routeParams)
+	void setErrorHandler(T)(T t, char[][] paramNames)
 	{
-		debug assert(routeParams);
-		debug assert(routeParams.url);
-		auto token = routeParams.url.top;
-		
-		Routes* pRoutes;
-		switch(routeParams.method)
+		errHandler = new FunctionWrapper!(T, Req)(t, paramNames);
+	}
+	
+	Ret route(Req routeParams)
+	in
+	{
+		assert(routeParams);
+		assert(routeParams.url);
+	}
+	body
+	{	
+		Ret error(char[] msg = "")
 		{
-		case HttpMethod.Get: pRoutes = &getRoutes; break;
-		case HttpMethod.Post: pRoutes = &postRoutes; break;
-		default: assert(false, "Unknown routing method");
+			if(errHandler) return errHandler.exec(routeParams);
+			else throw new Exception("Routing error: " ~ msg);
 		}
 		
-		if(!token) {
-			if(!pRoutes.defRoute) {
-				debug assert(false);
-				throw new Exception("Default route access violation");
+		try
+		{
+		
+			auto token = routeParams.url.top;
+			
+			Routes* pRoutes;
+			switch(routeParams.method)
+			{
+			case HttpMethod.Get: pRoutes = &getRoutes; break;
+			case HttpMethod.Post: pRoutes = &postRoutes; break;
+			default: return error;
+			}		
+			
+			if(!token) {
+				if(!pRoutes.defRoute) {
+					return error;
+				}
+				
+				return pRoutes.defRoute.exec(routeParams);
 			}
 			
-			return pRoutes.defRoute.exec(routeParams);
-		}
-		
-		routeParams.url.pop;
-		
-		auto routing = token in pRoutes.routes;
-		if(!routing) {
-			if(!pRoutes.starRoute) {
-				debug assert(false);
-				throw new Exception("Star route access violation: " ~ token);
+			routeParams.url.pop;
+			
+			auto routing = token in pRoutes.routes;
+			if(!routing) {
+				if(!pRoutes.starRoute) {
+					return error(token);
+				}
+				
+				routeParams.lastToken = token;
+				
+				return pRoutes.starRoute.exec(routeParams);
 			}
 			
-			routeParams.lastToken = token;
-			
-			return pRoutes.starRoute.exec(routeParams);
+			return routing.exec(routeParams);
 		}
-		
-		return routing.exec(routeParams);
+		catch(Exception ex)
+		{
+			return error(ex.toString);
+		}
 	}
 }
 
@@ -105,7 +127,6 @@ version(Unittest)
 {
 
 import sendero.routing.Request;
-
 
 alias TypeSafeRouter!(char[], Request) Router;
 	
