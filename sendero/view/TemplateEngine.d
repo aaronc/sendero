@@ -275,12 +275,10 @@ class TemplateCompiler(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, T
 		}
 	}
 	
-	Template compile(char[] src)
+	void compile(char[] src, inout Template tmpl)
 	{
 		auto tree = parseXmlTree(src);
-		auto tmpl = new Template;
 		tmpl.rootNode = this.process(tree, tmpl);
-		return tmpl;
 	}
 		
 	INodeProcessor!(TemplateCtxt, Template) defaultProcessor;

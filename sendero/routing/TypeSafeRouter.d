@@ -7,6 +7,72 @@ const ubyte GET = 0;
 const ubyte POST = 1;
 const ubyte ALL = 2;
 
+template Route(Ret, Req, bool UseDelegates = false)
+{
+	Ret route(Req routeParams, void* ptr = null)
+	in
+	{
+		assert(routeParams !is null);
+		assert(routeParams.url !is null);
+		static if(UseDelegates)
+		{
+			assert(ptr !is null);
+		}
+	}
+	body
+	{	
+		Ret error(char[] msg = "")
+		{
+			if(errHandler) return errHandler.exec(routeParams, ptr);
+			else throw new Exception("Routing error: " ~ msg);
+		}
+		
+		try
+		{
+		
+			auto token = routeParams.url.top;
+			
+			Routes* pRoutes;
+			switch(routeParams.method)
+			{
+			case HttpMethod.Get: pRoutes = &getRoutes; break;
+			case HttpMethod.Post: pRoutes = &postRoutes; break;
+			default: return error;
+			}		
+			
+			if(!token) {
+				if(!pRoutes.defRoute) {
+					return error;
+				}
+				
+				return pRoutes.defRoute.exec(routeParams, ptr);
+			}
+			
+			routeParams.url.pop;
+			
+			auto routing = token in pRoutes.routes;
+			if(!routing) {
+				if(!pRoutes.starRoute) {
+					return error(token);
+				}
+				
+				routeParams.lastToken = token;
+				routeParams.params.addParam(["__wildcard__"], token);
+				
+				return pRoutes.starRoute.exec(routeParams, ptr);
+			}
+			
+			routeParams.lastToken = token;
+			
+			return routing.exec(routeParams, ptr);
+		}
+		catch(Exception ex)
+		{
+			return error(ex.toString);
+		}
+	}
+}
+
 template TypeSafeRouterDef(Ret, Req)
 {
 	alias IFunctionWrapper!(Ret, Req) Routing;
@@ -60,68 +126,20 @@ template TypeSafeRouterDef(Ret, Req)
 	{
 		errHandler = new FunctionWrapper!(T, Req)(t, paramNames);
 	}
-	
-	Ret route(Req routeParams)
-	in
-	{
-		assert(routeParams);
-		assert(routeParams.url);
-	}
-	body
-	{	
-		Ret error(char[] msg = "")
-		{
-			if(errHandler) return errHandler.exec(routeParams);
-			else throw new Exception("Routing error: " ~ msg);
-		}
-		
-		try
-		{
-		
-			auto token = routeParams.url.top;
-			
-			Routes* pRoutes;
-			switch(routeParams.method)
-			{
-			case HttpMethod.Get: pRoutes = &getRoutes; break;
-			case HttpMethod.Post: pRoutes = &postRoutes; break;
-			default: return error;
-			}		
-			
-			if(!token) {
-				if(!pRoutes.defRoute) {
-					return error;
-				}
-				
-				return pRoutes.defRoute.exec(routeParams);
-			}
-			
-			routeParams.url.pop;
-			
-			auto routing = token in pRoutes.routes;
-			if(!routing) {
-				if(!pRoutes.starRoute) {
-					return error(token);
-				}
-				
-				routeParams.lastToken = token;
-				
-				return pRoutes.starRoute.exec(routeParams);
-			}
-			
-			return routing.exec(routeParams);
-		}
-		catch(Exception ex)
-		{
-			return error(ex.toString);
-		}
-	}
 }
 
 struct TypeSafeRouter(Ret, Req)
 {
 	mixin TypeSafeRouterDef!(Ret, Req);
+	mixin Route!(Ret, Req);
 }
+
+struct TypeSafeInstanceRouter(Ret, Req)
+{
+	mixin TypeSafeRouterDef!(Ret, Req);
+	mixin Route!(Ret, Req, true);
+}
+
 
 version(Unittest)
 {

@@ -22,6 +22,53 @@ struct Param
 	Param[char[]] obj;
 }
 
+void addParam(inout Param[char[]] params, char[][] key, char[] val, uint index = 0)
+{
+	if(index >= key.length) {
+		debug assert(false);
+		return;
+	}
+	
+	auto pVal = key[index] in params;
+	if(pVal) {			
+		if(index + 1 < key.length) {
+			addParam(pVal.obj, key, val, index + 1);
+		}
+		else {
+			switch(pVal.type)
+			{
+			case ParamT.Array:
+				pVal.arr ~= val;
+				break;
+			case ParamT.Value:
+				auto x = pVal.val;
+				pVal.type = ParamT.Array;
+				pVal.arr.length = 2;
+				pVal.arr[0] = x.dup;
+				pVal.arr[1] = val;
+				break;
+			case ParamT.None:
+			default:
+				pVal.type = ParamT.Value;
+				pVal.val = val;
+			}
+		}
+	}
+	else {
+		if(index + 1 < key.length) {
+			Param x;
+			params[key[index]] = x;
+			addParam(params[key[index]].obj, key, val, index + 1);
+		}
+		else {
+			Param x;
+			x.type = ParamT.Value;
+			x.val = val;
+			params[key[index]] = x;
+		}
+	}
+}
+
 /*
  * Parses a set of HTTP GET or POST parameters ("name=bob&text=hello+world") into an associative array.
  */
@@ -33,53 +80,6 @@ Param[char[]] parseParams(char[] str)
 		{
 			if(c == '+') {
 				c = ' ';
-			}
-		}
-	}
-	
-	void addParam(inout Param[char[]] params, char[][] key, char[] val, uint index = 0)
-	{
-		if(index >= key.length) {
-			debug assert(false);
-			return;
-		}
-		
-		auto pVal = key[index] in params;
-		if(pVal) {			
-			if(index + 1 < key.length) {
-				addParam(pVal.obj, key, val, index + 1);
-			}
-			else {
-				switch(pVal.type)
-				{
-				case ParamT.Array:
-					pVal.arr ~= val;
-					break;
-				case ParamT.Value:
-					auto x = pVal.val;
-					pVal.type = ParamT.Array;
-					pVal.arr.length = 2;
-					pVal.arr[0] = x.dup;
-					pVal.arr[1] = val;
-					break;
-				case ParamT.None:
-				default:
-					pVal.type = ParamT.Value;
-					pVal.val = val;
-				}
-			}
-		}
-		else {
-			if(index + 1 < key.length) {
-				Param x;
-				params[key[index]] = x;
-				addParam(params[key[index]].obj, key, val, index + 1);
-			}
-			else {
-				Param x;
-				x.type = ParamT.Value;
-				x.val = val;
-				params[key[index]] = x;
 			}
 		}
 	}

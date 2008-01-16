@@ -54,6 +54,8 @@ void main(char[][] arguments)
 	//scanFolder(arguments[1], gParams);
 	CtlrInfo info;
 	convertFile(arguments[1], gParams, info);
+	
+	Stdout("Done compiling controllers").newline.newline;
 }
 
 /+void scanFolder(char[] folder, GenParams gParams)
@@ -98,14 +100,6 @@ const ubyte lookup[256] =
          0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   // F
     ];
 
-char[] routerDecl(GenParams gParams) {
-	return "\tstatic const TypeSafeRouter!(" ~ gParams.resType ~ "," ~ gParams.reqType ~ ") r;\n"
-	"\tstatic " ~ gParams.resType ~ " route(Request req)\n"
-	"\t{\n"
-		"\t\treturn r.route(req);\n"
-	"\t}\n\n";
-}
-
 struct DeclParam
 {
 	char[] type;
@@ -122,12 +116,15 @@ struct ActionDecl
 	char[] importedRoute;
 	char[] pathName;
 	
-	char[] doParamStr()
+	char[] doParamStr(GenParams gParams)
 	{
 		char[] res;
 		bool first = true;
 		foreach(p; params)
 		{
+			if(p.type == gParams.reqType)
+				continue;
+			
 			if(!first) res ~= " ,";
 			res ~= "\"";
 			res ~= p.name;
@@ -144,6 +141,7 @@ struct CtlrDecl
 	ActionDecl[] actions;
 	char[] name;
 	uint joinPt;
+	bool instanceCtlr;
 }
 
 struct CtlrInfo
@@ -151,11 +149,11 @@ struct CtlrInfo
 	CtlrDecl[] decls;
 	CtlrInfo[] imports;
 	
-	bool lookupRoute(char[] path, inout char[] dgName, inout char[] paramStr, inout char[] err)
+	bool lookupRoute(char[] path, GenParams gParams, inout char[] dgName, inout char[] paramStr, inout char[] err)
 	{
 		auto tokens = Util.split(path, ".");
 		if(tokens.length == 1) {
-			dgName = tokens[0] ~ ".route";
+			dgName = "&" ~ tokens[0] ~ ".route";
 			paramStr = "";
 			return true;
 		}
@@ -169,7 +167,7 @@ struct CtlrInfo
 						if(action.name == tokens[1])
 						{
 							dgName = "&" ~ path;
-							paramStr = action.doParamStr;
+							paramStr = action.doParamStr(gParams);
 							return true;
 						}
 					}
@@ -178,7 +176,7 @@ struct CtlrInfo
 			
 			foreach(ctlr; imports)
 			{
-				if(ctlr.lookupRoute(path, dgName, paramStr, err))
+				if(ctlr.lookupRoute(path, gParams, dgName, paramStr, err))
 					return true;
 			}
 			
@@ -239,15 +237,71 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 	
 	char[] eatString()
 	{
-		auto i = itr.location;
+		auto strbeg = itr.location;
 		while(itr.good) {
 			if(itr[0] == '"') {
 				if(itr[-1] != '\\')
-					return itr.randomAccessSlice(i, itr.location);
+					return itr.randomAccessSlice(strbeg, itr.location);
 			}
 			++itr;
 		}
 		return "";
+	}
+	
+	bool doComment()
+	{
+		if(itr[0 .. 2] == "//") {
+			itr.forwardLocate('\n');
+			++lineNo;
+			++itr;
+			return true;				
+		}
+		else if(itr[0 .. 2] == "/*") {
+			while(itr.good) {
+				if(itr[0] == '*') {
+					if(itr[1] == '/') {
+						itr += 2;
+						return true;
+					}
+				}
+				else if(itr[0] == '\n') {
+					++lineNo;
+				}
+				++itr;
+			}
+			error("Unterminated comment, expected */");
+			return false;
+		}
+		else if(itr[0 .. 2] == "/+") {
+			itr += 2;
+			uint depth = 1;
+			while(itr.good) {
+				if(itr[0] == '+') {
+					if(itr[1] == '/') {
+						itr += 2;
+						--depth;
+						if(depth == 0)
+							return true;
+					}
+				}
+				else if(itr[0] == '/') {
+					if(itr[1] == '+') {
+						itr += 2;
+						++depth;
+					}
+				}
+				else if(itr[0] == '\n') {
+					++lineNo;
+				}
+				++itr;
+			}
+			error("Unterminated nested comment, expected proper nesting of /+ and +/");
+			return false;
+		}
+		else {
+			return false;
+		}
+	
 	}
 	
 	char[] getToken()
@@ -257,20 +311,31 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 			return null;
 		}
 		
-		auto start = itr.location;
+		auto tknbeg = itr.location;
 		while(itr.good && lookup[itr[0]] >= A) {++itr;}
 		
-		return itr.randomAccessSlice(start, itr.location);
+		return itr.randomAccessSlice(tknbeg, itr.location);
 	}	
 	
-	char[] getFnBody()
+	char[] getBody()
 	{	
-		auto start = itr.location;
-		++itr;
-	
+		auto bodyBeg = itr.location;
 		auto stack = new Stack!(char);
-		stack.push('}');
-				
+		switch(itr[0])
+		{
+		case '{':
+			stack.push('}');
+			break;
+		case '[':
+			stack.push(']');
+			break;
+		case '(':
+			stack.push(')');
+			break;
+		default: assert(false);
+		}
+		++itr;
+		
 		while(itr.good && !stack.empty) {
 			if(itr[0] == stack.top) {
 				stack.pop;
@@ -290,6 +355,10 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				case '"':
 					eatString;
 					break;
+				case '/':
+					if(doComment)
+						continue;
+					break;
 				case '\n':
 					++lineNo;
 					break;
@@ -302,7 +371,8 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		
 		eatSpace;
 		
-		return itr.randomAccessSlice(start, itr.location);
+		auto res = itr.randomAccessSlice(bodyBeg, itr.location);
+		return res;
 	}
 	
 	char[] doDecl(inout ActionDecl decl)
@@ -368,14 +438,14 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 			
 			if(decl.importedRoute.length) {
 				char[] err;
-				if(!info.lookupRoute(decl.importedRoute, dgName, paramStr, err)) {
+				if(!info.lookupRoute(decl.importedRoute, gParams, dgName, paramStr, err)) {
 					error(err);
 					return null;
 				}
 			}
 			else {
 				dgName = "&" ~ cd.name ~ "." ~ decl.name;
-				paramStr = decl.doParamStr;
+				paramStr = decl.doParamStr(gParams);
 			}
 			
 			if(decl.method == "__error__") {
@@ -399,61 +469,6 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		return res;
 	}
 	
-	bool doComment()
-	{
-		if(itr[0 .. 2] == "//") {
-			itr.forwardLocate('\n');
-			++lineNo;
-			++itr;
-			return true;				
-		}
-		else if(itr[0 .. 2] == "/*") {
-			while(itr.good) {
-				if(itr[0] == '*') {
-					if(itr[1] == '/') {
-						itr += 2;
-						return true;
-					}
-				}
-				else if(itr[0] == '\n') {
-					++lineNo;
-				}
-				++itr;
-			}
-			error("Unterminated comment, expected */");
-			return false;
-		}
-		else if(itr[0 .. 2] == "/+") {
-			uint depth = 1;
-			while(itr.good) {
-				if(itr[0] == '+') {
-					if(itr[1] == '/') {
-						itr += 2;
-						--depth;
-						if(depth == 0)
-							return true;
-					}
-				}
-				else if(itr[0] == '/') {
-					if(itr[1] == '+') {
-						itr += 2;
-						++depth;
-					}
-				}
-				else if(itr[0] == '\n') {
-					++lineNo;
-				}
-				++itr;
-			}
-			error("Unterminated nested comment, expected proper nesting of /+ and +/");
-			return false;
-		}
-		else {
-			return false;
-		}
-	
-	}
-	
 	bool doImport()
 	{
 		itr += 6;
@@ -465,11 +480,9 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		}
 		auto path = stripSpaces(itr.randomAccessSlice(start, itr.location).dup);
 		path = Util.replace(path, '.', '/');
-		Stdout.formatln("Checking import {}", path);
 		CtlrInfo impInfo;
 		auto filepath = new FilePath(path ~ ".dc");
 		if(filepath.exists) {
-			Stdout.formatln("Doing import {}", path);
 			convertFile(path, gParams, impInfo);
 			if(impInfo.decls.length)
 				info.imports ~= impInfo;
@@ -477,10 +490,10 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		return true;
 	}
 	
-	bool doController(inout CtlrDecl cDecl)
+	bool doController(inout CtlrDecl cDecl, bool instance = false)
 	{
-		itr += 10;
-
+		cDecl.instanceCtlr = instance;
+		
 		if(firstCtlr) {
 			firstCtlr = false;
 			
@@ -488,6 +501,7 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 			res ~= gParams.addImport ~ "\n\n";
 			res ~= printLineDecl;
 		}
+		
 		
 		res ~= "class ";
 		
@@ -498,7 +512,28 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		
 		res ~= cDecl.name ~ "\n{\n";
 		
-		res ~= routerDecl(gParams);
+		char[] routerDecl(GenParams gParams, bool instance) {
+			char[] res = "\tstatic const ";
+			res ~= "TypeSafeRouter";
+			res ~= "!(" ~ gParams.resType ~ "," ~ gParams.reqType ~ ") r;\n";
+			
+			if(!instance) {
+				res ~= "\tstatic " ~ gParams.resType ~ " route(Request req)\n"
+						"\t{\n"
+							"\t\treturn r.route(req);\n"
+						"\t}\n\n";
+			}
+			else {
+				res ~= "\t" ~ gParams.resType ~ " route(Request req)\n"
+				"\t{\n"
+					//"\t\tif(ptr is null) throw new Exception(\"icontroller " ~ cDecl.name ~ " access violation\");\n"
+					"\t\treturn r.route(req, cast(void*)this);\n"
+				"\t}\n\n";
+			}
+			return res;
+		}		
+		
+		res ~= routerDecl(gParams, instance);
 		
 		eatSpace;
 		
@@ -510,14 +545,14 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		
 		bool expectGET_POST()
 		{
-			error("expected GET, POST, ALL, __error__, or __skip__ at beginning of action declaration");
+			error("expected GET, POST, ALL, STATIC, or __error__ at beginning of action declaration");
 			return false;
 		}
 		
 		while(itr.good) {
 			ActionDecl decl;
 			
-			eatSpace;
+/+			eatSpace;
 			
 			if(itr[0] == '}') break;
 			
@@ -566,41 +601,90 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 			}
 			
 			if(itr[0] == '}')
-				break;
+				break;+/
 			
-			switch(itr[0])
+			void parseCtlr()
 			{
-			case 'G':
-				if(itr[0 .. 3] != "GET") return expectGET_POST;
-				itr += 3;
-				decl.method = "GET";
-				break;
-			case 'P':
-				if(itr[0 .. 4] != "POST") return expectGET_POST;
-				itr += 4;
-				decl.method = "POST";
-				break;
-			case 'A':
-				if(itr[0 .. 3] != "ALL") return expectGET_POST;
-				itr += 3;
-				decl.method = "ALL";
-				break;
-			case '_':
-				if(itr[0 .. 9] == "__error__") { 
-					itr += 9;
-					decl.method = "__error__";
+				auto stuffbeg = itr.location;
+				
+				void finish()
+				{
+					res ~= itr.randomAccessSlice(stuffbeg, itr.location);
 				}
-				else if(itr[0 .. 8] == "__skip__") {
-					itr += 8;
-					decl.method = "";
+				
+				while(itr.good)
+				{
+					switch(itr[0])
+					{
+					case 'G':
+						if(itr[0 .. 3] == "GET") {
+							finish;
+							itr += 3;
+							decl.method = "GET";
+							return;
+						}
+						break;
+					case 'P':
+						if(itr[0 .. 4] == "POST") {
+							finish;
+							itr += 4;
+							decl.method = "POST";
+							return;
+						}
+						break;
+					case 'A':
+						if(itr[0 .. 3] == "ALL") {
+							finish;
+							itr += 3;
+							decl.method = "ALL";
+							return;
+						}
+						break;
+					case 'S':
+						if(itr[0 .. 6] == "STATIC") {
+							finish;
+							itr += 6;
+							decl.method = "";
+							return;
+						}
+						break;
+					case '_':
+						if(itr[0 .. 9] == "__error__") {
+							finish;
+							itr += 9;
+							decl.method = "__error__";
+							return;
+						}
+						break;
+					case '{':
+					case '[':
+					case '(':
+						getBody;
+						continue;
+					case '"':
+						eatString;
+						break;
+					case '/':
+						if(doComment)
+							continue;
+						break;
+					case '\n':
+						lineNo++;
+						break;
+					case '}':
+						return finish;
+					default:
+						break;
+					}
+					++itr;
 				}
-				else {
-					return expectGET_POST;
-				}
-				break;
-			default:
-				return expectGET_POST;
+				return finish;
 			}
+			
+			parseCtlr;
+			
+			if(itr[0] == '}')
+				break;
 			
 			eatSpace;
 			
@@ -624,6 +708,14 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				else {
 					decl.name = getToken;
 					decl.pathName = decl.name;
+					if(decl.name == "__default__") {
+						decl.pathName = "";
+						decl.type = ActionDecl.Default;
+					}
+					else if(decl.name == "__wildcard__") {
+						decl.pathName = "*";
+						decl.type = ActionDecl.Wildcard;
+					}
 				}
 			}
 			
@@ -660,7 +752,11 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 			{
 			case '(':
 				res ~= printLineDecl;
-				res ~= "\tstatic " ~ gParams.resType ~ " " ~ decl.name;
+				res ~= "\t";
+				if(!cDecl.instanceCtlr || decl.method == "") {
+					res ~= "static ";
+				}
+				res ~= gParams.resType ~ " " ~ decl.name;
 				res ~= doDecl(decl);
 				cDecl.actions ~= decl;
 				if(itr[0] != '{') {
@@ -668,7 +764,7 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 					return false;
 				}
 				
-				res ~= getFnBody;
+				res ~= getBody;
 				break;
 			case '-':
 				if(itr[0 .. 2] != "->") {
@@ -718,10 +814,19 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				if(itr[0 .. 6] == "import") {
 					if(!doImport) return;
 				}
+				else if(itr[0 .. 11] == "icontroller") {
+					res ~= itr.randomAccessSlice(start, itr.location);
+					itr += 11;
+					CtlrDecl cDecl;
+					if(!doController(cDecl, true)) return;
+					info.decls ~= cDecl;
+					start = itr.location;
+				}
 				break;
 			case 'c':
 				if(itr[0 .. 10] == "controller") {
-					res ~= itr.randomAccessSlice(start, itr.location - 1);
+					res ~= itr.randomAccessSlice(start, itr.location);
+					itr += 10;
 					CtlrDecl cDecl;
 					if(!doController(cDecl)) return;
 					info.decls ~= cDecl;

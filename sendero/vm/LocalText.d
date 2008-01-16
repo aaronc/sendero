@@ -11,14 +11,10 @@ version(ICU) {
 	import mango.icu.UString;
 	import mango.icu.UNumberFormat;
 	import mango.icu.UDateFormat;
-	alias ULocale Locale;
-	alias UTimeZone Timezone;
 }
 else {
 	import Float = tango.text.convert.Float;
 	import tango.text.locale.Convert;
-	alias char[] Locale;
-	alias char[] Timezone;
 }
 
 import tango.group.time;
@@ -91,7 +87,6 @@ package class Param
 
 interface IMessage
 {
-	bool plural();
 	char[] exec(ExecutionContext ctxt);
 }
 

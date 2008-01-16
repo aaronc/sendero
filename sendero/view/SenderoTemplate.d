@@ -7,9 +7,9 @@ import sendero.vm.ExecutionContext;
 
 class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecutionContext, SenderoTemplateContext, SenderoTemplate)
 {
-	this(SenderoTemplate tmpl)
+	this(SenderoTemplate tmpl, Locale locale)
 	{
-		super(tmpl);
+		super(tmpl, locale);
 	}
 	
 	char[] render()

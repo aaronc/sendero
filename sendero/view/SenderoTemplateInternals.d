@@ -14,10 +14,10 @@ debug import tango.io.Stdout;
 
 class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : DefaultTemplateContext!(TemplateCtxt, Template)
 {
-	this(Template tmpl)
+	this(Template tmpl, Locale locale)
 	{
 		super(tmpl);
-		execCtxt = new ExecCtxt;
+		execCtxt = new ExecCtxt(locale);
 	}
 	
 	ExecCtxt execCtxt;
@@ -65,14 +65,18 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "choose", new SenderoChooseNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "if", new SenderoIfNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
-
+		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
 	
-	static Template compile(char[] src)
+	static Template compile(char[] src, Locale locale)
 	{
-		return engine.compile(src); 
+		auto tmpl = new Template;
+		tmpl.staticCtxt = new TemplateCtxt(tmpl, locale);
+		engine.compile(src, tmpl);
+		tmpl.staticCtxt = null;
+		return tmpl;
 	}
 	
 	private static struct TemplateCache
@@ -85,7 +89,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	private static char[] searchPath;
 	
 	private static TemplateCache[char[]] cache;
-	static Template getTemplate(char[] path)
+	static Template getTemplate(char[] path, Locale locale)
 	{
 		auto pt = (searchPath ~ path in cache);
 		if(!pt) {
@@ -93,7 +97,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 			scope f = new File(fp);
 			if(!f) throw new Exception("Template not found");
 			auto txt = cast(char[])f.read;
-			auto templ = Template.compile(txt);
+			auto templ = Template.compile(txt, locale);
 			
 			TemplateCache templCache;
 			templCache.templ = templ;
@@ -108,16 +112,16 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 			if(lastModified != path.modified) {
 				scope f = new File(path);
 				auto txt = cast(char[])f.read;
-				templ = Template.compile(txt);
+				templ = Template.compile(txt, locale);
 				lastModified = path.modified;
 			}
 			return templ;
 		}
 	}
 	
-	static TemplateCtxt get(char[] path)
+	static TemplateCtxt get(char[] path, Locale locale)
 	{
-		return getTemplate(path).createInstance;
+		return getTemplate(path, locale).createInstance;
 	}
 	
 	static void setSearchPath(char[] path)
@@ -132,6 +136,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	
 	FunctionBindingContext functionCtxt;	
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
+	TemplateCtxt staticCtxt;
 	
 	char[] render(TemplateCtxt templCtxt)
 	{
@@ -364,8 +369,9 @@ class XIIncludeExprNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
 	{
+		auto locale = ctxt.execCtxt.locale;
 		auto path = expr.exec(ctxt.execCtxt);
-		auto templ = ctxt.tmpl.getTemplate(path);
+		auto templ = ctxt.tmpl.getTemplate(path, locale);
 		if(!templ) return;
 		
 		ctxt.execCtxt.runtimeImports ~= templ.functionCtxt;
@@ -511,8 +517,9 @@ class SenderoExtendsNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
 	{
+		auto locale = ctxt.execCtxt.locale;
 		auto path = expr.exec(ctxt.execCtxt);
-		auto templ = ctxt.tmpl.getTemplate(path);
+		auto templ = ctxt.tmpl.getTemplate(path, locale);
 		if(!templ) return;
 		
 		ctxt.inherit(templ);
@@ -855,5 +862,26 @@ class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
 		VariableBinding var;
 		var.set(res.get);
 		return var;
+	}
+}
+
+class SenderoStaticNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
+{
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
+	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
+	{
+		debug assert(node.type == XmlNodeType.Element);
+		
+		if(node.type != XmlNodeType.Element)
+			return new TemplateDataNode!(TemplateCtxt)(null);
+		
+		auto x = TemplateContainerNode!(TemplateCtxt).createFromChildren(node, tmpl, childProcessor);
+		auto res = new ArrayWriter!(char);
+		auto ctxt = tmpl.staticCtxt;
+		
+		x.render(ctxt, res);
+		
+		return new TemplateDataNode!(TemplateCtxt)(res.get);
 	}
 }

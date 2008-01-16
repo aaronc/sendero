@@ -85,7 +85,7 @@ void convertParam(T)(inout T val, Param param)
 
 template ConvertParam(char[] n) {
 	const char[] ConvertParam = "static if(P.length > " ~ n ~ ") {"
-		"pParam = paramNames[" ~ n ~ "] in params;"
+		"pParam = paramNames[" ~ n ~ " - offset] in params;"
 		"if(pParam) {"
 			"convertParam(p[" ~ n ~ "], *pParam);"
 		"}"
@@ -93,48 +93,60 @@ template ConvertParam(char[] n) {
 	"}";
 }
 
-class FunctionWrapper(T, Req) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
+class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 {
 	alias ParameterTupleOf!(T) P;
 	alias ReturnTypeOf!(T) Ret;
 	
 	alias Ret function(P) FnT;
+	alias Ret delegate(P) DgT;
 	
 	this(FnT fn, char[][] paramNames)
 	{
 		this.fn = fn;
+		this.dg.funcptr = fn;
 		this.paramNames = paramNames;
 	}
 	
-	private FnT fn;	
+	private FnT fn;
+	private DgT dg;
 	private char[][] paramNames;
 	
-	
-	
-	Ret exec(Req routeParams)
-	{
+	Ret exec(Req routeParams, void* ptr)
+	{		
 		debug assert(routeParams);
 		auto params = routeParams.params;
 		
 		P p;
 		
-		static if(P.length == 1 && is(P[0] == Req)) {
+	/+	static if(P.length == 1 && is(P[0] == Req)) {
 			p[0] = routeParams;
 		}
 		else
-		{
-			if(paramNames.length < P.length)
-				throw new Exception("Incorrect number of parameters: " ~ P.stringof);
-			
+		{+/
 			Param* pParam;
 			
+			uint offset = 0;
+			
 			static if(P.length > 0) {
-				pParam = paramNames[0] in params;
-				if(pParam) {
-					convertParam(p[0], *pParam);
+				static if(is(P[0] == Req))
+				{
+					offset = 1;
+					p[0] = routeParams;
 				}
-				else p[0] = P[0].init;
+				else
+				{
+					pParam = paramNames[0] in params;
+					if(pParam) {
+						convertParam(p[0], *pParam);
+					}
+					else p[0] = P[0].init;
+				}
 			}
+			
+			if(paramNames.length < P.length - offset)
+				throw new Exception("Incorrect number of parameters: " ~ P.stringof);
+			
 			//mixin(ConvertParam!("0"));
 			mixin(ConvertParam!("1"));
 			mixin(ConvertParam!("2"));
@@ -151,9 +163,15 @@ class FunctionWrapper(T, Req) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 			mixin(ConvertParam!("13"));
 			mixin(ConvertParam!("14"));
 			mixin(ConvertParam!("15"));
-		}
+	/+	} +/
 		
-		return fn(p);
+		if(ptr !is null) {
+			dg.ptr = ptr;
+			return dg(p);
+		}
+		else {
+			return fn(p);
+		}
 	}
 }
 
@@ -183,7 +201,7 @@ unittest
 {
 	auto fn = new FunctionWrapper!(typeof(&test), Request)(&test, ["x", "y", "address"]);
 	auto routeParams = Request.parse(HttpMethod.Get, "/", "x=Hello&y=1&address.address=1+First+St.&address.city=Somewhere&address.state=NY");
-	auto res = fn.exec(routeParams);
+	auto res = fn.exec(routeParams, null);
 	assert(res == "Hello1\n1 First St.\nSomewhere\nNY", res);
 }
 
