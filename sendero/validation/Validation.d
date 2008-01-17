@@ -11,7 +11,6 @@ struct ValidationTrait
 {
 	static ValidationTrait opCall(char[] p, char[] v)
 	{
-		//auto t = new ValidationTrait;
 		ValidationTrait t;
 		t.property = p;
 		t.value = v;
@@ -322,6 +321,17 @@ alias Range!(long) Long;
 alias Range!(float) Float;
 alias Range!(double) Double;
 
+class StandinValidator(T)
+{
+	this(char[] property, char[] value) { this.property = property; this.value = value;}
+	private char[] property, value;
+	bool opCall(T t) {return true;}
+	ValidationTrait[] getTraits()
+	{
+		return [ValidationTrait(property, value)];
+	}
+}
+
 class Validation
 {
 	static Validation[char[]] registeredValidations;
@@ -361,6 +371,26 @@ class Validation
 	
 	FieldInfo[] fields;
 	
+	void assertType(T)(inout T t, char[] errCode, char[] validationPattern = "")
+	{
+		auto pi = &t in ptrMap;
+		assert(pi);
+		ValidationOption opt;
+		static if(isIntegerType!(T))
+			opt.validator = new StandInValidator!(T)("integer", validationPattern);
+		else static if(isRealType!(T))
+			opt.validator = new StandInValidator!(T)("number", validationPattern);
+		else static if(is(DateTime) || is(Time))
+			opt.validator = new StandInValidator!(T)("datetime", validationPattern);
+		else static if(is(Date))
+			opt.validator = new StandInValidator!(T)("date", validationPattern);
+		else static if(is(TimeOfDay))
+			opt.validator = new StandInValidator!(T)("time", validationPattern);
+		else static assert(false, "Unsupported assertion type");
+		opt.errCode = errCode;
+		options[*pi] ~= opt;
+	}
+	
 /+	void*[] callbacks;
 	
 	void callback(X)(ICallbackValidator!(X) v)
@@ -371,17 +401,6 @@ class Validation
 
 class Validator(X)
 {
-/+	void validate(T)(inout T t, IValidator!(T) v, char[] errCode)
-	{
-		
-	}
-	alias add opCall;
-	
-	void callback(X)(ICallbackValidator!(X) v)
-	{
-		
-	}+/
-	
 	this(Validation validation)
 	{
 		this.validation = validation;
