@@ -115,6 +115,7 @@ struct ActionDecl
 	DeclParam[] params;
 	char[] importedRoute;
 	char[] pathName;
+	char[][] pathAliases;
 	
 	char[] doParamStr(GenParams gParams)
 	{
@@ -317,7 +318,9 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		return itr.randomAccessSlice(tknbeg, itr.location);
 	}	
 	
-	char[] getBody()
+	alias void delegate() HookFn;
+	
+	char[] getBody(HookFn hookFn = null)
 	{	
 		auto bodyBeg = itr.location;
 		auto stack = new Stack!(char);
@@ -363,6 +366,7 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 					++lineNo;
 					break;
 				default:
+					if(hookFn !is null) hookFn();
 					break;
 				}
 			}
@@ -448,15 +452,23 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				paramStr = decl.doParamStr(gParams);
 			}
 			
+			void doMapping(char[] path)
+			{
+				txt ~= "\t\tr.map!(typeof(" ~ dgName ~ "))(" ~ decl.method ~ ", \"";
+				txt ~= path;
+				txt ~= "\", ";
+				txt ~= dgName ~ ", [" ~ paramStr ~ "]);\n";
+			}
+			
 			if(decl.method == "__error__") {
 				txt ~= "\t\tr.setErrorHandler!(typeof(" ~ dgName ~ "))(";
+				txt ~= dgName ~ ", [" ~ paramStr ~ "]);\n";
 			}
 			else {
-				txt ~= "\t\tr.map!(typeof(" ~ dgName ~ "))(" ~ decl.method ~ ", \"";
-				txt ~= decl.pathName;
-				txt ~= "\", ";
+				doMapping(decl.pathName);
+				foreach(path; decl.pathAliases) doMapping(path);
 			}
-			txt ~= dgName ~ ", [" ~ paramStr ~ "]);\n";
+			
 		}
 		
 		return txt.get;
@@ -551,57 +563,6 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 		
 		while(itr.good) {
 			ActionDecl decl;
-			
-/+			eatSpace;
-			
-			if(itr[0] == '}') break;
-			
-			while(itr[0] == '/' || itr[0] == '[') {
-				if(itr[0] == '/')
-				{
-					uint x = itr.location;
-					if(!doComment) {
-						error("Unexpected character /");
-						return false;
-					}
-					eatSpace;
-					res ~= itr.randomAccessSlice(x, itr.location);
-				}
-				else if(itr[0] == '[') {
-					if(itr[0 .. 6] != "[code]") {
-						error("Unexpected character [");
-						return false;
-					}
-					itr += 6;
-					
-					uint x = itr.location;
-					
-					while(itr.good) {
-						if(itr[0] == '[') {
-							if(itr[0 .. 7] == "[/code]") {
-								res ~= itr.randomAccessSlice(x, itr.location);
-								itr += 7;
-								//x = itr.location;
-								eatSpace;
-								//res ~= itr.randomAccessSlice(x, itr.location);
-								break;
-							}
-						}
-						else if(itr[0] == '\n') {
-							++lineNo;
-						}
-						++itr;
-					}
-					
-					if(!itr.good) {
-						error("Unterminated [code] block");
-						return false;
-					}
-				}
-			}
-			
-			if(itr[0] == '}')
-				break;+/
 			
 			void parseCtlr()
 			{
@@ -731,7 +692,7 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				++itr;
 				eatSpace;
 				if(itr[0] != '"') {
-					error("Expected string literal after [ in action declaration");
+					error("Expected string literal after [ in action path statement");
 					return false;
 				}
 				++itr;
@@ -739,13 +700,49 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 				++itr;
 				eatSpace;
 				
+				while(itr[0] == ',') {
+					++itr;
+					eatSpace;
+					if(itr[0] != '"') {
+						error("Expected \" after comma action path statement");
+						return false;
+					}
+					++itr;
+					decl.pathAliases ~= eatString;
+					++itr;
+					eatSpace;
+				}
+				
 				if(itr[0] != ']') {
-					error("Expected ] after string literal in action declaration");
+					error("Expected ] after string literal in action path statement");
 					return false;
 				}
 				++itr;
 				
 				eatSpace;
+			}
+			
+			void actionHooks()
+			{
+				void doRedirect()
+				{
+					while(itr.good) {
+						
+					}
+				}
+				
+				switch(itr[0])
+				{
+				case '-':
+					if(itr[1] == '>') {
+						//itr += 2;
+						//eatSpace;
+						//doRedirect;
+					}
+					break;
+				default:
+					break;
+				}
 			}
 			
 			switch(itr[0])
@@ -764,7 +761,8 @@ void convertFile(char[] filename, GenParams gParams, inout CtlrInfo info)
 					return false;
 				}
 				
-				res ~= getBody;
+				res ~= getBody(&actionHooks);
+				
 				break;
 			case '-':
 				if(itr[0 .. 2] != "->") {

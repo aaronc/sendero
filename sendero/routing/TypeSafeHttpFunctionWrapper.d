@@ -10,11 +10,11 @@ import sendero.routing.Common;
 template ConvClassParam(char[] n) {
 	const char[] ConvClassParam = "static if(val.tupleof.length > " ~ n ~ ") {"
 		"pp = val.tupleof[" ~ n ~ "].stringof[4 .. $] in param.obj;"
-		"if(pp) convertParam(val.tupleof[" ~ n ~ "], *pp);"
+		"if(pp) convertParam!(typeof(val.tupleof[" ~ n ~ "]), Req)(val.tupleof[" ~ n ~ "], *pp);"
 	"}";
 }
 
-void convertParam(T)(inout T val, Param param)
+void convertParam(T, Req)(inout T val, Param param)
 {
 	static if(is(T == class) || is(T == struct))
 	{
@@ -71,6 +71,18 @@ void convertParam(T)(inout T val, Param param)
 			break;
 		}		
 	}
+	/+else static if(is(T == Time))
+	{
+		
+	}
+	else static if(is(T == DateTime))
+	{
+		
+	}
+	else static if(is(T == Date))
+	{
+		
+	}+/
 	else
 	{
 		if(param.type != ParamT.Value) {
@@ -87,7 +99,7 @@ template ConvertParam(char[] n) {
 	const char[] ConvertParam = "static if(P.length > " ~ n ~ ") {"
 		"pParam = paramNames[" ~ n ~ " - offset] in params;"
 		"if(pParam) {"
-			"convertParam(p[" ~ n ~ "], *pParam);"
+			"convertParam!(P[" ~ n ~ "], Req)(p[" ~ n ~ "], *pParam);"
 		"}"
 		"else p[" ~ n ~ "] = P[" ~ n ~ "].init;"
 	"}";
@@ -119,51 +131,44 @@ class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!
 		
 		P p;
 		
-	/+	static if(P.length == 1 && is(P[0] == Req)) {
-			p[0] = routeParams;
-		}
-		else
-		{+/
-			Param* pParam;
+		Param* pParam;
 			
-			uint offset = 0;
-			
-			static if(P.length > 0) {
-				static if(is(P[0] == Req))
-				{
-					offset = 1;
-					p[0] = routeParams;
-				}
-				else
-				{
-					pParam = paramNames[0] in params;
-					if(pParam) {
-						convertParam(p[0], *pParam);
-					}
-					else p[0] = P[0].init;
-				}
+		uint offset = 0;
+		
+		static if(P.length > 0) {
+			static if(is(P[0] == Req))
+			{
+				offset = 1;
+				p[0] = routeParams;
 			}
-			
-			if(paramNames.length < P.length - offset)
-				throw new Exception("Incorrect number of parameters: " ~ P.stringof);
-			
-			//mixin(ConvertParam!("0"));
-			mixin(ConvertParam!("1"));
-			mixin(ConvertParam!("2"));
-			mixin(ConvertParam!("3"));
-			mixin(ConvertParam!("4"));
-			mixin(ConvertParam!("5"));
-			mixin(ConvertParam!("6"));
-			mixin(ConvertParam!("7"));
-			mixin(ConvertParam!("8"));
-			mixin(ConvertParam!("9"));
-			mixin(ConvertParam!("10"));
-			mixin(ConvertParam!("11"));
-			mixin(ConvertParam!("12"));
-			mixin(ConvertParam!("13"));
-			mixin(ConvertParam!("14"));
-			mixin(ConvertParam!("15"));
-	/+	} +/
+			else
+			{
+				pParam = paramNames[0] in params;
+				if(pParam) {
+					convertParam!(P[0], Req)(p[0], *pParam);
+				}
+				else p[0] = P[0].init;
+			}
+		}
+		
+		if(paramNames.length < P.length - offset)
+			throw new Exception("Incorrect number of parameters: " ~ P.stringof);
+		
+		mixin(ConvertParam!("1"));
+		mixin(ConvertParam!("2"));
+		mixin(ConvertParam!("3"));
+		mixin(ConvertParam!("4"));
+		mixin(ConvertParam!("5"));
+		mixin(ConvertParam!("6"));
+		mixin(ConvertParam!("7"));
+		mixin(ConvertParam!("8"));
+		mixin(ConvertParam!("9"));
+		mixin(ConvertParam!("10"));
+		mixin(ConvertParam!("11"));
+		mixin(ConvertParam!("12"));
+		mixin(ConvertParam!("13"));
+		mixin(ConvertParam!("14"));
+		mixin(ConvertParam!("15"));
 		
 		if(ptr !is null) {
 			dg.ptr = ptr;

@@ -82,6 +82,7 @@ template TypeSafeRouterDef(Ret, Req)
 		void setRoute(char[] route, Routing routing)
 		{
 			if(!route.length) defRoute = routing;
+			else if(route == "/") defRoute = routing;
 			else if(route == "*") starRoute = routing;
 			else routes[route] = routing;
 		}
