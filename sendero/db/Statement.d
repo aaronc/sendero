@@ -18,8 +18,8 @@ struct StatementContainer
 	}
 	
 	private IPreparedStatement stmt;
-	private char[] lastResSignature;
-	private char[] lastParamSignature;
+	private ubyte[] lastResSignature;
+	private ubyte[] lastParamSignature;
 }
 
 class TypeVisitor
@@ -43,6 +43,8 @@ class Statement
 	
 	IPreparedStatement statement()
 	{
+		inst.lastResSignature = null;
+		inst.lastParamSignature = null;
 		return inst.stmt;
 	}
 	
@@ -54,9 +56,9 @@ class Statement
 	static BindType[] getClassStructTypes(T)()
 	{
 		auto visitor = new TypeVisitor;
+		auto t = new T;
 		ReflectionOf!(T).visitTuple(t, visitor);
 		return visitor.types;
-		
 	}
 	
 	static void*[] bindClassStruct(T)(inout T t)
@@ -84,6 +86,8 @@ class Statement
 	{
 		const char[] SetPtrs = 
 			"static if(T.length > " ~ n ~ ") {"
+				"static if (is(typeof(t[" ~ n ~ "]) == BindInfo))"
+					"ptrs ~= info.ptrs;"
 				"static if(is(typeof(t[" ~ n ~ "]) == class) || is(typeof(t[" ~ n ~ "]) == struct)) {"
 					"t[0] = new typeof(t[" ~ n ~ "]);"
 					"ptrs ~= bindClassStruct(t[" ~ n ~ "]);"
@@ -134,7 +138,9 @@ class Statement
 		
 		foreach(x; t)
 		{
-			static if(is(typeof(x) == class) || is(typeof(x) == struct))
+			static if(is(typeof(x) == BindInfo))
+				types ~= t.types;
+			else static if(is(typeof(x) == class) || is(typeof(x) == struct))
 				types ~= getClassStructTypes!(typeof(x))();
 			else
 				types ~= getBindType!(typeof(x))();
@@ -143,17 +149,43 @@ class Statement
 		return types;
 	}
 	
+	template CheckBindInfo(char[] n)
+	{
+		const char[] CheckBindInfo = 
+			"static if(T.length > " ~ n ~ " && is(typeof(t[" ~ n ~ "]) == BindInfo)) {"
+				"signature ~= t[" ~ n ~ "].types;"
+			"}";
+	}
+	
 	bool execute(T...)(T t)
 	{
 		static if(T.length) {
 			void*[] ptrs = setPtrs(t);
 			
-			if(inst.lastParamSignature != T.stringof)
+			ubyte[] signature = cast(ubyte[])T.stringof;
+			mixin(CheckBindInfo!("0"));
+			mixin(CheckBindInfo!("1"));
+			mixin(CheckBindInfo!("2"));
+			mixin(CheckBindInfo!("3"));
+			mixin(CheckBindInfo!("4"));
+			mixin(CheckBindInfo!("5"));
+			mixin(CheckBindInfo!("6"));
+			mixin(CheckBindInfo!("7"));
+			mixin(CheckBindInfo!("8"));
+			mixin(CheckBindInfo!("9"));
+			mixin(CheckBindInfo!("10"));
+			mixin(CheckBindInfo!("11"));
+			mixin(CheckBindInfo!("12"));
+			mixin(CheckBindInfo!("13"));
+			mixin(CheckBindInfo!("14"));
+			mixin(CheckBindInfo!("15"));
+			
+			if(inst.lastParamSignature != signature)
 			{
 				BindType[] types = setBindTypes(t);
 				
 				inst.stmt.setParamTypes(types);
-				inst.lastParamSignature = T.stringof;
+				inst.lastParamSignature = signature;
 			}
 			
 			return inst.stmt.execute(ptrs);
@@ -172,12 +204,30 @@ class Statement
 	{
 		void*[] ptrs = setPtrs(t);
 		
-		if(inst.lastResSignature != T.stringof)
+		ubyte[] signature = cast(ubyte[])T.stringof;
+		mixin(CheckBindInfo!("0"));
+		mixin(CheckBindInfo!("1"));
+		mixin(CheckBindInfo!("2"));
+		mixin(CheckBindInfo!("3"));
+		mixin(CheckBindInfo!("4"));
+		mixin(CheckBindInfo!("5"));
+		mixin(CheckBindInfo!("6"));
+		mixin(CheckBindInfo!("7"));
+		mixin(CheckBindInfo!("8"));
+		mixin(CheckBindInfo!("9"));
+		mixin(CheckBindInfo!("10"));
+		mixin(CheckBindInfo!("11"));
+		mixin(CheckBindInfo!("12"));
+		mixin(CheckBindInfo!("13"));
+		mixin(CheckBindInfo!("14"));
+		mixin(CheckBindInfo!("15"));
+		
+		if(inst.lastResSignature != signature)
 		{
 			BindType[] types = setBindTypes(t);
 			
 			inst.stmt.setResultTypes(types);
-			inst.lastResSignature = T.stringof;
+			inst.lastResSignature = signature;
 		}
 		
 		return inst.stmt.fetch(ptrs);
@@ -204,6 +254,97 @@ class Statement
 	}
 }
 
+bool compare(BindType[] t1, BindType[] t2)
+{
+	auto len = t1.length;
+	if(len != t2.length) return false;
+	for(uint i = 0; i < len; ++i)
+		if(t1[i] != t2[i]) return false;
+	return true;
+}
+
+struct BindInfo
+{
+	BindType[] types;
+	void* ptrs;
+}
+
+char[] createInsertSql(T, char quote = '\'')(char[][] except = null, char[] tablename = null)
+{
+	auto fields = getFieldNames!(T)(except);
+	if(!tablename.length) tablename = T.stringof;
+	return makeInsertSql(tablename, fields, quote);
+}
+
+char[] createUpdateSql(T, char quote = '\'')(char[] whereClause, char[][] except = null, char[] tablename = null)
+{
+	auto fields = getFieldNames!(T)(except);
+	if(!tablename.length) tablename = T.stringof;
+	return makeUpdateSql(whereClause, tablename, fields, quote);
+}
+
+char[] makeInsertSql(char[] tablename, char[][] items, char quote = '\'')
+{
+	if(!items.length) throw new Exception("Trying to make INSERT SQL but no fields were provided");
+	
+	char[] res = "INSERT into " ~ quote ~ tablename ~ quote ~ " (";
+	res ~= makeList(items, quote) ~ ") VALUES(";
+	auto len = items.length;
+	for(uint i = 0; i < len; ++i)
+	{
+		res ~= "?,";
+	}
+	res[$ - 1] = ')';
+	return res;
+}
+
+char[] makeUpdateSql(char[] whereClause, char[] tablename, char[][] fields, char quote = '\'')
+{
+	if(!fields.length) throw new Exception("Trying to make INSERT SQL but no fields were provided");
+	
+	char[] res = "UPDATE '" ~ quote ~ tablename ~ quote ~ "' SET ";
+	foreach(f; fields)
+	{
+		res ~= quote ~ f ~ quote ~ "=\?,";
+	}
+	res[$-1] = ' ';
+	if(whereClause.length) res ~= whereClause;
+	return res;
+}
+
+char[] makeList(char[][] items, char quote = '\'')
+{
+	char[] res;
+	
+	foreach(x; items)
+	{
+		res ~= quote ~ x ~ quote ~ ",";
+	}
+	
+	return res[0 .. $ - 1];
+}
+
+char[] createFieldList(T)(char[][] except)
+{
+	auto fields = getFieldNames!(T)(except);
+	returen makeList(fields);
+}
+
+char[][] getFieldNames(T)(char[][] except)
+{
+	char[][] res;
+	auto fields = ReflectionOf!(T).fields;
+	auto len = fields.length;
+	for(uint i = 0; i < len; ++i)
+	{
+		bool skip = false;
+		foreach(n; except) if(fields[i].name == n) skip = true;
+		if(skip) continue;
+		res ~= fields[i].name;
+	}
+	return res;
+}
+
 template SelectList(char[] n) {
 	const char[] SelectList = "static if(T.length > " ~ n ~ ") {"
 		"fields = ReflectionOf!(T[" ~ n ~ "]).fields;"
@@ -213,7 +354,7 @@ template SelectList(char[] n) {
 	"}";
 }
 
-char[] createSelectList(T...)()
+char[] createJoinSelectList(T...)()
 {
 	char[] res;
 	sendero.util.FieldInfo.FieldInfo[] fields;
@@ -253,6 +394,6 @@ unittest
 		void[] z;
 	}
 	
-	auto select = createSelectList!(Test, Test2)();
+	auto select = createJoinSelectList!(Test, Test2)();
 	assert(select == "'Test'.'a','Test'.'b','Test'.'c','Test2'.'y','Test2'.'z'", select);
 }

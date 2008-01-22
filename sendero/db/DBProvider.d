@@ -17,7 +17,8 @@ interface IDBConnectionProvider
 
 interface IProvider(StatementT)
 {
-	bool prepare(char[] statement, inout StatementT stmt);
+	bool prepare(char[] statement, inout StatementT stmt, char[] key = null);
+	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null);
 }
 
 class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(StatementT)
@@ -27,9 +28,12 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		this.inst = inst;
 	}
 	
-	bool prepare(char[] statement, inout StatementT stmt)
+	bool prepare(char[] statement, inout StatementT stmt, char[] key = null)
 	{
-		auto pStmt = statement in cachedStatements;
+		StatementT* pStmt = null;
+		if(key.length) pStmt = key in cachedStatements;
+		else pStmt = statement in cachedStatements;
+		
 		if(pStmt) {
 			stmt = *pStmt;
 			return true;
@@ -41,12 +45,34 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		
 		stmt = StatementT(rawStmt);
 		//debug assert(stmt);
-		cachedStatements[statement] = stmt;
+		if(key.length) cachedStatements[key] = stmt;
+		else cachedStatements[statement] = stmt;
+		return true;
+	}
+	
+	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null)
+	{
+		IPreparedStatement* pStmt = null;
+		if(key.length) pStmt = key in cachedRawStatements;
+		else pStmt = statement in cachedRawStatements;
+		if(pStmt) {
+			stmt = *pStmt;
+			return true;
+		}
+		
+		auto rawStmt = inst.prepare(statement);
+		if(!rawStmt)
+			return false;
+		
+		stmt = rawStmt;
+		if(key.length) cachedRawStatements[key] = stmt;
+		else cachedRawStatements[statement] = stmt;
 		return true;
 	}
 	
 	private ConnectionT inst;
 	private StatementT[char[]] cachedStatements;
+	private IPreparedStatement[char[]] cachedRawStatements;
 	
 	~this()
 	{
@@ -87,14 +113,28 @@ class DBProvider(DBConnectionProvider)
 		pool.releaseConnection(conn);
 	}
 		
-	static Statement prepare(char[] sql)
+	static Statement prepare(char[] sql, char[] key = null)
 	{
 		auto provider = getProvider;
 		StatementContainer cntr;
-		if(!provider.prepare(sql, cntr))
-			return null;
+		if(!provider.prepare(sql, cntr, key)) {
+			debug throw new Exception("Unable to create statement:" ~ sql);
+			else throw new Exception("Unable to create statement");
+		}
 		
 		return new Statement(cntr);
+	}
+	
+	static IPreparedStatement prepareRaw(char[] sql, char[] key = null)
+	{
+		auto provider = getProvider;
+		IPreparedStatement stmt;
+		if(!provider.prepareRaw(sql, stmt, key)) {
+			debug throw new Exception("Unable to create statement:" ~ sql);
+			else throw new Exception("Unable to create statement");
+		}
+		
+		return stmt;
 	}
 }
 

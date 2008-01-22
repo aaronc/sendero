@@ -5,7 +5,7 @@
  */
 
 
-module sendero.util.HTTPRequest;
+module sendero.routing.HTTPRequest;
 
 import tango.net.Uri;
 import tango.text.Util;

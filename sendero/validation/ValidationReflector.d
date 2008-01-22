@@ -12,7 +12,6 @@ class ReflectedTrait
 
 class ValidationReflection
 {
-	
 	static ValidationReflection getValidation(char[] className)
 	{
 		auto pvr = className in validations;
@@ -22,7 +21,7 @@ class ValidationReflection
 		
 		auto valRefl = new ValidationReflection;
 		
-		auto pv = className in Validation.registeredValidations;
+		auto pv = className in ValidationInspector.registeredValidations;
 		for(uint i = 0; i < pv.fields.length; ++i)
 		{
 			ReflectedTrait[] res;
@@ -52,6 +51,11 @@ class ValidationReflection
 
 class ValidationReflector : IFunctionBinding
 {
+	static this()
+	{
+		FunctionBindingContext.global.addFunction("getValidation", new ValidationReflector);
+	}
+	
 	Var exec(Var[] params, ExecutionContext ctxt)
 	{
 		if(params.length < 1)

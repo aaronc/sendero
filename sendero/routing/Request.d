@@ -31,6 +31,11 @@ class Request
 	char[] lastToken;
 	char[][char[]] cookies;
 	char[] ip;
+	
+	static bool convert(T)(Param p, inout T t)
+	{
+		
+	}
 }
 
 
