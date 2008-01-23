@@ -419,7 +419,7 @@ class XPathStep : IStep
 	{
 		if(!ctxt.contextNode) return null;
 		
-		scope nodesetViewer = nodeSetViewerCtr(ctxt.contextNode);
+		auto nodesetViewer = nodeSetViewerCtr(ctxt.contextNode);
 		
 		XmlNode[] res;
 		

@@ -3,19 +3,200 @@ module sendero.xml.XmlNode;
 public import sendero.xml.XmlNodeType;
 import sendero.xml.XmlParser;
 
-struct QName
+class XmlNode
 {
+public:
+	XmlNodeType type;
 	char[] prefix;
 	char[] localName;
+	uint uriID = 0;
 	
-	char[] print()
+	final char[] name()
+    {
+    	if(prefix.length)
+    		return prefix ~ ":" ~ localName;
+    	return localName;
+    }
+	
+	char[] rawValue;
+
+	final char[] value()
 	{
-		if(prefix.length) {
-			return prefix ~ ":" ~ localName;
-		}
-		return localName;
+		if(type == XmlNodeType.Data || type == XmlNodeType.Attribute)
+    		return decodeBuiltinEntities!(char)(rawValue);
+    	return rawValue;
 	}
+	
+	final void value(char[] val)
+	{
+		rawValue = encodeBuiltinEntities!(char)(val);
+	}
+	
+	final INodeSetViewer children() {return new ChildAxisViewer(this);}
+	final INodeSetViewer attributes() {return new AttributeAxisViewer(this);}
+	final XmlNode parent() { return parent_; }
+	final XmlNode firstChild() { return firstChild_; }
+	final XmlNode lastChild() { return lastChild_; }
+	final XmlNode prevSibling() { return prevSibling_; }
+	final XmlNode nextSibling() { return nextSibling_; }
+	
+	final void append(XmlNode node)
+	{
+/+		if(node.parent_) throw new Exception("Trying to append node that already has a parent"
+		                                     "- this operation will break that node's tree. "
+		                                     "Please append a new node to the tree instead.");+/
+		node.parent_ = this;
+		if(!lastChild_) {
+			firstChild_ = node;
+			lastChild_ = node;
+		}
+		else {
+			lastChild_.nextSibling_ = node;
+			node.prevSibling_ = lastChild_;
+			lastChild_ = node;
+		}
+	}
+	
+	final void prepend(XmlNode node)
+	{
+		node.parent_ = this;
+		if(!firstChild_) {
+			firstChild_ = node;
+			lastChild_ = node;
+		}
+		else {
+			firstChild_.prevSibling_ = node;
+			node.nextSibling_ = firstChild_;
+			firstChild_ = node;
+		}
+	}
+	
+	final void insertAfter(XmlNode node)
+	{
+		node.parent_ = parent_;
+		if(nextSibling_) {
+			nextSibling_.prevSibling_ = node;
+			node.nextSibling_ = nextSibling_;
+			node.prevSibling_ = this;
+			nextSibling_ = node;
+		}
+		else {
+			node.prevSibling_ = this;
+			node.nextSibling_ = null;
+			nextSibling_ = node;
+		}
+	}
+	
+	final void insertBefore(XmlNode node)
+	{
+		node.parent_ = parent_;
+		if(prevSibling_) {
+			prevSibling_.nextSibling_ = node;
+			node.prevSibling_ = prevSibling_;
+			node.nextSibling_ = this;
+			prevSibling_ = node;
+		}
+		else {
+			node.nextSibling_ = this;
+			node.prevSibling_ = null;
+			prevSibling_ = node;
+		}
+	}
+	
+	final void remove()
+	{
+		if(!parent_) return;
+		
+		if(prevSibling_ && nextSibling_) {
+			prevSibling_.nextSibling_ = nextSibling_;
+			nextSibling_.prevSibling_ = prevSibling_;
+			prevSibling_ = null;
+			nextSibling_ = null;
+			parent_ = null;
+		}
+		else if(nextSibling_)
+		{
+			debug assert(parent_.firstChild_ == this);
+			parent_.firstChild_ = nextSibling_;
+			nextSibling_.prevSibling_ = null;
+			nextSibling_ = null;
+			parent_ = null;
+			
+		}
+		else if(type != XmlNodeType.Attribute)
+		{
+			if(prevSibling_)
+			{
+				debug assert(parent_.lastChild_ == this);
+				parent_.lastChild_ = prevSibling_;
+				prevSibling_.nextSibling_ = null;
+				prevSibling_ = null;
+				parent_ = null;
+			}
+			else
+			{
+				debug assert(parent_.firstChild_ == this);
+				debug assert(parent_.lastChild_ == this);
+				parent_.firstChild_ = null;
+				parent_.lastChild_ = null;
+				parent_ = null;
+			}
+		}
+		else
+		{
+			if(prevSibling_)
+			{
+				debug assert(parent_.lastAttr_ == this);
+				parent_.lastAttr_ = prevSibling_;
+				prevSibling_.nextSibling_ = null;
+				prevSibling_ = null;
+				parent_ = null;
+			}
+			else
+			{
+				debug assert(parent_.firstAttr_ == this);
+				debug assert(parent_.lastAttr_ == this);
+				parent_.firstAttr_ = null;
+				parent_.lastAttr_ = null;
+				parent_ = null;
+			}
+		}
+	}
+	
+	final void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
+	{
+		auto attr = new XmlNode;
+		attr.prefix = prefix;
+		attr.localName = localName;
+		attr.rawValue = value;
+		attr.uriID = uriID;
+		attr.parent_ = this;
+		attr.type = XmlNodeType.Attribute;
+		if(!firstAttr_) {
+			firstAttr_ = attr;
+			lastAttr_ = attr;
+		}
+		else {
+			lastAttr_.nextSibling_ = attr;
+			attr.prevSibling_ = lastAttr_;
+			lastAttr_ = attr;
+		}
+	}
+	
+	bool hasChildren() { return firstChild_ !is null; }
+	
+private:
+	XmlNode parent_ = null;
+	XmlNode prevSibling_ = null;
+	XmlNode nextSibling_ = null;
+	XmlNode firstChild_ = null;
+	XmlNode lastChild_ = null;
+	
+	XmlNode firstAttr_ = null;
+	XmlNode lastAttr_ = null;
+	uint[char[]] namespaceURIs;
 }
+
 
 interface INodeSetViewer
 {
@@ -286,207 +467,6 @@ class PrecedingSiblingAxisViewer : INodeSetViewer
 	}
 }
 
-class XmlNode
-{
-public:
-	XmlNodeType type;
-	char[] prefix;
-	char[] localName;
-	uint uriID = 0;
-	
-	final char[] name()
-    {
-    	if(prefix.length)
-    		return prefix ~ ":" ~ localName;
-    	return localName;
-    }
-	
-	char[] rawValue;
-
-	final char[] value()
-	{
-		if(type == XmlNodeType.Data || type == XmlNodeType.Attribute)
-    		return decodeBuiltinEntities!(char)(rawValue);
-    	return rawValue;
-	}
-	
-	final void value(char[] val)
-	{
-		rawValue = encodeBuiltinEntities!(char)(val);
-	}
-	
-	final INodeSetViewer children() {return new ChildAxisViewer(this);}
-	final INodeSetViewer attributes() {return new AttributeAxisViewer(this);}
-	final XmlNode parent() { return parent_; }
-	final XmlNode firstChild() { return firstChild_; }
-	final XmlNode lastChild() { return lastChild_; }
-	final XmlNode prevSibling() { return prevSibling_; }
-	final XmlNode nextSibling() { return nextSibling_; }
-	
-	final void append(XmlNode node)
-	{
-/+		if(node.parent_) throw new Exception("Trying to append node that already has a parent"
-		                                     "- this operation will break that node's tree. "
-		                                     "Please append a new node to the tree instead.");+/
-		node.parent_ = this;
-		if(!lastChild_) {
-			firstChild_ = node;
-			lastChild_ = node;
-		}
-		else {
-			lastChild_.nextSibling_ = node;
-			node.prevSibling_ = lastChild_;
-			lastChild_ = node;
-		}
-	}
-	
-	final void prepend(XmlNode node)
-	{
-		node.parent_ = this;
-		if(!firstChild_) {
-			firstChild_ = node;
-			lastChild_ = node;
-		}
-		else {
-			firstChild_.prevSibling_ = node;
-			node.nextSibling_ = firstChild_;
-			firstChild_ = node;
-		}
-	}
-	
-	final void insertAfter(XmlNode node)
-	{
-		node.parent_ = parent_;
-		if(nextSibling_) {
-			nextSibling_.prevSibling_ = node;
-			node.nextSibling_ = nextSibling_;
-			node.prevSibling_ = this;
-			nextSibling_ = node;
-		}
-		else {
-			node.prevSibling_ = this;
-			node.nextSibling_ = null;
-			nextSibling_ = node;
-		}
-	}
-	
-	final void insertBefore(XmlNode node)
-	{
-		node.parent_ = parent_;
-		if(prevSibling_) {
-			prevSibling_.nextSibling_ = node;
-			node.prevSibling_ = prevSibling_;
-			node.nextSibling_ = this;
-			prevSibling_ = node;
-		}
-		else {
-			node.nextSibling_ = this;
-			node.prevSibling_ = null;
-			prevSibling_ = node;
-		}
-	}
-	
-	final void remove()
-	{
-		if(!parent_) return;
-		
-		if(prevSibling_ && nextSibling_) {
-			prevSibling_.nextSibling_ = nextSibling_;
-			nextSibling_.prevSibling_ = prevSibling_;
-			prevSibling_ = null;
-			nextSibling_ = null;
-			parent_ = null;
-		}
-		else if(nextSibling_)
-		{
-			debug assert(parent_.firstChild_ == this);
-			parent_.firstChild_ = nextSibling_;
-			nextSibling_.prevSibling_ = null;
-			nextSibling_ = null;
-			parent_ = null;
-			
-		}
-		else if(type != XmlNodeType.Attribute)
-		{
-			if(prevSibling_)
-			{
-				debug assert(parent_.lastChild_ == this);
-				parent_.lastChild_ = prevSibling_;
-				prevSibling_.nextSibling_ = null;
-				prevSibling_ = null;
-				parent_ = null;
-			}
-			else
-			{
-				debug assert(parent_.firstChild_ == this);
-				debug assert(parent_.lastChild_ == this);
-				parent_.firstChild_ = null;
-				parent_.lastChild_ = null;
-				parent_ = null;
-			}
-		}
-		else
-		{
-			if(prevSibling_)
-			{
-				debug assert(parent_.lastAttr_ == this);
-				parent_.lastAttr_ = prevSibling_;
-				prevSibling_.nextSibling_ = null;
-				prevSibling_ = null;
-				parent_ = null;
-			}
-			else
-			{
-				debug assert(parent_.firstAttr_ == this);
-				debug assert(parent_.lastAttr_ == this);
-				parent_.firstAttr_ = null;
-				parent_.lastAttr_ = null;
-				parent_ = null;
-			}
-		}
-	}
-	
-	final void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
-	{
-		/*QName name;
-		name.prefix = prefix;
-		name.localName = localName;
-		attributes[name] = value;*/
-		auto attr = new XmlNode;
-		attr.prefix = prefix;
-		attr.localName = localName;
-		attr.rawValue = value;
-		attr.uriID = uriID;
-		attr.parent_ = this;
-		attr.type = XmlNodeType.Attribute;
-		if(!firstAttr_) {
-			firstAttr_ = attr;
-			lastAttr_ = attr;
-		}
-		else {
-			lastAttr_.nextSibling_ = attr;
-			attr.prevSibling_ = lastAttr_;
-			lastAttr_ = attr;
-		}
-	}
-	
-	bool hasChildren() { return firstChild_ !is null; }
-	
-private:
-	XmlNode parent_ = null;
-	XmlNode prevSibling_ = null;
-	XmlNode nextSibling_ = null;
-	XmlNode firstChild_ = null;
-	XmlNode lastChild_ = null;
-	
-	XmlNode firstAttr_ = null;
-	XmlNode lastAttr_ = null;
-	uint[char[]] namespaceURIs;
-	//XmlNode[] children;
-	//char[][QName] attributes;
-//	QName name;
-//	char[] value;
-}
 
 XmlNode XmlElement(char[] prefix, char[] localName, XmlNode contents = null)
 {
@@ -535,7 +515,6 @@ const char[] xmlnsURI = "http://www.w3.org/2000/xmlns/";
 XmlNode parseXmlTree(char[] xml)
 {
 	auto itr = new XmlParser!(char)(xml);
-//	XmlParser!(char) itr;
 	itr.reset(xml);
 	auto doc = new XmlNode;
 	doc.type = XmlNodeType.Document;
@@ -550,11 +529,6 @@ XmlNode parseXmlTree(char[] xml)
 	inscopeNSs["xmlns"] = 2;
 	
 	while(itr.next) {
-	/*	if(itr.depth > depth) {
-			assert(cur.lastChild_);
-			cur = cur.lastChild_;
-			depth = itr.depth;
-		}*/
 		
 		switch(itr.type) 
 		{
@@ -761,33 +735,3 @@ version(Unittest)
 		//benchmarkSenderoNodeParser(100, "hamlet.xml");
 	}
 }
-
-/+
-while(itr.next)
-{
-	if(depth < itr.depth)
-	{
-		if(cur.lastChild_) cur = cur.lastChild_;
-		depth = itr.depth;
-	}
-	else if(depth > itr.depth)
-	{
-		cur = cur.parent_;
-	}
-	
-	switch(itr.type)
-	{
-	case XmlTokenType.StartElement:
-		cur.append(XmlElement(itr.prefix, itr.localName));
-		break;
-	case XmlTokenType.Data:
-		cur.append(XmlData(itr.value));
-		break;
-	case XmlTokenType.EndElement:
-	case XmlTokenType.EndEmptyElement:
-		break;
-	default:
-		break;
-	}
-}
-+/
