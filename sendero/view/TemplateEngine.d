@@ -1,24 +1,25 @@
 module sendero.view.TemplateEngine;
 
 public import sendero.xml.XmlNode;
-public import sendero.util.ArrayWriter;
 
 debug import tango.io.Stdout;
 
+alias void delegate(void[]) Consumer;
+
 interface ITemplateNode(TemplateCtxt)
 {
-	void render(TemplateCtxt tCtxt, ArrayWriter!(char) output);
+	void render(TemplateCtxt tCtxt, Consumer consumer);
 }
 
 class TemplateContainerNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {
 	ITemplateNode!(TemplateCtxt)[] children;
 	
-	void render(TemplateCtxt tCtxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt tCtxt, Consumer consumer)
 	{
 		foreach(child; children)
 		{
-			child.render(tCtxt, output);
+			child.render(tCtxt, consumer);
 		}
 	}
 	
@@ -49,28 +50,28 @@ class TemplateElementNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	ITemplateNode!(TemplateCtxt)[] children;
 	ITemplateNode!(TemplateCtxt)[] attributes;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
-		output ~= "<" ~ name;
+		consumer("<" ~ name);
 			
 		foreach(attr; attributes)
 		{
-			output ~= " ";
-			attr.render(ctxt, output);
+			consumer(" ");
+			attr.render(ctxt, consumer);
 		}
 		
 		if(children.length)
 		{
-			output ~= ">";
+			consumer(">");
 			foreach(child; children)
 			{
-				child.render(ctxt, output);
+				child.render(ctxt, consumer);
 			}
-			output ~= "</" ~ name ~ ">";
+			consumer("</" ~ name ~ ">");
 		}
 		else
 		{
-			output ~= " />";
+			consumer(" />");
 		}
 	}
 }
@@ -89,9 +90,9 @@ class TemplateAttributeNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	char[] name;
 	char[] value;
 	
-	void render(TemplateCtxt tCtxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt tCtxt, Consumer consumer)
 	{
-		output ~= name ~ "=" ~ "\"" ~ value ~ "\"";
+		consumer(name ~ "=" ~ "\"" ~ value ~ "\"");
 	}
 }
 
@@ -104,9 +105,9 @@ class TemplateDataNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	char[] src;
 	
-	void render(TemplateCtxt tCtxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt tCtxt, Consumer consumer)
 	{
-		output ~= src;
+		consumer(src);
 	}
 }
 
@@ -119,9 +120,9 @@ class TemplateGenericNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	XmlNode node;
 	
-	void render(TemplateCtxt tCtxt, ArrayWriter!(char) res)
+	void render(TemplateCtxt tCtxt, Consumer consumer)
 	{
-		res ~= print(node);
+		consumer(print(node));
 	}
 }
 
@@ -206,13 +207,13 @@ class NullNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, 
 	}
 }
 
-class DefaultTemplate(TemplateCtxt, Template)
+class DefaultTemplate(TemplateCtxt, Template, LocaleT)
 {
 	ITemplateNode!(TemplateCtxt) rootNode;
 	
-	TemplateCtxt createInstance()
+	TemplateCtxt createInstance(LocaleT locale)
 	{
-		return new TemplateCtxt(cast(Template)this);
+		return new TemplateCtxt(cast(Template)this, locale);
 	}
 }
 

@@ -4,13 +4,14 @@ import sendero.view.TemplateEngine;
 import sendero.xml.XmlNode;
 import sendero.vm.ExecutionContext;
 import sendero.vm.LocalText;
-import sendero.util.ArrayWriter;
 import sendero.util.StringCharIterator;
 
 import tango.group.File;
 import tango.text.Util;
 import Integer = tango.text.convert.Integer;
 debug import tango.io.Stdout;
+
+import sendero.util.ArrayWriter;
 
 class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : DefaultTemplateContext!(TemplateCtxt, Template)
 {
@@ -41,7 +42,7 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	}
 }
 
-class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(TemplateCtxt, Template)
+class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(TemplateCtxt, Template, Locale)
 {
 	static this()
 	{
@@ -121,7 +122,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	
 	static TemplateCtxt get(char[] path, Locale locale)
 	{
-		return getTemplate(path, locale).createInstance;
+		return getTemplate(path, locale).createInstance(locale);
 	}
 	
 	static void setSearchPath(char[] path)
@@ -138,11 +139,9 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
-	char[] render(TemplateCtxt templCtxt)
+	void render(TemplateCtxt templCtxt, Consumer consumer)
 	{
-		auto res = new ArrayWriter!(char);
-		rootNode.render(templCtxt, res);
-		return res.get;
+		rootNode.render(templCtxt, consumer);
 	}
 }
 
@@ -179,9 +178,9 @@ class SenderoAttributeNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	char[] name;
 	IMessage msg;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
-		output ~= name ~ "=" ~ "\"" ~ msg.exec(ctxt.execCtxt) ~ "\"";
+		consumer(name ~ "=" ~ "\"" ~ msg.exec(ctxt.execCtxt) ~ "\"");
 	}
 }
 
@@ -214,9 +213,9 @@ class SenderoDataNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	IMessage msg;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
-		res ~= msg.exec(ctxt.execCtxt);
+		consumer(cast(char[])msg.exec(ctxt.execCtxt));
 	}
 }
 
@@ -312,7 +311,7 @@ class SenderoForNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	protected char[] localVarName;
 	ITemplateNode!(TemplateCtxt)[] children;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
+	void render(TemplateCtxt ctxt, Consumer res)
 	{
 		auto var = expr.exec(ctxt.execCtxt);
 		if(var.type != VarT.Array) return;
@@ -367,7 +366,7 @@ class XIIncludeExprNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	}
 	protected IMessage expr;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
+	void render(TemplateCtxt ctxt, Consumer res)
 	{
 		auto locale = ctxt.execCtxt.locale;
 		auto path = expr.exec(ctxt.execCtxt);
@@ -375,7 +374,7 @@ class XIIncludeExprNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		if(!templ) return;
 		
 		ctxt.execCtxt.runtimeImports ~= templ.functionCtxt;
-		res ~= templ.render(ctxt);
+		templ.render(ctxt, res);
 	}
 }
 
@@ -439,11 +438,11 @@ class SenderoBlockContainer(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 	}
 	char[] name;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		auto lastBlock = ctxt.curBlock;
 		ctxt.curBlock = this;
-		super.render(ctxt, output);
+		super.render(ctxt, consumer);
 		ctxt.curBlock = lastBlock;
 	}
 }
@@ -456,11 +455,11 @@ class SenderoBlockAction(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	}
 	private char[] name;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		auto pBlock = name in ctxt.tmpl.blocks;
 		if(pBlock) {
-			pBlock.render(ctxt, output);
+			pBlock.render(ctxt, consumer);
 			return;
 		}
 		
@@ -468,7 +467,7 @@ class SenderoBlockAction(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		{
 			pBlock = name in t.blocks;
 			if(pBlock) {
-				pBlock.render(ctxt, output);
+				pBlock.render(ctxt, consumer);
 				return;
 			}
 		}
@@ -515,7 +514,7 @@ class SenderoExtendsNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	}
 	protected IMessage expr;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) res)
+	void render(TemplateCtxt ctxt, Consumer res)
 	{
 		auto locale = ctxt.execCtxt.locale;
 		auto path = expr.exec(ctxt.execCtxt);
@@ -523,7 +522,7 @@ class SenderoExtendsNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		if(!templ) return;
 		
 		ctxt.inherit(templ);
-		res ~= templ.render(ctxt);
+		templ.render(ctxt, res);
 	}
 }
 
@@ -542,7 +541,7 @@ class SenderoSuperNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templa
 
 class SenderoSuperNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		if(!ctxt.curBlock)
 			return;
@@ -555,7 +554,7 @@ class SenderoSuperNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 			{
 				auto pBlock = name in t.blocks;
 				if(pBlock) {
-					pBlock.render(ctxt, output);
+					pBlock.render(ctxt, consumer);
 					return;
 				}
 			}
@@ -573,7 +572,7 @@ class SenderoSuperNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 				{
 					auto pBlock = name in t.blocks;
 					if(pBlock) {
-						pBlock.render(ctxt, output);
+						pBlock.render(ctxt, consumer);
 						return;
 					}
 				}
@@ -672,7 +671,7 @@ class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	Choice[] choices;
 	ITemplateNode!(TemplateCtxt) otherwise;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		auto val = expr.exec(ctxt.execCtxt);
 		
@@ -680,12 +679,12 @@ class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		{
 			if(val == c.val)
 			{
-				c.node.render(ctxt, output);
+				c.node.render(ctxt, consumer);
 				return;
 			}
 		}
 		
-		if(otherwise) otherwise.render(ctxt, output);
+		if(otherwise) otherwise.render(ctxt, consumer);
 	}
 }
 
@@ -779,12 +778,12 @@ class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 	Elif[] elifs;
 	ITemplateNode!(TemplateCtxt) otherwise;
 	
-	void render(TemplateCtxt ctxt, ArrayWriter!(char) output)
+	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		auto var = expr.exec(ctxt.execCtxt);
 		if(templateBool(var))
 		{
-			return super.render(ctxt, output);
+			return super.render(ctxt, consumer);
 		}
 		
 		foreach(elif; elifs)
@@ -792,11 +791,11 @@ class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 			var = elif.expr.exec(ctxt.execCtxt);
 			if(templateBool(var))
 			{
-				return elif.node.render(ctxt, output);
+				return elif.node.render(ctxt, consumer);
 			}
 		}
 		
-		if(otherwise) return otherwise.render(ctxt, output);
+		if(otherwise) return otherwise.render(ctxt, consumer);
 	}
 }
 
@@ -849,7 +848,7 @@ class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
 	
 	VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
 	{
-		scope ctxt = new TemplateCtxt(tmpl);
+		scope ctxt = new TemplateCtxt(tmpl, null);
 		ctxt.execCtxt = new ExecutionContext(parentCtxt);
 		for(int i = 0; i < paramNames.length && i < params.length; ++i)
 		{
@@ -857,10 +856,12 @@ class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
 		}
 		
 		auto res = new ArrayWriter!(char);
-		funcNode.render(ctxt, res);
+		funcNode.render(ctxt, cast(Consumer)&res.append);
+		
+		char[] str = res.get;	
 		
 		VariableBinding var;
-		var.set(res.get);
+		var.set(str);
 		return var;
 	}
 }
@@ -880,7 +881,7 @@ class SenderoStaticNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templ
 		auto res = new ArrayWriter!(char);
 		auto ctxt = tmpl.staticCtxt;
 		
-		x.render(ctxt, res);
+		x.render(ctxt, cast(Consumer)&res.append);
 		
 		return new TemplateDataNode!(TemplateCtxt)(res.get);
 	}

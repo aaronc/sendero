@@ -1,24 +1,27 @@
 module sendero.db.DBProvider;
 
 import dbi.PreparedStatement;
+import dbi.Registry;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
 
 public import sendero.db.Statement;
 
-
-/*
-
-interface IDBConnectionProvider
+class DBConnectionProvider(char[] dbUrl)
 {
-	IPreparedStatementProvider createNewConnection();
+	Database createNewConnection()
+	{
+		getDatabaseForURL(dbUrl);
+	}
 }
-*/
 
 interface IProvider(StatementT)
 {
 	bool prepare(char[] statement, inout StatementT stmt, char[] key = null);
 	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null);
+	void beginTransact();
+	void rollback();
+	void commit();
 }
 
 class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(StatementT)
@@ -68,6 +71,21 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		if(key.length) cachedRawStatements[key] = stmt;
 		else cachedRawStatements[statement] = stmt;
 		return true;
+	}
+	
+	void beginTransact()
+	{
+		inst.beginTransact;
+	}
+	
+	void rollback()
+	{
+		inst.rollback;
+	}
+	
+	void commit()
+	{
+		inst.commit;
 	}
 	
 	private ConnectionT inst;
@@ -135,6 +153,24 @@ class DBProvider(DBConnectionProvider)
 		}
 		
 		return stmt;
+	}
+	
+	static void beginTransact()
+	{
+		auto provider = getProvider;
+		provider.beginTransact;
+	}
+	
+	static void rollback()
+	{
+		auto provider = getProvider;
+		provider.rollback;
+	}
+	
+	static void commit()
+	{
+		auto provider = getProvider;
+		provider.commit;
 	}
 }
 

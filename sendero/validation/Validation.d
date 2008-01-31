@@ -5,30 +5,20 @@ import tango.util.Convert;
 import tango.group.time;
 import tango.text.Regex;
 
+import sendero.validation.Validations;
+import sendero.validation.ValidationResult;
+
 public import sendero.util.Reflection;
 
-struct ValidationTrait
-{
-	static ValidationTrait opCall(char[] p, char[] v)
-	{
-		ValidationTrait t;
-		t.property = p;
-		t.value = v;
-		return t;
-	}
+class ValidationInfo
+{	
+	static ValidationInfo[char[]] registeredValidations;
 	
-	char[] property;
-	char[] value;
-}
-
-interface IValidationTraitsProvider
-{
-	ValidationTrait[] getTraits();
-}
-
-interface IValidator(T) : IValidationTraitsProvider
-{
-	bool opCall(T t);
+	struct Option
+	{
+		AbstractValidation validator;
+	}
+	Option[][] options;
 }
 
 class ValidationInspector
@@ -44,365 +34,91 @@ class ValidationInspector
 			ptrMap[ptr + f.offset] = f.ordinal;
 		}
 		
-		options.length = fields.length;
+		info = new ValidationInfo;
 		
-		registeredValidations[className] = this;
+		info.options.length = fields.length;
+		
+		ValidationInfo.registeredValidations[className] = info;
 	}
 	private uint[void*] ptrMap;
 	
-	struct ValidationOption
+	ValidationInfo info;
+	
+	void require(T)(inout T t)
 	{
-		IValidationTraitsProvider validator;
-		char[] errCode;
+		add!(T)(t, new ExistenceValidation!(T));
 	}
 	
-	ValidationOption[][] options;
-	
-	void require(T)(inout T t, char[] errCode)
+	void minLength(uint val, inout char[] t)
 	{
-		static if(isDynamicArrayType!(T))
-		{
-			addValidation!(T)(t, ArrayRequired!(T).inst, errCode);
-		}
-		else static if(is(T == DateTime))
-		{
-			addValidation!(T)(t, DateTimeRequired.inst, errCode);
-		}
-		else static if(is(T == Time))
-		{
-			addValidation!(T)(t, TimeRequired.inst, errCode);
-		}
-		else static assert(false);
+		add!(char[])(t, new MinLengthValidation(val));
 	}
 	
-	void minLength(T)(uint val, inout T t, char[] errCode)
+	void maxLength(uint val, inout char[] t)
 	{
-		static if(isDynamicArrayType!(T))
-		{
-			addValidation!(T)(t, new MinLength!(T)(val), errCode);
-		}
-		else static assert(false);
-	}
-	
-	void maxLength(T)(uint val, inout T t, char[] errCode)
-	{
-		static if(isDynamicArrayType!(T))
-		{
-			addValidation!(T)(t, new MaxLength!(T)(val), errCode);
-		}
-		else static assert(false);
+		add!(char[])(t, new MaxLengthValidation(val));
 	}
 	
 	void lengthRange(T)(uint min, uint max, inout T t, char[] errCode)
 	{
-		static if(isDynamicArrayType!(T))
-		{
-			addValidation!(T)(t, new LengthRange!(T)(min, max), errCode);
-		}
-		else static assert(false);
+		add(t, new MinLengthValidation!(T)(val));
+		add(t, new MaxLengthValidation!(T)(val));
 	}
 	
-	void format(char[] t, char[] regex, char[] errCode)
+	void format(char[] testRegex, inout char[] t)
 	{
-		addValidation!(char[])(t, new Pattern(regex), errCode);
+		add!(char[])(t, new FormatValidation(testRegex));
 	}
 	
-	void custom(T)(inout T t, IValidator!(T) validator, char[] errCode)
+	void add(T)(inout T t, Validation!(T) validator)
 	{
 		auto pi = &t in ptrMap;
 		assert(pi);
-		ValidationOption opt;
+		ValidationInfo.Option opt;
 		opt.validator = validator;
-		opt.errCode = errCode;
-		options[*pi] ~= opt;
+		info.options[*pi] ~= opt;
 	}
-	alias custom addValidation;
-	alias custom opCall;
+	alias add custom;
+	alias add opCall;
 	
 	FieldInfo[] fields;
 }
 
-class ArrayRequired(T) : IValidator!(T)
-{
-	static this() {inst = new ArrayRequired!(T);}
-	private static ArrayRequired!(T) inst;
-	bool opCall(char[] t) {return t.length > 0;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("required", "")];
-	}
-}
-
-class TimeRequired : IValidator!(Time)
-{
-	static this() {inst = new TimeRequired;}
-	private static TimeRequired inst;
-	bool opCall(Time t) {return t.ticks != 0;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("required", "")];
-	}
-}
-
-class DateTimeRequired : IValidator!(DateTime)
-{
-	static this() {inst = new DateTimeRequired;}
-	private static DateTimeRequired inst;
-	bool opCall(DateTime dt)
-	{
-		return dt.date.month != 0 && dt.date.day != 0 && dt.date.year != 0;
-	}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("required", "")];
-	}
-}
-
-class MinLength(T) : IValidator!(T)
-{
-	this(uint len) { this.len = len; }
-	private uint len;
-	bool opCall(char[] t) {return t.length >= len;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("minLength", to!(char[])(len))];
-	}
-}
-
-class MaxLength(T) : IValidator!(T)
-{
-	this(uint len) { this.len = len; }
-	private uint len;
-	bool opCall(char[] t) {return t.length <= len;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("maxLength", to!(char[])(len))];
-	}
-}
-
-class LengthRange(T) : IValidator!(T)
-{
-	this(uint min, uint max) { this.min = min; this.max = max; }
-	private uint min, max;
-	bool opCall(char[] t) {return t.length >= min && t.length <= max;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("minLength", to!(char[])(min))];
-		return [ValidationTrait("maxLength", to!(char[])(max))];
-	}
-}
-
-class Pattern : IValidator!(char[])
-{
-	this(char[] pattern) { regex = Regex(pattern); }
-	Regex regex;
-	bool opCall(char[] t) {return regex.test(t, 0) != 0;}
-	ValidationTrait[] getTraits()
-	{
-		return [ValidationTrait("regex", regex.pattern)];
-	}
-}
-
-template Range(T)
-{
-	class GT : IValidator!(T)
-	{
-		this(T val) {this.val = val;}
-		T val;
-		bool opCall(T t) { return t > val; }
-		ValidationTrait[] getTraits()
-		{
-			return [ValidationTrait("gt", to!(char[])(val))];
-		}
-	}
-	
-	IValidator!(T) gt(T val)
-	{
-		return new GT(val);
-	}
-	
-	class GTE : IValidator!(T)
-	{
-		this(T val) {this.val = val;}
-		T val;
-		bool opCall(T t) { return t >= val; }
-		ValidationTrait[] getTraits()
-		{
-			return [ValidationTrait("gte", to!(char[])(val))];
-		}
-	}
-	
-	IValidator!(T) gte(T val)
-	{
-		return new GTE(val);
-	}
-
-	class LT : IValidator!(T)
-	{
-		this(T val) {this.val = val;}
-		T val;
-		bool opCall(T t) { return t < val; }
-		ValidationTrait[] getTraits()
-		{
-			return [ValidationTrait("lt", to!(char[])(val))];
-		}
-	}
-	
-	IValidator!(T) lt(T val)
-	{
-		return new LT(val);
-	}
-	
-	class LTE : IValidator!(T)
-	{
-		this(T val) {this.val = val;}
-		T val;
-		bool opCall(T t) { return t <= val; }
-		ValidationTrait[] getTraits()
-		{
-			return [ValidationTrait("lte", to!(char[])(val))];
-		}
-	}
-	
-	IValidator!(T) lte(T val)
-	{
-		return new LTE(val);
-	}
-	
-	class GT_LT : IValidator!(T)
-	{
-		this(T min, T max) {this.min = min; this.max = max;}
-		T min, max;
-		bool opCall(T t) { return t > min && t < max; }
-		ValidationTrait[] getTraits()
-		{
-			return [  ValidationTrait("gt", to!(char[])(min))
-					, ValidationTrait("lt", to!(char[])(max))];
-		}
-	}
-	
-	IValidator!(T) gt_lt(T min, T max)
-	{
-		return new GT_LT(min, max);
-	}
-	
-	class GTE_LT : IValidator!(T)
-	{
-		this(T min, T max) {this.min = min; this.max = max;}
-		T min, max;
-		bool opCall(T t) { return t >= min && t < max; }
-		ValidationTrait[] getTraits()
-		{
-			return [  ValidationTrait("gte", to!(char[])(min))
-					, ValidationTrait("lt", to!(char[])(max))];
-		}
-	}
-	
-	IValidator!(T) gte_lt(T min, T max)
-	{
-		return new GTE_LT(min, max);
-	}
-	
-	class GT_LTE : IValidator!(T)
-	{
-		this(T min, T max) {this.min = min; this.max = max;}
-		T min, max;
-		bool opCall(T t) { return t > min && t <= max; }
-		ValidationTrait[] getTraits()
-		{
-			return [  ValidationTrait("gt", to!(char[])(min))
-					, ValidationTrait("lte", to!(char[])(max))];
-		}
-	}
-	
-	IValidator!(T) gt_lte(T min, T max)
-	{
-		return new GT_LTE(min, max);
-	}
-	
-	class GTE_LTE : IValidator!(T)
-	{
-		this(T min, T max) {this.min = min; this.max = max;}
-		T min, max;
-		bool opCall(T t) { return t >= min && t <= max; }
-		ValidationTrait[] getTraits()
-		{
-			return [  ValidationTrait("gte", to!(char[])(min))
-					, ValidationTrait("lte", to!(char[])(max))];
-		}
-	}
-	
-	IValidator!(T) gte_lte(T min, T max)
-	{
-		return new GTE_LTE(min, max);
-	}
-}
-
-/+alias Range!(int) Int;
-alias Range!(uint) UInt;
-alias Range!(long) Long;
-alias Range!(float) Float;
-alias Range!(double) Double;+/
-
-static IValidator!(char[]) required()
-{
-	return ArrayRequired!(char[]).inst;
-}
-
-static IValidator!(char[]) minLength(uint len)
-{
-	return new MinLength!(char[])(len);
-}
-
-static IValidator!(char[]) maxLength(uint len)
-{
-	return new MaxLength!(char[])(len);
-}
-
-static IValidator!(char[]) lengthRange(uint min, uint max)
-{
-	return new LengthRange!(char[])(min, max);
-}
-
-static IValidator!(char[]) regex(char[] pattern)
-{
-	return new Pattern(pattern);
-}
-
 class ValidatorInstance
 {
-	this(ValidationInspector validation)
+	this(ValidationInfo validation)
 	{
 		this.validation = validation;
 	}
-	private ValidationInspector validation;
-	char[][] res;
+	private ValidationInfo validation;
+	
+	ValidationResult res;
 	
 	void visit(T)(T t, uint index)
 	{
 		foreach(opt; validation.options[index])
 		{
-			auto validator = cast(IValidator!(T))opt.validator;
+			auto validator = cast(Validator!(T))opt.validator;
 			debug assert(validator);
-			if(!validator(t))
-				res ~= opt.errCode;
+			if(!validator.validate(t))
+				res ~= validator.error;
 		}
 	}
 }
 
 class Validator(X)
 {
-	this(ValidationInspector validation)
+	this(ValidationInfo validation)
 	{
 		this.validation = validation;
 	}
-	private ValidationInspector validation;
+	private ValidationInfo validation;
 	
-	char[][] validate(X x)
+	ValidationResult validate(X x)
 	{
 		auto inst = new ValidatorInstance(validation);
-		ReflectionOf!(X).visitTuple(x, inst);
-		return inst.res;
+		//ReflectionOf!(X).visitTuple(x, inst);
+		//return inst.res;
 	}
 }
 
@@ -412,12 +128,12 @@ template Validate(X)
 	{
 		auto inspector = new ValidationInspector(cast(void*)x, ReflectionOf!(X).fields, X.stringof);
 		x.defineValidation(inspector);
-		validator = new Validator!(X)(inspector);
+		validator = new Validator!(X)(inspector.info);
 	}
 	
 	static Validator!(X) validator;
 	
-	char[][] validate()
+	ValidationResult validate()
 	{
 		if(!validator) initValidation(this);
 		return validator.validate(this);
@@ -438,21 +154,21 @@ class Test
 	
 	void defineValidation(V)(V v)
 	{
-		v(name, required, "nameRequired");
-		v(name, minLength(7), "nameMinLen7");
-		v(name, maxLength(256), "nameMaxLen256");
-		v(id, Range!(uint).gt(0), "idNotZero");
-		v.require(dateOfBirth, "dateOfBirthRequired");
-		v(email, regex("[A-Za-z0-9_\\-]+@([A-Za-z0-9_\\-]+\\.)+[A-Za-z]+"), "email");
+		v.require(name);
+		v.minLength(7, name);
+		v.maxLength(256, name);
+		//v.minValue(id, Range!(uint).gt(0), "idNotZero");
+		v.require(dateOfBirth);
+		v.format("[A-Za-z0-9_\\-]+@([A-Za-z0-9_\\-]+\\.)+[A-Za-z]+", email);
 	}
 	mixin Validate!(Test);
 }
-	
+
 unittest
 {
-	auto val1 = Range!(long).gt(5);
-	assert(!val1(3));
-	assert(val1(7));
+//	auto val1 = Range!(long).gt(5);
+//	assert(!val1(3));
+//	assert(val1(7));
 	
 	auto x = new Test;
 	auto res = x.validate;

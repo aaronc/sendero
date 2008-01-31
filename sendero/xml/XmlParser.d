@@ -581,8 +581,8 @@ unittest
         //doTests!(wchar)();
         //doTests!(dchar)();
         
-        //for (int i = 5; --i;)
-        //    benchmarkSenderoReader (1000, "hamlet.xml");
+        for (int i = 5; --i;)
+            benchmarkSenderoReader (1000, "hamlet.xml");
 }
 
 

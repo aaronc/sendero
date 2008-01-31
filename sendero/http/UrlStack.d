@@ -1,4 +1,4 @@
-module sendero.util.UrlStack;
+module sendero.http.UrlStack;
 
 import sendero.util.collection.Stack;
 

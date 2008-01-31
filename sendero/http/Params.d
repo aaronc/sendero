@@ -1,11 +1,10 @@
 /** 
- * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Copyright: Copyright (C) 2007-2008 Aaron Craelius.  All rights reserved.
  * License:   BSD Style
  * Authors:   Aaron Craelius
  */
 
-
-module sendero.routing.HTTPRequest;
+module sendero.http.Params;
 
 import tango.net.Uri;
 import tango.text.Util;

@@ -2,6 +2,7 @@ module sendero.view.SenderoTemplate;
 
 import sendero.view.SenderoTemplateInternals;
 import sendero.vm.ExecutionContext;
+import sendero.util.ArrayWriter;
 //alias AbstractSenderoTemplateContext!(ExecutionContext, AbstractSenderoTemplateContext) SenderoTemplateContext;
 //alias AbstractSenderoTemplate!(ExecutionContext, SenderoTemplateContext) SenderoTemplate;
 
@@ -12,9 +13,16 @@ class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecutionContext,
 		super(tmpl, locale);
 	}
 	
+	void render(void delegate(void[]) consumer)
+	{
+		return tmpl.render(cast(SenderoTemplateContext)this, consumer);
+	}
+	
 	char[] render()
 	{
-		return tmpl.render(cast(SenderoTemplateContext)this);
+		auto output = new ArrayWriter!(char)(1024, 1024);
+		render(cast(void delegate(void[]))&output.append);
+		return output.get;
 	}
 }
 
@@ -50,8 +58,8 @@ unittest
 		"</tr></d:for>"
 		"</table>";
 	
-	auto tmpl = SenderoTemplate.compile(bigtable);
-	auto inst = new SenderoTemplateContext(tmpl);
+	auto tmpl = SenderoTemplate.compile(bigtable, null);
+	auto inst = new SenderoTemplateContext(tmpl, null);
 	
 	ubyte[][] table;
 	for(int i = 0; i < 10; ++i)
@@ -73,11 +81,11 @@ unittest
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
 	
-	auto derived = SenderoTemplate.get("derivedtemplate.xml");
+	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
 	Stdout(derived.render).newline;
 	
-	auto derived2 = SenderoTemplate.get("derived2.xml");
+	auto derived2 = SenderoTemplate.get("derived2.xml", null);
 	derived2["name"] = "alice";
 	Stdout(derived2.render).newline;
 	
@@ -115,7 +123,7 @@ unittest
 	n.date.date.day = 3;
 	names ~= n;
 	
-	auto complex = SenderoTemplate.get("test/complex.xml");
+	auto complex = SenderoTemplate.get("test/complex.xml", null);
 	complex["person"] = n;
 	complex["names"] = names;
 	Stdout(complex.render).newline;

@@ -1,9 +1,6 @@
 module sendero.routing.Common;
 
-public import sendero.routing.HTTPRequest;
-public import sendero.util.UrlStack;
-
-enum HttpMethod { Get, Post };
+public import sendero.http.Request;
 
 interface IFunctionWrapper(Ret, Req)
 {

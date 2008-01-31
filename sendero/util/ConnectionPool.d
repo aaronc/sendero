@@ -25,9 +25,10 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 	private ThreadSafeQueue!(ConnectionT) queue;
 	private ConnectionT[ConnectionT] activeConnections;
 	
-	this()
+	this(uint maxCacheSize = 100)
 	{
 		queue = new ThreadSafeQueue!(ConnectionT);
+		setMaxCacheSize(maxCacheSize);
 	}
 	
 	ConnectionT getConnection()
