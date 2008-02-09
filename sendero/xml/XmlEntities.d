@@ -104,7 +104,7 @@ Ch[] decodeBuiltinEntities(Ch)(Ch[] str)
 
 }
 
-Ch[] encodeBuiltinEntities(Ch, bool encodeQuotes = false)(Ch[] str)
+Ch[] encodeBuiltinEntities(Ch, bool encodeQuotes = true)(Ch[] str)
 {
 	auto res = new ArrayWriter!(Ch);
 	foreach(ch; str)

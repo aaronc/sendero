@@ -45,7 +45,7 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 		version(SenderoLog) auto log = Log.getLogger("sendero.backends.FCGI");		
 	
 		FastCGIRequest fcgiRequest = new FastCGIRequest();
-		auto output = new FastCGIOutputBuffer(fcgiRequest);
+		//auto output = new FastCGIOutputBuffer(fcgiRequest);
 		auto session = SessionT.cur;
 
 		while ( fcgiRequest.accept () )
@@ -106,7 +106,9 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 				
 				// Begin sending output client
 				
-				output.reset;
+				auto output = fcgiRequest.stdout;
+				
+				//output.reset;
 				
 				foreach(cookie; session.cookies)
  					cookie.produce(cast(void delegate(void[]))&output.write);
@@ -256,7 +258,7 @@ class FastCGIOutputBuffer : OutputStream
 version(Unittest)
 {
 	import sendero.session.Session;
-	alias SessionGlobal!(BasicSessionImp) Session;
+	alias SessionGlobal!(BasicSessionData) Session;
 	
 	alias FCGIRunner!(Session) FCGI;
 	

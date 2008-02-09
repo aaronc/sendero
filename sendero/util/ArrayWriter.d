@@ -73,6 +73,51 @@ class ArrayWriter(T)
 	}
 	OutputStream flush() { return this; }
 }+/
+version(Unittest)
+{
+import tango.time.StopWatch;
+import tango.io.Stdout;
+
+void test1(ArrayWriter!(char) w)
+{
+	for(uint i = 0; i < 100000; ++i)
+	{
+		w.append("hello");
+	}
+}
+
+void test2(void delegate(void[]) w)
+{
+	for(uint i = 0; i < 100000; ++i)
+	{
+		w("hello");
+	}
+}
+
+void benchmark(char[] msg, void delegate() dg)
+{
+	Stdout("Beginning:")(msg).newline;
+	StopWatch sw;
+	sw.start;
+	for(uint i = 0; i < 10; ++i)
+		dg();
+	auto t = sw.stop;
+	Stdout.formatln("{}:{}ms", msg, t);
+}
+
+void doBenchmarks()
+{
+	auto a1 = new ArrayWriter!(char);
+	benchmark("A1", {test1(a1);});
+	
+	auto a2 = new ArrayWriter!(char);
+	benchmark("A2", {test2(cast(void delegate(void[]))&a2.append);});
+	
+	benchmark("A1", {test1(a1);});
+	benchmark("A2", {test2(cast(void delegate(void[]))&a2.append);});
+	benchmark("A1", {test1(a1);});
+	benchmark("A2", {test2(cast(void delegate(void[]))&a2.append);});
+}
 
 unittest
 {
@@ -83,6 +128,8 @@ unittest
 	str ~= "rld";
 	assert(str.get == "hello world");
 	
+//	doBenchmarks;
+	
 /+	auto str2 = new StringWriter;
 	
 	str2 ~= 'h';
@@ -90,4 +137,5 @@ unittest
 	str2 ~= 'o';
 	str2 ~= "rld";
 	assert(str2.get == "hello world");+/
+}
 }

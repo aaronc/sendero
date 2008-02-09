@@ -45,7 +45,6 @@ class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!
 version(Unittest)
 {
 
-import sendero.routing.Request;
 import Integer = tango.text.convert.Integer;
 	
 struct Address
@@ -68,7 +67,8 @@ char[] test(char[] x, int y, Address address)
 unittest
 {
 	auto fn = new FunctionWrapper!(typeof(&test), Request)(&test, ["x", "y", "address"]);
-	auto routeParams = Request.parse(HttpMethod.Get, "/", "x=Hello&y=1&address.address=1+First+St.&address.city=Somewhere&address.state=NY");
+	auto routeParams = new Request;
+	routeParams.parse(HttpMethod.Get, "/", "x=Hello&y=1&address.address=1+First+St.&address.city=Somewhere&address.state=NY");
 	auto res = fn.exec(routeParams, null);
 	assert(res == "Hello1\n1 First St.\nSomewhere\nNY", res);
 }

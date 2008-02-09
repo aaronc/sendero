@@ -15,6 +15,7 @@ version(ICU) {
 else {
 	import Float = tango.text.convert.Float;
 	import tango.text.locale.Convert;
+	import tango.text.locale.Core;
 }
 
 import tango.group.time;
@@ -116,10 +117,6 @@ class Message : IMessage
 			break;
 		case(VarT.Long):
 			auto x = var.long_;
-			o ~= renderLong(x, p, lcl);
-			break;
-		case(VarT.ULong):
-			auto x = var.ulong_;
 			o ~= renderLong(x, p, lcl);
 			break;
 		case(VarT.Double):
@@ -306,51 +303,39 @@ class Message : IMessage
 			return dst.toString;
 		}
 		else {
-			char[] res;
-			res.length = 100;
+			//char[] res;
+			//res.length = 100;
+			char[200] res = void;
 			switch(p.elementFormat)
 			{
 			case FORMAT_DATE:
 				switch(p.secondaryFormat)
 				{
-				case DATE_STYLE_SHORT:
-					return formatDateTime(res, t, "d");
-					break;
-				case DATE_STYLE_LONG:
-					return formatDateTime(res, t, "D");
-					break;
-				case DATE_STYLE_FULL:
-					return formatDateTime(res, t, "D");
-					break;
 				case DATE_STYLE_CUSTOM:
 					return formatDateTime(res, t, p.formatString);
-					break;
+				case DATE_STYLE_SHORT:
+					return formatDateTime(res, t, "d");
+				case DATE_STYLE_LONG:
+				case DATE_STYLE_FULL:
 				case DATE_STYLE_MEDIUM:
 				default:
 					return formatDateTime(res, t, "D");
-					break;
 				}
 				break;
 				
 			case FORMAT_TIME:
 				switch(p.secondaryFormat)
 				{
-				case DATE_STYLE_SHORT:
-					return formatDateTime(res, t, "t");
-					break;
+				case DATE_STYLE_CUSTOM:
+					return formatDateTime(res, t, p.formatString);
 				case DATE_STYLE_LONG:
-					return formatDateTime(res, t, "T");
-					break;
 				case DATE_STYLE_FULL:
 					return formatDateTime(res, t, "T");
 					break;
-				case DATE_STYLE_CUSTOM:
-					return formatDateTime(res, t, p.formatString);
-					break;
+				case DATE_STYLE_SHORT:
 				case DATE_STYLE_MEDIUM:
 				default:
 					return formatDateTime(res, t, "t");
-					break;
 				}
 				break;
 			
@@ -358,22 +343,15 @@ class Message : IMessage
 			default:
 				switch(p.secondaryFormat)
 				{
-				case DATE_STYLE_SHORT:
-					return formatDateTime(res, t, "g");
-					break;
-				case DATE_STYLE_LONG:
-					return formatDateTime(res, t, "G");
-					break;
-				case DATE_STYLE_FULL:
-					return formatDateTime(res, t, "G");
-					break;
 				case DATE_STYLE_CUSTOM:
 					return formatDateTime(res, t, p.formatString);
-					break;
+				case DATE_STYLE_LONG:
+				case DATE_STYLE_FULL:
+					return formatDateTime(res, t, "G");
+				case DATE_STYLE_SHORT:
 				case DATE_STYLE_MEDIUM:
 				default:
 					return formatDateTime(res, t, "g");
-					break;
 				}
 				break;
 			}
@@ -579,7 +557,7 @@ Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 		if(!itr.forwardLocate('}')) throw new MessageParserException("Expected \'}\' at end of expression");
 		uint j = itr.location;
 		char[] exprTxt = itr.randomAccessSlice(i, j);		
-		j = Text.locate(exprTxt, '|');
+		j = Text.locate(exprTxt, ';');
 		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
 		itr.seek(i + j);	
 		
@@ -647,6 +625,12 @@ Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 			}
 			else return unexpectedFormat();
 			break;
+/+		case 'h':
+			if(itr[0 .. 10] == "htmlencode") {
+				itr += 10;
+				p.elementFormat = ENCODE_ENTITIES;
+			}
+			else return unexpectedFormat();+/
 		default:
 			return unexpectedFormat();
 			break;

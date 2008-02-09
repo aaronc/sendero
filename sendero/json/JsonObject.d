@@ -19,7 +19,6 @@ import sendero.util.ArrayWriter;
 enum JSONValueType { String, Number, Object, Array, True, False, Null };
 alias JSONValueType JSONType;
 
-
 /**
  * Represents a JSON value that is one of the seven types specified by the enum
  * JSONValueType.

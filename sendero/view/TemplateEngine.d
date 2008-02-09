@@ -299,3 +299,16 @@ class TemplateCompiler(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, T
 		attrProcessors[prefix][localName] = proc;
 	}
 }
+
+bool getAttr(XmlNode node, char[] attrLocalName, inout char[] attrValue)
+{
+	foreach(attr; node.attributes)
+	{
+		if(attr.localName == attrLocalName)
+		{
+			attrValue = attr.value;
+			return true;
+		}
+	}
+	return false;
+}

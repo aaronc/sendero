@@ -1,17 +1,44 @@
 module sendero.routing.Convert;
 
-static import tango.util.Convert;
 import tango.group.time;
 
-//static import sendero.util.Convert;
 import sendero.routing.Common;
-import sendero.conversion.Conversion;
+import sendero.conversion.Convert;
+import sendero.msg.Msg;
+
+import tango.core.Traits;
+import Integer = tango.text.convert.Integer;
+import Float = tango.text.convert.Float;
+
+debug import tango.io.Stdout; 
 
 /+interface IConverter(T)
 {
 	bool convert(Param, inout T);
 	char[] getFormatString();
 }+/
+
+void fromString(T, Char)(Char[] str, inout T t)
+{
+	if(str is null) {
+		t = T.init;
+		return;
+	}
+	
+	static if(is(T == char[]))
+	{
+		t = str;
+	}
+	else static if(isIntegerType!(T))
+	{
+		t = Integer.parse(str);
+	}
+	else static if(isRealType!(T))
+	{
+		t = Float.parse(str);
+	}
+	else static assert(false);
+}
 
 template ConvClassParam(char[] n) {
 	const char[] ConvClassParam = "static if(val.tupleof.length > " ~ n ~ ") {"
@@ -29,27 +56,41 @@ template ConvClassParam(char[] n) {
 
 void convertParam(T, Req)(inout T val, Param param)
 {
-	static if(is(typeof(tango.util.Convert.to!(T, char[]))))
+	static if(is(T == char[]))
 	{
 		if(param.type != ParamT.Value) {
 			debug assert(false);
 			val = T.init;
+		}
+		else {
+			val = param.val;
 			return;
 		}
-		else val = to!(T)(param.val);
 	}
 	else static if(is(T == bool))
 	{
 		val = param.type != Param.None ? true : false;  
 	}
-	else static if(is(typeof(Convert!(T))))
+	else static if(is(typeof(fromString!(T, char))))
+	{
+		if(param.type != ParamT.Value) {
+			debug assert(false);
+			val = T.init;
+		}
+		else {
+			debug Stdout("Param ")(val).newline;
+			//val = to!(T)(param.val);
+			fromString!(T, char)(param.val, val);
+		}
+	}
+/+	else static if(is(typeof(Convert!(T))))
 	{
 		
 	}
 	else static if(is(T == DateTime) || is(T == Time))
 	{
 		
-	}
+	}+/
 	else static if(is(T == class) || is(T == struct))
 	{
 		if(param.obj.length == 0) {
@@ -60,34 +101,41 @@ void convertParam(T, Req)(inout T val, Param param)
 		static if(is(T == class))
 			val = new T;
 		
-		Param* pp;
-		
-		/+static if(val.tupleof.length > 0) {
-			pp = val.tupleof[0].stringof[4 .. $] in param.obj;
-			static if(is(typeof(T.convert!( typeof(val.tupleof[0]) )()) == bool)) {
-				T.convert(*pp, val.tupleof[0]);
-			}
-			else {
-				if(pp) convertParam!(typeof(val.tupleof[0]), Req)(val.tupleof[0], *pp);
-			}
-		};+/
-		
-		mixin(ConvClassParam!("0"));
-		mixin(ConvClassParam!("1"));
-		mixin(ConvClassParam!("2"));
-		mixin(ConvClassParam!("3"));
-		mixin(ConvClassParam!("4"));
-		mixin(ConvClassParam!("5"));
-		mixin(ConvClassParam!("6"));
-		mixin(ConvClassParam!("7"));
-		mixin(ConvClassParam!("8"));
-		mixin(ConvClassParam!("9"));
-		mixin(ConvClassParam!("10"));
-		mixin(ConvClassParam!("11"));
-		mixin(ConvClassParam!("12"));
-		mixin(ConvClassParam!("13"));
-		mixin(ConvClassParam!("14"));
-		mixin(ConvClassParam!("15"));
+		static if(is(typeof(T.convert)))
+		{
+			Msg.post(val.convert(param.obj));
+		}
+		else
+		{
+			Param* pp;
+			
+			/+static if(val.tupleof.length > 0) {
+				pp = val.tupleof[0].stringof[4 .. $] in param.obj;
+				static if(is(typeof(T.convert!( typeof(val.tupleof[0]) )()) == bool)) {
+					T.convert(*pp, val.tupleof[0]);
+				}
+				else {
+					if(pp) convertParam!(typeof(val.tupleof[0]), Req)(val.tupleof[0], *pp);
+				}
+			};+/
+			
+			mixin(ConvClassParam!("0"));
+			mixin(ConvClassParam!("1"));
+			mixin(ConvClassParam!("2"));
+			mixin(ConvClassParam!("3"));
+			mixin(ConvClassParam!("4"));
+			mixin(ConvClassParam!("5"));
+			mixin(ConvClassParam!("6"));
+			mixin(ConvClassParam!("7"));
+			mixin(ConvClassParam!("8"));
+			mixin(ConvClassParam!("9"));
+			mixin(ConvClassParam!("10"));
+			mixin(ConvClassParam!("11"));
+			mixin(ConvClassParam!("12"));
+			mixin(ConvClassParam!("13"));
+			mixin(ConvClassParam!("14"));
+			mixin(ConvClassParam!("15"));
+		}
 	}
 	else static if(is(T == char[][]))
 	{
@@ -119,11 +167,13 @@ void convertParam(T, Req)(inout T val, Param param)
 			
 		sendero.util.Convert.fromString(param.val, val);
 	}+/
+	else static assert(false, "Unhandled conversion type " ~ T.stringof);
 }
 
 template ConvertParam(char[] n) {
 	const char[] ConvertParam = "static if(P.length > " ~ n ~ ") {"
-		"pParam = paramNames[" ~ n ~ " - offset] in params;"
+		"pParam = paramNames[" ~ n ~ "- offset] in params;"
+		"debug Stdout(paramNames[" ~ n ~ "- offset]).newline;"
 		"if(pParam) {"
 			"convertParam!(P[" ~ n ~ "], Req)(p[" ~ n ~ "], *pParam);"
 		"}"
@@ -133,6 +183,8 @@ template ConvertParam(char[] n) {
 
 void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 {
+	debug Stdout("Start conversion:")(paramNames)(" ")(P.stringof).newline;
+	
 	auto params = req.params;
 	
 	Param* pParam;
@@ -147,9 +199,12 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 		}
 		else
 		{
+			debug Stdout(paramNames[0]).newline;
 			pParam = paramNames[0] in params;
 			if(pParam) {
+				debug Stdout(pParam.val).newline;
 				convertParam!(P[0], Req)(p[0], *pParam);
+				debug Stdout(p[0]).newline;
 			}
 			else p[0] = P[0].init;
 		}
@@ -157,6 +212,15 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 	
 	if(paramNames.length < P.length - offset)
 		throw new Exception("Incorrect number of parameters: " ~ P.stringof);
+	
+	/+static if(P.length > 1) {
+		pParam = paramNames[1- offset] in params;
+		debug Stdout(paramNames[1]).newline;
+		if(pParam) {
+			convertParam!(P[1], Req)(p[1], *pParam);
+		}
+		else p[1] = P[1].init;
+	};+/
 	
 	mixin(ConvertParam!("1"));
 	mixin(ConvertParam!("2"));

@@ -15,6 +15,10 @@ class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecutionContext,
 	
 	void render(void delegate(void[]) consumer)
 	{
+	/+	version(SenderoTemplateMsgs)
+		{
+			prerenderedMsgs = tmpl.renderMsgs(this, Msg.read);
+		}+/
 		return tmpl.render(cast(SenderoTemplateContext)this, consumer);
 	}
 	
@@ -35,6 +39,7 @@ version(Unittest)
 {
 	import tango.io.Stdout;
 	import tango.group.time;
+	import sendero.msg.Error;
 	
 	static class Name
 	{
@@ -47,6 +52,8 @@ version(Unittest)
 	
 unittest
 {
+	Msg.post(new Error);
+	
 	/+auto bigtable = "<table>"
 		"<tr d:for='$row in $table'>"
 		"<td d:for='$c in $row'>_{$c}</td>"
@@ -88,6 +95,8 @@ unittest
 	auto derived2 = SenderoTemplate.get("derived2.xml", null);
 	derived2["name"] = "alice";
 	Stdout(derived2.render).newline;
+	
+	Msg.clear;
 	
 	Name[] names;
 	auto n = new Name;

@@ -44,6 +44,7 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 		}
 		return conn;
 	}
+	alias getConnection get;
 	
 	void releaseConnection(ConnectionT conn)
 	{
@@ -52,11 +53,15 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 			activeConnections.remove(conn);
 		}
 		
-		if(queue.length >= maxCacheSize.load!(msync.seq))
+		if(queue.length >= maxCacheSize.load!(msync.seq)) {
+			static if(is(typeof(ProviderT.release)))
+				ProviderT.release(conn);
 			return;
+		}
 		
 		queue.enqueue(conn);
 	}
+	alias releaseConnection release;
 	
 	uint getMaxCacheSize()
 	{

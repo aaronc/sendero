@@ -2,6 +2,13 @@ module sendero.msg.Msg;
 
 import tango.core.Thread;
 
+import sendero.util.collection.NestedMap;
+import sendero.util.collection.SimpleList;
+import sendero.core.Memory;
+
+alias NestedMap!(Msg, SessionAllocator) MsgMap;
+alias SimpleList!(Msg, SessionAllocator) MsgList;
+
 abstract class Msg
 {
 	static uint registerClass(char[] classname)
@@ -37,11 +44,23 @@ abstract class Msg
 		id = x;
 	}
 	
+	char[][char[]] getProperties()
+	{
+		return null;
+	}
+	
 	static uint getClassID(char[] classname)
 	{
 		auto pCl = classname in registeredClasses;
 		if(!pCl) return 0;
 		return pCl.id;
+	}
+	
+	static uint getParentID(uint id)
+	{
+		auto pCl = id in registeredClassesByID;
+		if(pCl) return pCl.parent;
+		return 0;
 	}
 	
 	static char[] getClassName(uint id)
@@ -70,42 +89,6 @@ abstract class Msg
 	static ClassRegistration[char[]] registeredClasses;
 	static ClassRegistration[uint] registeredClassesByID;
 	
-	private static ThreadLocal!(Mailbox) mailboxes;
-	static this()
-	{
-		mailboxes = new ThreadLocal!(Mailbox);
-	}
-	
-	static void post(Msg msg)
-	{
-		mailboxes.val.post(msg);
-	}
-	
-	static void post(char[] scope_, Msg msg)
-	{
-		mailboxes.val.post(scope_, msg);
-	}
-	
-	static void post(MsgMap msgMap)
-	{
-		mailboxes.val.post(msgMap);
-	}
-	
-	static void post(char[] scope_, MsgMap msgMap)
-	{
-		mailboxes.val.post(scope_, msgMap);
-	}
-	
-	static Mailbox read()
-	{
-		return mailboxes.val;
-	}
-	
-	static void clear()
-	{
-		mailboxes.val.clear;
-	}
-	
 	uint id = 0;
 	
 	debug uint[] idTree()
@@ -131,42 +114,58 @@ abstract class Msg
 			res ~= getClassName(id);
 		return res;
 	}
-}
-
-alias Msg[][char[]] MsgMap;
-
-struct Mailbox
-{
-	Msg[] msgs;
-	Mailbox[char[]] scopedMsgs;
 	
-	void clear()
+	private static ThreadLocal!(MsgMap) msgMaps;
+	static this()
 	{
-		msgs = null;
-		scopedMsgs = null;
+		msgMaps = new ThreadLocal!(MsgMap);
 	}
 	
-	void post(Msg msg)
+	static void set(Msg msg)
 	{
-		msgs ~= msg;
+		auto map = msgMaps.val;
+		map.add(msg);
+		msgMaps.val = map;
 	}
 	
-	void post(char[] scope_, Msg msg)
+	static void set(MsgList msgList)
 	{
-		scopedMsgs[scope_].msgs ~= msg;
+		auto map = msgMaps.val;
+		msgMaps.val.merge(msgList);
+		msgMaps.val = map;
 	}
 	
-	void post(MsgMap msgMap)
+	static void set(char[] scope_, Msg msg)
 	{
-		foreach(k, v; msgMap)
-		{
-			scopedMsgs[k].msgs ~= v;
-		}
+		auto map = msgMaps.val;
+		msgMaps.val.add(scope_, msg);
+		msgMaps.val = map;
 	}
 	
-	void post(char[] scope_, MsgMap msgMap)
+	static void set(char[] scope_, MsgList msgList)
 	{
-		scopedMsgs[scope_].post(msgMap);
+		auto map = msgMaps.val;
+		msgMaps.val.merge(scope_, msgList);
+		msgMaps.val = map;
+	}
+	
+	static void set(char[] scope_, MsgMap msgMap)
+	{
+		auto map = msgMaps.val;
+		msgMaps.val.merge(scope_, msgMap);
+		msgMaps.val = map;
+	}
+	
+	alias set post;
+	
+	static MsgMap read()
+	{
+		return msgMaps.val;
+	}
+	
+	static void clear()
+	{
+		msgMaps.val.reset;
 	}
 }
 
@@ -204,4 +203,25 @@ class FieldMsgs : Msg
 	}
 	char[] field;
 	Msg[] msgs;
+}
+
+version(Unittest)
+{
+	import tango.util.Convert;
+	import tango.io.Stdout;
+	
+	unittest
+	{
+		Msg.clear;
+		Stdout("before post").newline;
+		Msg.set(new Success);
+		Stdout("after post").newline;
+		auto map = Msg.read;
+		Msg[] res;
+		foreach(msg; map) {
+			Stdout(msg.toString);
+			res ~= msg;
+		}
+		assert(res.length == 1, to!(char[])(res.length));
+	}
 }

@@ -5,13 +5,20 @@ import sendero.xml.XmlNode;
 import sendero.vm.ExecutionContext;
 import sendero.vm.LocalText;
 import sendero.util.StringCharIterator;
+import sendero.util.ArrayWriter;
+import sendero.util.collection.NestedMap;
+import sendero.Exception;
 
-import tango.group.File;
+import tango.group.file;
 import tango.text.Util;
 import Integer = tango.text.convert.Integer;
 debug import tango.io.Stdout;
 
-import sendero.util.ArrayWriter;
+version(SenderoTemplateMsgs)
+{
+	public import sendero.msg.Msg;
+	import sendero.view.TemplateMsgs;
+}
 
 class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : DefaultTemplateContext!(TemplateCtxt, Template)
 {
@@ -19,6 +26,17 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	{
 		super(tmpl);
 		execCtxt = new ExecCtxt(locale);
+		version(SenderoTemplateMsgs)
+		{
+			msgMap = Msg.read;
+			curMsgHandler = null;
+		}
+	}
+	
+	version(SenderoTemplateMsgs)
+	{
+		MsgMap msgMap;
+		ITemplateNode!(TemplateCtxt) curMsgHandler;
 	}
 	
 	ExecCtxt execCtxt;
@@ -39,6 +57,11 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	void use(T)(T t)
 	{
 		execCtxt.addVarAsRoot(t);
+	}
+	
+	version(SenderoTemplateMsgs)
+	{
+		char[][char[]] prerenderedMsgs;
 	}
 }
 
@@ -67,6 +90,11 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "if", new SenderoIfNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
+		version(SenderoTemplateMsgs)
+		{
+			//engine.addElementProcessor("d", "msgs", new SenderoMsgsNodeProcessor!(TemplateCtxt, Template)(engine));
+			engine.addElementProcessor("d", "msgdef", new SenderoMsgDefProcessor!(TemplateCtxt, Template)(engine));
+		}
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
@@ -143,6 +171,87 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	{
 		rootNode.render(templCtxt, consumer);
 	}
+	
+	version(SenderoTemplateMsgs)
+	{
+		static void importGlobalMsgs(char[] filepath, Locale locale)
+		{
+			auto t = getTemplate(filepath, locale);
+			foreach(id, msg; t.msgs)
+				defaultMsgs[id] = msg;
+		}
+		
+		static ITemplateNode!(TemplateCtxt)[uint] defaultMsgs;
+		ITemplateNode!(TemplateCtxt)[uint] msgs;
+		
+		//ISenderoMsgsNode!(TemplateCtxt)[char[]] msgScopes;
+/+		NestedMap!(ISenderoMsgsNode) msgScope;
+		
+		void routeMsgs(MsgMap msgMap)
+		{
+			auto sItr = msgScope.getIterator;
+			auto mItr =  msgMap.getIterator;
+			
+			while(sItr() && mItr()) {
+				auto res = strcmp(sItr.key, mItr.key);
+				if(res == 0) {
+					sItr++;
+					mItr++;				
+					continue;
+				}
+				while(sItr()) {
+					sItr++;
+					res = strcmp(sItr.key, mItr.key);
+					if(res == 0) {
+						break;
+					}
+					else if(res > 0) {
+						assert(false, "Handle");
+						mItr++;
+						break;
+					}
+				}
+			}
+			while(mItr()) {
+				assert(false, "Handle");
+				mItr++;
+			}
+		}+/
+		
+/+		char[][char[]] renderMsgs(TemplateCtxt ctxt, MsgMap msgMap)
+		{
+			char[][char[]] res;
+			Msg[] defMsgs;
+			foreach(key, msgs; msgMap)
+			{
+				if(!key.length) {
+					defMsgs ~= msgs;
+					continue;
+				}
+				
+				auto msgScope = key in msgScopes;
+				if(msgScope) {
+					auto arr = new ArrayWriter!(char);
+					auto unread = msgScope.prerender(msgs, ctxt, cast(void delegate(void[]))&arr.append);
+					if(unread.length) defMsgs ~= new FieldMsgs(key, msgs);
+					if(arr.length) res[key] = arr.get;
+				}
+				else {
+					defMsgs ~= new FieldMsgs(key, msgs);
+				}
+			}
+			
+			if(defMsgs.length) {
+				auto defScope = "" in msgScopes;
+				if(!defScope) throw new MessageSinkNotFoundException("No default message sink");
+				auto arr = new ArrayWriter!(char);
+				defScope.prerender(defMsgs, ctxt, cast(void delegate(void[]))&arr.append);
+				res[""] = arr.get;
+			}
+			
+			return res;
+		}+/
+	}
 }
 
 class SenderoElemProcessor(TemplateCtxt, Template) : DefaultElemProcessor!(TemplateCtxt, Template)
@@ -216,18 +325,6 @@ class SenderoDataNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
 		consumer(cast(char[])msg.exec(ctxt.execCtxt));
-	}
-}
-
-bool getAttr(XmlNode node, char[] attrLocalName, inout char[] attrValue)
-{
-	foreach(attr; node.attributes)
-	{
-		if(attr.localName == attrLocalName)
-		{
-			attrValue = attr.value;
-			return true;
-		}
 	}
 }
 
@@ -747,8 +844,6 @@ bool templateBool(Var var)
 		return var.bool_;
 	case VarT.Long:
 		return var.long_ >= 1 ? true : false;
-	case VarT.ULong:
-		return var.ulong_ >= 1 ? true : false;
 	case VarT.Double:
 		return var.double_ >= 1 ? true : false;
 	case VarT.Object:
@@ -884,5 +979,181 @@ class SenderoStaticNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templ
 		x.render(ctxt, cast(Consumer)&res.append);
 		
 		return new TemplateDataNode!(TemplateCtxt)(res.get);
+
 	}
+}
+version(SenderoTemplateMsgs)
+{
+/+
+class SenderoMsgsNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
+{
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
+	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
+	{
+		debug assert(node.type == XmlNodeType.Element);
+		
+		char[] scope_;
+		if(!getAttr(node, "scope", scope_))
+		{
+			scope_ = "";
+		}
+		
+		auto msgs = new SenderoMsgsNode!(TemplateCtxt)(scope_);
+		tmpl.msgScopes[scope_] = msgs;
+		
+		foreach(child; node.children)
+		{
+			if(child.prefix == "d")
+			{
+				if(child.localName == "msg")
+				{
+					char[] cls;
+					if(!getAttr(child, "cls", cls))
+						continue;
+					
+					auto id = Msg.registerClass(cls);
+					
+					msgs.msgs[id] = TemplateContainerNode!(TemplateCtxt).createFromChildren(child, tmpl, childProcessor);
+				}
+			}
+		}
+		
+		return msgs;
+	}
+}
+
+interface ISenderoMsgsNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
+{
+	Msg[] prerender(Msg[] msgs, TemplateCtxt ctxt, void delegate(void[]) write);
+}
+
+class SenderoMsgsNode(TemplateCtxt) : ISenderoMsgsNode!(TemplateCtxt)
+{	
+	this(char[] scope_)
+	{
+		this.scope_ = scope_;
+	}
+	char[] scope_;
+	
+	ITemplateNode!(TemplateCtxt)[uint] msgs;
+	
+	Msg[] prerender(Msg[] msgList, TemplateCtxt ctxt, void delegate(void[]) write)
+	{
+		ITemplateNode!(TemplateCtxt) getRenderer(uint id)
+		{
+			auto pm = id in msgs;
+			if(pm) {
+				return *pm;
+			}
+			
+			pm = id in ctxt.tmpl.msgs;
+			if(pm) {
+				return *pm;
+			}
+			
+			pm = id in ctxt.tmpl.defaultMsgs;
+			if(pm) {
+				return *pm;
+			}
+			
+			return null;
+		}
+		
+		Msg[] unread;
+		
+		foreach(m; msgList)
+		{
+			auto r = getRenderer(m.id);
+			if(!r) {
+				auto id = Msg.getParentID(m.id);
+				while(id) {
+					r = getRenderer(id);
+					if(r) break;
+					else id = Msg.getParentID(id);
+				}
+				if(!r) {
+					unread ~= m;
+					continue;
+				}
+			}
+			r.render(ctxt, write);
+		}
+		
+		return unread;
+	}
+	
+	void render(TemplateCtxt ctxt, void delegate(void[]) write)
+	{
+		auto ptxt = scope_ in ctxt.prerenderedMsgs;
+		if(ptxt && ptxt.length) write(*ptxt);
+		else write("<span id='msg_" ~ scope_ ~ "' />");
+	}
+}
+
+class SenderoMsgDefProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
+{
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
+	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
+	{
+		debug assert(node.type == XmlNodeType.Element);
+		
+		foreach(child; node.children)
+		{
+			if(child.prefix == "d")
+			{
+				if(child.localName == "msg")
+				{
+					char[] cls;
+					if(!getAttr(child, "cls", cls))
+						continue;
+					
+					auto id = Msg.registerClass(cls);
+					
+					tmpl.msgs[id] = TemplateContainerNode!(TemplateCtxt).createFromChildren(child, tmpl, childProcessor);
+				}
+			}
+		}
+		
+		return new TemplateDataNode!(TemplateCtxt)(null);
+	}
+}+/
+/+
+class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
+{
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
+	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
+	{
+		debug assert(node.type == XmlNodeType.Element);
+		
+		char[] cls;
+		if(!getAttr(node, "cls", cls))
+		{
+			debug assert(false);
+			return new TemplateDataNode!(TemplateCtxt)(null);
+		}
+		
+		auto id = Msg.registerClass(cls);
+		
+		auto msg = new SenderoMsgNode!(TemplateCtxt);
+		foreach(child; node.children)
+		{
+			msg.children ~= childProcessor(child, tmpl);
+		}
+		
+		return msg;
+	}
+}
+
+class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
+{	
+	this(uint id)
+	{
+		this.id = id;
+	}
+	uint id;
+}
++/
 }

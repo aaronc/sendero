@@ -1,11 +1,16 @@
 module sendero.session.Session;
 
-import sendero.http.Request;
+public import sendero.http.Request;
 
 import tango.core.Thread;
-import tango.net.http.HttpCookies;
+public import tango.net.http.HttpCookies;
 
-class BasicSessionImp
+version(SenderoSessionGC)
+{
+	public import sendero.session.GC;
+}
+
+class BasicSessionData
 {
 	this()
 	{
@@ -30,6 +35,10 @@ class BasicSessionImp
 	{
 		cookies.length = 0;
 		req.reset;
+		version(SenderoSessionGC)
+		{
+			SessionGC.reset;
+		}
 	}
 }
 
@@ -50,13 +59,14 @@ class SessionGlobal(SessionImpT)
 		}
 		return session;
 	}
+	alias cur get;
 	alias cur opCall;
 }
 
 version(Unittest)
 {
 
-alias SessionGlobal!(BasicSessionImp) Session;
+alias SessionGlobal!(BasicSessionData) Session;
 	
 unittest
 {

@@ -22,9 +22,10 @@ else {
 	alias char[] Timezone;
 }
 
-enum VarT : ubyte { Null, Bool, Long, ULong, Double, String, DateTime, Array, Object, Function, Node, Binary }; //TODO change Bool to True, False???
+enum VarT : ubyte { Null, Bool, Long, Double, String, DateTime, Array, Object, Function, Node, Binary, Stream }; //TODO change Bool to True, False???
 
 alias VariableBinding Var;
+alias void delegate(void delegate(void[])) Stream;
 
 struct VariableBinding
 {
@@ -40,9 +41,9 @@ struct VariableBinding
 		IObjectBinding objBinding;
 		IFunctionBinding funcBinding;
 		XmlNode xmlNode;
+		Stream stream;
 		bool bool_;		
 		long long_;
-		ulong ulong_;
 		double double_;
 		char[] string_;
 		Time dateTime_;
@@ -60,13 +61,9 @@ struct VariableBinding
 			type = cast(VarT)VarT.Bool;
 			bool_ = val;
 		}
-		else static if(isLongT!(X)) {
+		else static if(isIntegerType!(X)) {
 			type = cast(VarT)VarT.Long;
 			long_ = val;
-		}
-		else static if(is(X == ulong)) {
-			type = cast(VarT)VarT.ULong;
-			ulong_ = val;
 		}
 		else static if(isDoubleT!(X)) {
 			type = cast(VarT)VarT.Double;
@@ -142,24 +139,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				return long_ == v.long_;
-			case VarT.ULong:
-				return long_ == v.ulong_;
 			case VarT.Double:
 				return long_ == v.double_;
-			default:
-				return false;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				return ulong_ == v.long_;
-			case VarT.ULong:
-				return ulong_ == v.ulong_;
-			case VarT.Double:
-				return ulong_ == v.double_;
 			default:
 				return false;
 			}
@@ -170,8 +151,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				return double_ == v.long_;
-			case VarT.ULong:
-				return double_ == v.ulong_;
 			case VarT.Double:
 				return double_ == v.double_;
 			default:
@@ -201,8 +180,6 @@ struct VariableBinding
 		{
 		case VarT.Long:
 			return long_ == x;
-		case VarT.ULong:
-			return ulong_ == x;
 		case VarT.Double:
 			return double_ == x;
 		default:
@@ -216,8 +193,6 @@ struct VariableBinding
 		{
 		case VarT.Long:
 			if(long_ < x) return -1; else if(long_ > x) return 1; else return 0;
-		case VarT.ULong:
-			if(ulong_ < x) return -1; else if(ulong_ > x) return 1; else return 0;
 		case VarT.Double:
 			if(double_ < x) return -1; else if(double_ > x) return 1; else return 0;
 		default:
@@ -231,8 +206,6 @@ struct VariableBinding
 		{
 		case VarT.Long:
 			return long_ == x;
-		case VarT.ULong:
-			return ulong_ == x;
 		case VarT.Double:
 			return double_ == x;
 		default:
@@ -246,8 +219,6 @@ struct VariableBinding
 		{
 		case VarT.Long:
 			if(long_ < x) return -1; else if(long_ > x) return 1; else return 0;
-		case VarT.ULong:
-			if(ulong_ < x) return -1; else if(ulong_ > x) return 1; else return 0;
 		case VarT.Double:
 			if(double_ < x) return -1; else if(double_ > x) return 1; else return 0;
 		default:
@@ -268,24 +239,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				if(long_ < v.long_) return -1; else if(long_ > v.long_) return 1; else return 0;
-			case VarT.ULong:
-				if(long_ < v.ulong_) return -1; else if(long_ > v.ulong_) return 1; else return 0;
 			case VarT.Double:
 				if(long_ < v.double_) return -1; else if(long_ > v.double_) return 1; else return 0;
-			default:
-				return 0;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				if(ulong_ < v.long_) return -1; else if(ulong_ > v.long_) return 1; else return 0;
-			case VarT.ULong:
-				if(ulong_ < v.ulong_) return -1; else if(ulong_ > v.ulong_) return 1; else return 0;
-			case VarT.Double:
-				if(ulong_ < v.double_) return -1; else if(ulong_ > v.double_) return 1; else return 0;
 			default:
 				return 0;
 			}
@@ -296,8 +251,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				if(double_ < v.long_) return -1; else if(double_ > v.long_) return 1; else return 0;
-			case VarT.ULong:
-				if(double_ < v.ulong_) return -1; else if(double_ > v.ulong_) return 1; else return 0;
 			case VarT.Double:
 				if(double_ < v.double_) return -1; else if(double_ > v.double_) return 1; else return 0;
 			default:
@@ -315,120 +268,40 @@ struct VariableBinding
 		}
 	}
 	
-	VariableBinding opAdd(T)(T v)
+	VariableBinding opAdd(VariableBinding v)
 	{
-		static if(is(T == VariableBinding))
-		{
-			VariableBinding res = VariableBinding();
-			switch(type)
-			{
-			case VarT.String:
-				if(v.type == VarT.String) {res.set(string_ ~ v.string_); return res;}
-				else return res;
-			case VarT.Long:
-			{
-				switch(v.type)
-				{
-				case VarT.Long:
-					res.set(cast(long)(long_ + v.long_)); return res; 
-				case VarT.ULong:
-					res.set(cast(long)(long_ + v.ulong_)); return res;
-				case VarT.Double:
-					res.set(cast(double)(long_ + v.double_)); return res;
-				default:
-					res.set(0); return res;
-				}
-			}
-			case VarT.ULong:
-			{
-				switch(v.type)
-				{
-				case VarT.Long:
-					res.set(cast(long)(ulong_ + v.long_)); return res; 
-				case VarT.ULong:
-					res.set(cast(ulong)(ulong_ + v.ulong_)); return res; 
-				case VarT.Double:
-					res.set(cast(double)(ulong_ + v.double_)); return res;
-				default:
-					res.set(0); return res;
-				}
-			}
-			case VarT.Double:
-			{
-				switch(v.type)
-				{
-				case VarT.Long:
-					res.set(double_ + v.long_); return res;
-				case VarT.ULong:
-					res.set(double_ + v.ulong_); return res;
-				case VarT.Double:
-					res.set(double_ + v.double_); return res;
-				default:
-					res.set(0); return res;
-				}
-			}
-			case VarT.DateTime:
-				res.set(dateTime_ + v.dateTime_.span); return res;
-			default:
-				return res;
-			}
-		}
-		else static if(isLongT!(T)) {
-			Var res = Var();
-			switch(type)
-			{
-			case VarT.Long:
-				res.set(cast(long)(long_ + v)); return res;
-			case VarT.ULong:
-				res.set(cast(long)(ulong_ + v)); return res;
-			case VarT.Double:
-				res.set(cast(double)(double_ + v)); return res;
-			default:
-				return res;
-			}
-		}
-		else static if(is(T == ulong)) {
-			Var res = Var();
-			switch(type)
-			{
-			case VarT.Long:
-				res.set(cast(long)(long_ + v)); return res;
-			case VarT.ULong:
-				res.set(cast(ulong)(ulong_ + v)); return res;
-			case VarT.Double:
-				res.set(cast(double)(double_ + v)); return res;
-			default:
-				return res;
-			}
-		}
-		else static if(isDoubleT!(T)) {
-			Var res = Var();
-			switch(type)
-			{
-			case VarT.Long:
-				res.set(cast(double)(long_ + v)); return res;
-			case VarT.ULong:
-				res.set(cast(double)(ulong_ + v)); return res;
-			case VarT.Double:
-				res.set(cast(double)(double_ + v)); return res;
-			default:
-				return res;
-			}
-		}
-		else static assert(false);
-	}
-	
-	VariableBinding opAdd_r(long x)
-	{
-		Var res = Var();
+		VariableBinding res = VariableBinding();
 		switch(type)
 		{
+		case VarT.String:
+			if(v.type == VarT.String) {res.set(string_ ~ v.string_); return res;}
+			else return res;
 		case VarT.Long:
-			res.set(long_ + x); return res;
-		case VarT.ULong:
-			res.set(ulong_ + x); return res;
+		{
+			switch(v.type)
+			{
+			case VarT.Long:
+				res.set(cast(long)(long_ + v.long_)); return res; 
+			case VarT.Double:
+				res.set(cast(double)(long_ + v.double_)); return res;
+			default:
+				res.set(0); return res;
+			}
+		}
 		case VarT.Double:
-			res.set(double_ + x); return res;
+		{
+			switch(v.type)
+			{
+			case VarT.Long:
+				res.set(double_ + v.long_); return res;
+			case VarT.Double:
+				res.set(double_ + v.double_); return res;
+			default:
+				res.set(0); return res;
+			}
+		}
+		case VarT.DateTime:
+			res.set(dateTime_ + v.dateTime_.span); return res;
 		default:
 			return res;
 		}
@@ -445,24 +318,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(long_ - v.long_); return res; 
-			case VarT.ULong:
-				res.set(long_ - v.ulong_); return res;
 			case VarT.Double:
 				res.set(long_ - v.double_); return res;
-			default:
-				res.set(0); return res;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				res.set(ulong_ - v.long_); return res; 
-			case VarT.ULong:
-				res.set(ulong_ - v.ulong_); return res; 
-			case VarT.Double:
-				res.set(ulong_ - v.double_); return res;
 			default:
 				res.set(0); return res;
 			}
@@ -473,8 +330,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(double_ - v.long_); return res;
-			case VarT.ULong:
-				res.set(double_ - v.ulong_); return res;
 			case VarT.Double:
 				res.set(double_ - v.double_); return res;
 			default:
@@ -499,24 +354,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(long_ * v.long_); return res; 
-			case VarT.ULong:
-				res.set(long_ * v.ulong_); return res;
 			case VarT.Double:
 				res.set(long_ * v.double_); return res;
-			default:
-				res.set(0); return res;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				res.set(ulong_ * v.long_); return res; 
-			case VarT.ULong:
-				res.set(ulong_ * v.ulong_); return res; 
-			case VarT.Double:
-				res.set(ulong_ * v.double_); return res;
 			default:
 				res.set(0); return res;
 			}
@@ -527,8 +366,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(double_ * v.long_); return res;
-			case VarT.ULong:
-				res.set(double_ * v.ulong_); return res;
 			case VarT.Double:
 				res.set(double_ * v.double_); return res;
 			default:
@@ -551,24 +388,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(long_ / v.long_); return res; 
-			case VarT.ULong:
-				res.set(long_ / v.ulong_); return res;
 			case VarT.Double:
 				res.set(long_ / v.double_); return res;
-			default:
-				res.set(0); return res;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				res.set(ulong_ / v.long_); return res; 
-			case VarT.ULong:
-				res.set(ulong_ / v.ulong_); return res; 
-			case VarT.Double:
-				res.set(ulong_ / v.double_); return res;
 			default:
 				res.set(0); return res;
 			}
@@ -579,8 +400,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(double_ / v.long_); return res;
-			case VarT.ULong:
-				res.set(double_ / v.ulong_); return res;
 			case VarT.Double:
 				res.set(double_ / v.double_); return res;
 			default:
@@ -603,24 +422,8 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(long_ % v.long_); return res; 
-			case VarT.ULong:
-				res.set(long_ % v.ulong_); return res;
 			case VarT.Double:
 				res.set(long_ % v.double_); return res;
-			default:
-				res.set(0); return res;
-			}
-		}
-		case VarT.ULong:
-		{
-			switch(v.type)
-			{
-			case VarT.Long:
-				res.set(ulong_ % v.long_); return res; 
-			case VarT.ULong:
-				res.set(ulong_ % v.ulong_); return res; 
-			case VarT.Double:
-				res.set(ulong_ % v.double_); return res;
 			default:
 				res.set(0); return res;
 			}
@@ -631,8 +434,6 @@ struct VariableBinding
 			{
 			case VarT.Long:
 				res.set(double_ % v.long_); return res;
-			case VarT.ULong:
-				res.set(double_ % v.ulong_); return res;
 			case VarT.Double:
 				res.set(double_ % v.double_); return res;
 			default:
@@ -673,17 +474,6 @@ struct VariableBinding
 	}
 }
 
-template isLongT( T )
-{
-    const bool isLongT = is( T == byte )  ||
-                         is( T == short ) ||
-                         is( T == int )   ||
-                         is( T == long )  ||
-                         is( T == ubyte )  ||
-                         is( T == ushort ) ||
-                         is( T == uint );
-}
-
 template isDoubleT( T )
 {
     const bool isDoubleT = 	is( T == float )  ||
@@ -708,7 +498,6 @@ interface IClassBinding
 
 interface IArrayBinding
 {
-	//void set(void* ptr);
 	int opApply (int delegate (inout VariableBinding val) dg);
 	VariableBinding opIndex(size_t i);
 	size_t length();
@@ -772,89 +561,6 @@ class ArrayVariableBinding(T) : IArrayBinding, IDynArrayBinding
 	size_t length() { return t.length;}
 }
 
-class ArrayIterator : IObjectBinding
-{
-	class ArrayIteratorIncrFunc : IFunctionBinding
-	{
-		VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
-		{
-			++current;
-			return VariableBinding();
-		}
-	}
-	
-	class ArrayIteratorDecrFunc : IFunctionBinding
-	{
-		VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
-		{
-			if(current > 0) --current;
-			return VariableBinding();
-		}
-	}
-	
-	class ArrayIteratorTestFunc : IFunctionBinding
-	{
-		VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
-		{
-			VariableBinding var;
-			if(current >= array.length) var.set(false); 
-			else var.set(true);
-			return var;
-		}
-	}
-	
-	IArrayBinding array;
-	uint current = 0;
-	
-	VariableBinding opIndex(char[] key)
-	{
-		VariableBinding good()
-		{
-			VariableBinding var;
-			if(current >= array.length) var.set(false); 
-			else var.set(true);
-			return var;
-		}
-		
-		switch(key)
-		{
-		case "incr":
-			//var.type = VarT.Function;
-			//var.funcBinding = new ArrayIteratorIncrFunc;
-			++current;
-			return good;
-		case "decr":
-			//var.type = VarT.Function;
-			//var.funcBinding = new ArrayIteratorDecrFunc;
-			--current;
-			return good;
-		case "good":
-			return good;
-		default:
-			if(current < array.length ){
-				auto var = array[current];
-				return var[key];			
-			}
-			return VariableBinding();
-		}
-	}
-	
-	int opApply (int delegate (inout char[] key, inout VariableBinding val) dg)
-	{
-		return 0;
-	}
-	
-	size_t length()
-	{
-		return 0;
-	}
-	
-	void opIndexAssign(inout VariableBinding, char[] key)
-	{
-		debug assert(false);
-	}
-}
-
 class AssocArrayVariableBinding(T) : IObjectBinding, IClassBinding
 {
 	static this()
@@ -908,6 +614,11 @@ class AssocArrayVariableBinding(T) : IObjectBinding, IClassBinding
 	}
 }
 
+interface IVarFilter
+{
+	Var filter(Var v);
+}
+
 struct VarInfo
 {
 	ClassVarT type;
@@ -918,6 +629,7 @@ struct VarInfo
 		IDynArrayBinding arrayBinding;
 	}
 	size_t offset;
+	IVarFilter filter;
 }
 
 ClassVarT getClassVarT(X)()
@@ -1118,9 +830,10 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 		default:
 			debug assert(false, "Unhandled class bind type");
 			var.type = VarT.Null; 
-			return;
+			break;
 		}
 		var.propertyService = varInfo.propertyService;
+//		if(varInfo.filter) { var = varInfo.filter(var); }
 	}
 	
 	VariableBinding opIndex(char[] varName)
@@ -1620,7 +1333,6 @@ struct Expression
 		VarPath var;
 		VarAccess varAccess;
 		FunctionCall func;
-//		deprecated Message textExpr; //TODO deprecate
 		BinaryExpression binaryExpr;
 	}
 	
@@ -1634,10 +1346,6 @@ struct Expression
 			return val;
 		case ExpressionT.FuncCall:
 			return func.exec(ctxt);
-	/*	case ExpressionT.TextExpr:
-			VariableBinding var;
-			var.set(textExpr.exec(ctxt));
-			return var;*/
 		case ExpressionT.Binary:
 			return binaryExpr.exec(ctxt);
 		case ExpressionT.VarAccess:

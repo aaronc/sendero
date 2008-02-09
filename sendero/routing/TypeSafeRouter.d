@@ -145,7 +145,7 @@ struct TypeSafeInstanceRouter(Ret, Req)
 version(Unittest)
 {
 
-import sendero.routing.Request;
+import sendero.http.Request;
 
 alias TypeSafeRouter!(char[], Request) Router;
 	
@@ -173,8 +173,10 @@ class Ctlr
 	
 unittest
 {
-	auto rParams = Request.parse(HttpMethod.Get, "/main", "param=test");
-	assert(Ctlr.route(rParams) == "test");
+	auto rParams = new Request;
+	rParams.parse(HttpMethod.Get, "/main", "param=test");
+	auto res = Ctlr.route(rParams);
+	assert(res== "test", res);
 }
 
 }

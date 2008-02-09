@@ -9,11 +9,11 @@ public import sendero.db.SQLGen;
 
 debug import tango.io.Stdout;
 
-struct StatementContainer
+class StatementContainer
 {
 	static StatementContainer opCall(IPreparedStatement stmt)
 	{
-		StatementContainer cntr;
+		auto cntr = new StatementContainer;
 		cntr.stmt = stmt;
 		return cntr;
 	}
@@ -33,6 +33,10 @@ class TypeVisitor
 	}
 }
 
+/**
+ * Wrapper class for a database prepared statement.
+ * 
+ */
 class Statement
 {
 	this(StatementContainer container)
@@ -42,6 +46,9 @@ class Statement
 	
 	private StatementContainer inst;
 	
+	/**
+	 * Returns the underlying DBI IPreparedStatement instance.
+	 */
 	IPreparedStatement statement()
 	{
 		inst.lastResSignature = null;
