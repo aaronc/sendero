@@ -177,12 +177,16 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		static void importGlobalMsgs(char[] filepath, Locale locale)
 		{
 			auto t = getTemplate(filepath, locale);
-			foreach(id, msg; t.msgs)
-				defaultMsgs[id] = msg;
+			/*foreach(id, msg; t.msgs)
+				defaultMsgs[id] = msg;*/
+			defaultMsgDef = t.msgDef;
 		}
 		
-		static ITemplateNode!(TemplateCtxt)[uint] defaultMsgs;
-		ITemplateNode!(TemplateCtxt)[uint] msgs;
+		//static ITemplateNode!(TemplateCtxt)[uint] defaultMsgs;
+		//ITemplateNode!(TemplateCtxt)[uint] msgs;
+		static MsgDef!(TemplateCtxt) defaultMsgDef;
+		MsgDef!(TemplateCtxt) msgDef;
+		//ITemplateNode!(TemplateCtxt)[uint] msgs;
 		
 		//ISenderoMsgsNode!(TemplateCtxt)[char[]] msgScopes;
 /+		NestedMap!(ISenderoMsgsNode) msgScope;
