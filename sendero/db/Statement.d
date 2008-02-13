@@ -5,7 +5,7 @@ import dbi.PreparedStatement;
 import tango.core.Traits;
 
 public import sendero.util.Reflection;
-public import sendero.db.SQLGen;
+public import sendero.db.SqlGen;
 
 debug import tango.io.Stdout;
 
