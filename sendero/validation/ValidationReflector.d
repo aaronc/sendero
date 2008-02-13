@@ -2,7 +2,7 @@ module sendero.validation.ValidationReflector;
 
 import sendero.validation.Validation;
 import sendero.vm.ExecutionContext;
-
+/+
 class ReflectedTrait
 {
 	char[] property;
@@ -81,4 +81,4 @@ class ValidationReflector : IFunctionBinding
 		
 		return res;
 	}
-}
+}+/

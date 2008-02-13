@@ -206,8 +206,6 @@ class FilterPredicate : IFunctionBinding
 			{
 			case VarT.Long:
 				return var.arrayBinding[pred.long_];
-			case VarT.ULong:
-				return var.arrayBinding[pred.ulong_];
 			default:
 				auto predTest = new PredicateTest(predicate);
 				break;
