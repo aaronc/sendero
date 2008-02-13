@@ -3,6 +3,7 @@ module sendero.validation.ValidationErrors;
 import tango.util.Convert;
 
 public import sendero.msg.Error;
+import sendero.util.Singleton;
 
 abstract class ValidationError : FieldError
 {
@@ -36,6 +37,16 @@ abstract class LengthValidationError : ValidationError
 
 final class MinLengthValidationError : LengthValidationError
 {
+	static MinLengthValidationError[uint] errors;
+	static MinLengthValidationError opCall(uint len)
+	{
+		auto pErr = len in errors;
+		if(pErr) return *pErr;
+		auto err = new MinLengthValidationError(len);
+		errors[len] = err;
+		return err;
+	}
+	
 	this(uint len)
 	{
 		super(len);
@@ -149,7 +160,7 @@ class FormatValidationError : ValidationError
 	}
 }
 
-class EmailFormatValidationError : FormatValidationError
+class EmailValidationError : FormatValidationError
 {
 	this()
 	{

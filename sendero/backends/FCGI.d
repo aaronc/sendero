@@ -33,6 +33,10 @@ import fcgi.Protocol;
 import sendero.backends.Base;
 import sendero.routing.Common;
 
+/**
+ * Sendero backend for FCGI (uses <a href="http://www.dsource.org/projects/fastcgi4d">FastCGI4D</a> 
+ * 
+ */
 class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractBackend!(SessionT, RequestT, ResponseT)
 {
 	this(ResponseT function(RequestT) appMain)
@@ -129,20 +133,20 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 			}
 			catch(Exception ex)
 			{
-				auto stderr = fcgiRequest.stderr;
+				auto stdout = fcgiRequest.stdout;
 				
 				void defaultErrorMsg(Exception ex)
 				{
-					stderr.write("Content-type: text/html\r\n\r\n");		
-					debug stderr.write("Sendero error: " ~ ex.toString);
-					else stderr.write("Error");
+					stdout.write("Content-type: text/html\r\n\r\n");		
+					debug stdout.write("Sendero error: " ~ ex.toString);
+					else stdout.write("Error");
 				}
 				
 				if(errorHandler) {
 					try
 					{
 						auto res = errorHandler();
-						res.render(cast(void delegate(void[]))&stderr.write);
+						res.render(cast(void delegate(void[]))&stdout.write);
 					}
 					catch(Exception ex2)
 					{

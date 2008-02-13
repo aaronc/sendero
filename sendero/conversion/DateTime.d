@@ -11,7 +11,7 @@ class ExactDateTimeConverter : ExactDateTimeParser, IConverter!(DateTime), IConv
 	private this(char[] format, Error error = null)
 	{
 		super(format);
-		if(!error) error = new DateTimeConversionError;
+		if(!error) error = DateTimeConversionError();
 		this.error = error;
 	}
 	private Error error;
@@ -68,13 +68,13 @@ alias ExactDateTimeConverter ExactTimeConverter;
 
 ExactDateTimeConverter ExactDateConverter(char[] format, Error error = null)
 {
-	if(!error) error = new DateConversionError;
+	if(!error) error = DateConversionError();
 	return ExactDateTimeConverter(format, error); 
 }
 
 ExactDateTimeConverter ExactTimeOfDayConverter(char[] format, Error error = null)
 {
-	if(!error) error = new TimeConversionError;
+	if(!error) error = TimeConversionError();
 	return ExactDateTimeConverter(format, error); 
 }
 
@@ -84,6 +84,6 @@ class SplitDateTimeConverter : IConverter!(DateTime)
 	
 	Error convert(Param p, inout DateTime dt)
 	{
-		return new DateTimeConversionError;
+		return DateTimeConversionError();
 	}
 }

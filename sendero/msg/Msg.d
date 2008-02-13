@@ -2,12 +2,12 @@ module sendero.msg.Msg;
 
 import tango.core.Thread;
 
-import sendero.util.collection.NestedMap;
-import sendero.util.collection.SimpleList;
+public import sendero.util.collection.NestedMap;
+public import sendero.util.collection.SimpleList;
 import sendero.core.Memory;
 
-alias NestedMap!(Msg, SessionAllocator) MsgMap;
-alias SimpleList!(Msg, SessionAllocator) MsgList;
+public alias NestedMap!(Msg, SessionAllocator) MsgMap;
+public alias SimpleList!(Msg, SessionAllocator) MsgList;
 
 abstract class Msg
 {
@@ -132,6 +132,13 @@ abstract class Msg
 	{
 		auto map = msgMaps.val;
 		msgMaps.val.merge(msgList);
+		msgMaps.val = map;
+	}
+	
+	static void set(MsgMap msgMap)
+	{
+		auto map = msgMaps.val;
+		msgMaps.val.merge(msgMap);
 		msgMaps.val = map;
 	}
 	

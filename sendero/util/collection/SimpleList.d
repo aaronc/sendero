@@ -39,6 +39,11 @@ struct SimpleList(T, Alloc = DefaultAllocator)
 		return res;
 	}
 	
+	bool empty()
+	{
+		return first is null;
+	}
+	
 	void reset()
 	{
 		first = null;

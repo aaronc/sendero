@@ -19,7 +19,10 @@ version(SenderoBenchmark)
 	import tango.time.StopWatch;
 	
 }
-
+/**
+ * The base class for implementing a backend in Sendero
+ *
+ */
 abstract class AbstractBackend(SessionT, RequestT = Request, ResponseT = Response)
 {
 	static this()
@@ -62,5 +65,8 @@ abstract class AbstractBackend(SessionT, RequestT = Request, ResponseT = Respons
 	protected ResponseT function(RequestT) appMain;
 	protected ResponseT function() errorHandler;
 	
+	/**
+	 * Begins execution of the Sendero application
+	 */
 	abstract void run();
 }

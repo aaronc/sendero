@@ -5,11 +5,10 @@ import tango.util.Convert;
 import tango.group.time;
 import tango.text.Regex;
 
-import sendero.validation.Validations;
-import sendero.msg.Error;
-//import sendero.validation.ValidationResult;
+public import sendero.validation.Validations;
 
 public import sendero.util.Reflection;
+public import sendero.msg.Msg;
 
 class ValidationInfo
 {	
@@ -25,8 +24,6 @@ class ValidationInfo
 
 class ValidationInspector
 {
-	//static ValidationInspector[char[]] registeredValidations;
-	
 	this(void* ptr, FieldInfo[] fields, char[] className)
 	{
 		foreach(f; fields)
@@ -153,6 +150,7 @@ version(Unittest)
 {
 
 import tango.io.Stdout;
+import sendero.msg.Error;
 	
 class Test
 {

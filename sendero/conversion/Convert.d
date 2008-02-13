@@ -1,14 +1,40 @@
 module sendero.conversion.Convert;
 
 import tango.core.Traits;
-import tango.util.Convert;
-import tango.group.time;
-import tango.text.Regex;
+import Integer = tango.text.convert.Integer;
+import Float = tango.text.convert.Float;
 
 import sendero.conversion.IConverter;
+import sendero.conversion.ConversionErrors;
 
+public import sendero.msg.Msg;
 public import sendero.util.Reflection;
 
+import sendero.util.Singleton;
+
+/**
+ * 
+ * Embeds conversion support into a class.
+ * 
+ * Example:
+ * ---
+class Test
+{
+	char[] name;
+	DateTime dateOfBirth;
+	uint id;
+	char[] email;
+	
+	void onConvert(C)(C c)
+	{
+		c.noFilter(email);
+		c(dateOfBirth, ExactDateTimeConverter("MM-dd-yyyy"));
+	}
+	mixin Convert!(Test);
+}
+ * ---
+ * 
+ */
 template Convert(X)
 {
 	static void initConversion(X x)
@@ -54,8 +80,13 @@ class ConversionInspector
 		info.fields = fields;
 		
 		ConversionInfo.registeredConversions[className] = info;
+		
+		this.ptr = ptr;
+		this.className = className;
 	}
 	private uint[void*] ptrMap;
+	private void* ptr;
+	private char[] className;
 	
 	ConversionInfo info;
 	
@@ -70,11 +101,28 @@ class ConversionInspector
 		info.converters[*pi] = cnv;
 	}
 
-	void opCall(T, Cnv)(inout T t, Cnv cnv, char[] paramName = null)
+	void opCall(T)(inout T t, IAbstractConverter cnv = null, char[] paramName = null)
 	{
-		static if(!is(Cnv : IConverter!(T)))
-			static assert(false, "class " ~ Cnv.stringof ~ " must implement the interface IConverter!(" ~ T.stringof ~ ") to be used as a converter for type " ~ T.stringof);
-		add!(T)(t, cnv, paramName);
+		if(cnv is null) {
+			static if(isIntegerType!(T))
+				cnv = IntegerConverter();
+			else static if(isRealType!(T))
+				cnv = FloatConverter();
+			else static if(is(T == bool))
+				cnv = BoolConverter();
+			else throw new Exception("Cannot pass a null converter for type " ~ T.stringof ~ ".  "
+				"Only numeric types and bool can be converted by default. "
+				"For default string conversion use the noFilter method.");
+		}
+		auto cnvt = cast(IConverter!(T))cnv;
+		if(cnvt is null) throw new Exception("You specified a converter for type "
+			~ T.stringof ~ " in class " ~ className ~ " which does not implement the "
+			"IConverter!(" ~ T.stringof ~ ") interface");
+			//throw new Exception("error");
+		//static if(!is(Cnv : IConverter!(T)))
+		//	static assert(false, "class " ~ Cnv.stringof ~ " must implement the interface IConverter!(" ~ T.stringof ~ ") to be used as a converter for type " ~ T.stringof);
+		
+		add!(T)(t, cnvt, paramName);
 	}
 	
 	void noFilter(inout char[] t, char[] paramName = null)
@@ -102,7 +150,6 @@ scope class ConverterInstance
 		auto pCnv = index in info.converters;
 		if(pCnv)
 		{
-			debug Stdout("index")(index).newline;
 			auto converter = cast(IConverter!(T))pCnv.converter;
 			debug assert(converter);
 			auto pp = pCnv.paramName in params;
@@ -140,12 +187,7 @@ class Converter(X)
 
 class NoFilter : IConverter!(char[])
 {
-	static NoFilter opCall()
-	{
-		if(!inst) inst = new NoFilter;
-		return inst;
-	}
-	private static NoFilter inst;
+	mixin Singleton!(NoFilter);
 	
 	private this() {}
 	
@@ -155,6 +197,80 @@ class NoFilter : IConverter!(char[])
 		t = p.val;
 		return null;
 	}
+}
+
+class BoolConverter : IConverter!(bool)
+{
+	mixin Singleton!(NoFilter);
+	
+	private this() {}
+	
+	Error convert(Param p, inout bool t)
+	{
+		if(p.type != ParamT.Value) {
+			t = false;
+			return null;
+		}
+		if(p.val == "false") t = false;
+		else t = true;
+		return null;
+	}
+}
+
+class IntegerConverter : IConverter!(ubyte), IConverter!(byte),
+						 IConverter!(ushort), IConverter!(short),
+						 IConverter!(uint), IConverter!(int),
+						 IConverter!(ulong), IConverter!(long)
+{
+	mixin Singleton!(IntegerConverter);
+	
+	private this() {
+		error = IntegerConversionError();
+	}
+	private Error error;
+	
+	template IntConvert(char[] Int) {
+		const char[] IntConvert =
+		"Error convert(Param p, inout " ~ Int ~ " t)"
+		"{"
+			"if(p.type != ParamT.Value) return null;"
+			"t = Integer.parse(p.val);"
+			"return error;"
+		"}";
+	}
+	
+	mixin(IntConvert!("ubyte"));
+	mixin(IntConvert!("byte"));
+	mixin(IntConvert!("ushort"));
+	mixin(IntConvert!("short"));
+	mixin(IntConvert!("uint"));
+	mixin(IntConvert!("int"));
+	mixin(IntConvert!("ulong"));
+	mixin(IntConvert!("long"));
+}
+
+class FloatConverter : IConverter!(float), IConverter!(double), IConverter!(real)
+{
+	mixin Singleton!(FloatConverter);
+
+	private this() {
+		error = NumberConversionError();
+	}
+	private Error error;
+
+	template FloatConvert(char[] Float) {
+		const char[] FloatConvert =
+		"Error convert(Param p, inout " ~ Float ~ " t)"
+		"{"
+			"if(p.type != ParamT.Value) return null;"
+			"t = Float.parse(p.val);"
+			"return error;"
+		"}";
+	}
+
+	mixin(FloatConvert!("float"));
+	mixin(FloatConvert!("double"));
+	mixin(FloatConvert!("real"));
 }
 
 version(Unittest)

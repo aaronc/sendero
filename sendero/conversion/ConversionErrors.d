@@ -2,6 +2,8 @@ module sendero.conversion.ConversionErrors;
 
 public import sendero.msg.Error;
 
+import sendero.util.Singleton;
+
 abstract class ConversionError : FieldError
 {
 	
@@ -14,7 +16,9 @@ abstract class FilterError : FieldError
 
 class TimeConversionError : ConversionError
 {
-	this()
+	mixin Singleton!(TimeConversionError);
+	
+	private this()
 	{
 		register("TimeFormat");
 	}
@@ -22,7 +26,9 @@ class TimeConversionError : ConversionError
 
 class DateConversionError : ConversionError
 {
-	this()
+	mixin Singleton!(DateConversionError);
+	
+	private this()
 	{
 		register("DateFormat");
 	}
@@ -30,7 +36,9 @@ class DateConversionError : ConversionError
 
 class DateTimeConversionError : ConversionError
 {
-	this()
+	mixin Singleton!(DateTimeConversionError);
+	
+	private this()
 	{
 		register("DateTimeFormat");
 	}
@@ -38,7 +46,9 @@ class DateTimeConversionError : ConversionError
 
 class NumberConversionError : ConversionError
 {
-	this()
+	mixin Singleton!(NumberConversionError);
+	
+	private this()
 	{
 		register("NumberFormat");
 	}
@@ -46,8 +56,11 @@ class NumberConversionError : ConversionError
 
 class IntegerConversionError : NumberConversionError
 {
-	this()
+	mixin Singleton!(IntegerConversionError);
+	
+	private this()
 	{
+		super();
 		register("IntegerFormat");
 	}
 }

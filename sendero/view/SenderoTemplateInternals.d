@@ -189,11 +189,11 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		//ITemplateNode!(TemplateCtxt)[uint] msgs;
 		
 		//ISenderoMsgsNode!(TemplateCtxt)[char[]] msgScopes;
-/+		NestedMap!(ISenderoMsgsNode) msgScope;
+/+		NestedMap!(ISenderoMsgsNode) msgScopes;
 		
 		void routeMsgs(MsgMap msgMap)
 		{
-			auto sItr = msgScope.getIterator;
+			auto sItr = msgScopes.getIterator;
 			auto mItr =  msgMap.getIterator;
 			
 			while(sItr() && mItr()) {
@@ -680,7 +680,7 @@ class SenderoChooseNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templ
 					if(!getAttr(child, "val", val))
 						continue;
 					
-					SenderoChooseNode!(TemplateCtxt).Choice choice;
+					Choice!(TemplateCtxt) choice;
 					
 					choice.val = parseChoiceLiteral(val);
 					choice.node = TemplateContainerNode!(TemplateCtxt).createFromChildren(child, tmpl, childProcessor);
@@ -692,7 +692,7 @@ class SenderoChooseNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templ
 					choose.otherwise = TemplateContainerNode!(TemplateCtxt).createFromChildren(child, tmpl, childProcessor);
 				}
 			}
-		}		
+		}
 		
 		return choose;
 	}
@@ -721,6 +721,12 @@ Var parseChoiceLiteral(char[] txt)
 	}
 }
 
+struct Choice(TemplateCtxt)
+{
+	ITemplateNode!(TemplateCtxt) node;
+	Var val;
+}
+
 class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {
 	this(Expression expr)
@@ -730,12 +736,7 @@ class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	Expression expr;
 	
-	struct Choice
-	{
-		ITemplateNode!(TemplateCtxt) node;
-		Var val;
-	}
-	Choice[] choices;
+	Choice!(TemplateCtxt)[] choices;
 	ITemplateNode!(TemplateCtxt) otherwise;
 	
 	void render(TemplateCtxt ctxt, Consumer consumer)
@@ -786,7 +787,7 @@ class SenderoIfNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateC
 		{
 			if(getAttr(node, "test", e))
 			{
-				SenderoIfNode!(TemplateCtxt).Elif elif;
+				Elif!(TemplateCtxt) elif;
 				parseExpression(e, elif.expr, tmpl.functionCtxt);
 				elif.node = TemplateContainerNode!(TemplateCtxt).createFromChildren(node, tmpl, childProcessor);
 				ifNode.elifs ~= elif;
@@ -827,6 +828,12 @@ bool templateBool(Var var)
 	}
 }
 
+private struct Elif(TemplateCtxt)
+{
+	ITemplateNode!(TemplateCtxt) node;
+	Expression expr;
+}
+
 class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 {
 	this(Expression expr)
@@ -835,12 +842,8 @@ class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 	}
 	Expression expr;
 	
-	struct Elif
-	{
-		ITemplateNode!(TemplateCtxt) node;
-		Expression expr;
-	}
-	Elif[] elifs;
+	
+	Elif!(TemplateCtxt)[] elifs;
 	ITemplateNode!(TemplateCtxt) otherwise;
 	
 	void render(TemplateCtxt ctxt, Consumer consumer)

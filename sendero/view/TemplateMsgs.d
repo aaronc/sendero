@@ -220,7 +220,7 @@ class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 		
 		char[] name;
 		if(!getAttr(node, "name", name))
-			return null;
+			name = "Error";
 		
 		auto container = new SenderoMsgNode!(TemplateCtxt)(name, cls);
 		foreach(child; node.children)

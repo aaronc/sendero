@@ -37,41 +37,7 @@ bool saveToFile(T)(T t, char[] filename)
 	return true;
 }
 
-/**
- *  
- * Each class that is to be serialized should define the following templated public method:
- * 
- * void serialize(Ar)(Ar ar, byte ver)
- * {
- * 	ar (a) (b) (c);
- * }
- * 
- * where a, b, and c are data members to be serialized.
- * 
- * Serialization of polymorphic classes and interfaces:
- * Each polymorphic class that is to be serialized should register itself in its static constructor
- * as follows:
- * 
- * static this()
- * {
- * 	Serialization.register!(T)();
- * }
- * 
- * Where T is the identifier of the class.
- * 
- * The following method should also be defined for each class in the class hierarchy and should return
- * a unique string representing this class (the .mangleof property is a good choice for this value):
- * 
- * char[] classid();
- * 
- * The serialization method will then need to call the parent class's serialization method.
- * void serialize(Ar)(Ar ar, byte ver)
- * {
- * 	super.serialize(ar, ver);
- * }
- *  
- * 
- */
+
 
 interface IHandler
 {
@@ -79,6 +45,50 @@ interface IHandler
 	void handle(Object o, SimpleBinaryInArchiver ar, byte ver);
 	void handle(Object o, SimpleBinaryOutArchiver ar, byte ver);
 }
+
+/**
+ *  
+ * Each class that is to be serialized should define the following templated public method:
+ * 
+ * ---
+ * void serialize(Ar)(Ar ar, byte ver)
+ * {
+ * 	ar (a) (b) (c);
+ * }
+ * ---
+ * 
+ * where a, b, and c are data members to be serialized.
+ * 
+ * Serialization of polymorphic classes and interfaces:
+ * Each polymorphic class that is to be serialized should register itself in its static constructor
+ * as follows:
+ * 
+ * ---
+ * static this()
+ * {
+ * 	Serialization.register!(T)();
+ * }
+ * ---
+ * 
+ * Where T is the identifier of the class.
+ * 
+ * The following method should also be defined for each class in the class hierarchy and should return
+ * a unique string representing this class (the .mangleof property is a good choice for this value):
+ * 
+ * ---
+ * char[] classid();
+ * ---
+ * 
+ * The serialization method will then need to call the parent class's serialization method.
+ * ---
+ * void serialize(Ar)(Ar ar, byte ver)
+ * {
+ * 	super.serialize(ar, ver);
+ * }
+ * ---
+ *  
+ * 
+ */
 
 class Serialization
 {

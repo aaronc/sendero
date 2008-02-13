@@ -64,7 +64,6 @@ void convertParam(T, Req)(inout T val, Param param)
 		}
 		else {
 			val = param.val;
-			return;
 		}
 	}
 	else static if(is(T == bool))
@@ -86,11 +85,11 @@ void convertParam(T, Req)(inout T val, Param param)
 /+	else static if(is(typeof(Convert!(T))))
 	{
 		
-	}
+	}+/
 	else static if(is(T == DateTime) || is(T == Time))
 	{
-		
-	}+/
+		static assert(false, "Routing system cannot convert type " ~ T.stringof ~ " without specifying a converter.");
+	}
 	else static if(is(T == class) || is(T == struct))
 	{
 		if(param.obj.length == 0) {
@@ -103,7 +102,8 @@ void convertParam(T, Req)(inout T val, Param param)
 		
 		static if(is(typeof(T.convert)))
 		{
-			Msg.post(val.convert(param.obj));
+			auto res = val.convert(param.obj);
+			Msg.post(T.stringof, res);
 		}
 		else
 		{
@@ -168,6 +168,8 @@ void convertParam(T, Req)(inout T val, Param param)
 		sendero.util.Convert.fromString(param.val, val);
 	}+/
 	else static assert(false, "Unhandled conversion type " ~ T.stringof);
+	
+	return true;
 }
 
 template ConvertParam(char[] n) {
@@ -175,12 +177,25 @@ template ConvertParam(char[] n) {
 		"pParam = paramNames[" ~ n ~ "- offset] in params;"
 		"debug Stdout(paramNames[" ~ n ~ "- offset]).newline;"
 		"if(pParam) {"
-			"convertParam!(P[" ~ n ~ "], Req)(p[" ~ n ~ "], *pParam);"
+			"static if((is(P[" ~ n ~ "] == class) || is(P[" ~ n ~ "] == struct)) && is(typeof(P[" ~ n ~ "].convert))) {"
+					"doClassConvert!(P[" ~ n ~ "])(pParam.obj, p[" ~ n ~ "], paramNames[" ~ n ~ "- offset]);"
+				"}"
+			"else {"
+				"convertParam!(P[" ~ n ~ "], Req)(p[" ~ n ~ "], *pParam);"
+			"}"
 		"}"
 		"else p[" ~ n ~ "] = P[" ~ n ~ "].init;"
 	"}";
 }
 
+void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
+{
+	static if(is(T == class))
+		t = new T;
+	auto res = t.convert(params);
+	if(!res.empty) Msg.post(name, res);
+}
+	
 void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 {
 	debug Stdout("Start conversion:")(paramNames)(" ")(P.stringof).newline;
@@ -199,12 +214,14 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 		}
 		else
 		{
-			debug Stdout(paramNames[0]).newline;
 			pParam = paramNames[0] in params;
 			if(pParam) {
-				debug Stdout(pParam.val).newline;
-				convertParam!(P[0], Req)(p[0], *pParam);
-				debug Stdout(p[0]).newline;
+				static if((is(P[0] == class) || is(P[0] == struct)) && is(typeof(P[0].convert))) {
+					doClassConvert!(P[0])(pParam.obj, p[0], paramNames[0]);
+				}
+				else {
+					convertParam!(P[0], Req)(p[0], *pParam);
+				}
 			}
 			else p[0] = P[0].init;
 		}

@@ -232,6 +232,11 @@ struct NestedMap(T, Alloc = DefaultAllocator)
 		itr.cur = first;
 		return itr;
 	}
+	
+	bool empty()
+	{
+		return first is null && list.empty;
+	}
 }
 
 version(Unittest)

@@ -1,12 +1,14 @@
 module sendero.validation.Validations;
 
-import sendero.validation.ValidationErrors;
+public import sendero.validation.ValidationErrors;
 
 import tango.text.Regex;
 import tango.core.Traits;
 import tango.group.time;
 
 debug import tango.util.Convert;
+
+import sendero.util.Singleton;
 
 abstract class AbstractValidation
 {
@@ -122,36 +124,28 @@ class FormatValidation : Validation!(char[])
 	private Regex regex;
 	char[] testRegex;
 	
-	bool validate(char[] t) { return regex.test(t) != 0; }	
+	bool validate(char[] t) { return regex.test(t) != 0; }
 }
 
 class UrlFormatValidation : FormatValidation
-{
-	static this()
-	{
-		urlFormatError = new UrlFormatValidationError;
-	}
-	private static UrlFormatValidationError urlFormatError;
+{	
+	mixin Singleton!(UrlFormatValidation);
 	
 	this()
 	{
 		super(tango.text.Regex.url);
-		error = urlFormatError;
+		error = new UrlFormatValidationError;
 	}
 }
 
-class EmailFormatValidation : FormatValidation
+class EmailValidation : FormatValidation
 {
-	static this()
-	{
-		emailFormatError = new EmailFormatValidationError;
-	}
-	private static EmailFormatValidationError emailFormatError;
+	mixin Singleton!(EmailValidation);
 	
-	this()
+	private this()
 	{
 		super("[A-Za-z0-9_\\-]+@([A-Za-z0-9_\\-]+\\.)+[A-Za-z]+");
-		error = emailFormatError;
+		error = new EmailValidationError;
 	}
 }
 
