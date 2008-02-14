@@ -181,7 +181,7 @@ class Filter
 {
 	void exec(ExecutionContext ctxt)
 	{
-		
+		assert(false, "TODO not implemented");
 	}
 }
 
@@ -212,7 +212,7 @@ class FilterPredicate : IFunctionBinding
 			}
 			break;
 		case VarT.Node:
-			
+			assert(false, "TODO not implemented");
 		default:
 			return Var();
 		}
