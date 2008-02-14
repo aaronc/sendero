@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007-2008 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.util.WebServices;
 
 import tango.net.Uri;
@@ -87,6 +92,7 @@ class RESTHelper
 	{
 		auto query = createQueryString(url, queryParams);
 		scope client = new HttpClient(HttpClient.Get, query);
+		client.open;
 		client.read(consume);
 		delete query;
 	}

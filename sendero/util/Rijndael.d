@@ -1,3 +1,7 @@
+/*
+ * Public Domain
+ */
+
 module sendero.util.Rijndael;
 
 /**

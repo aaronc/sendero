@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007-2008 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.util.Serialization;
 
 import tango.io.protocol.Writer, tango.io.protocol.Reader;

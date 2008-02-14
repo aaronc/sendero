@@ -1,3 +1,8 @@
+/** 
+ * Copyright: Copyright (C) 2007-2008 Aaron Craelius.  All rights reserved.
+ * Authors:   Aaron Craelius
+ */
+
 module sendero.msg.Msg;
 
 import tango.core.Thread;
