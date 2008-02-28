@@ -1,0 +1,71 @@
+module sendero.time.LocalTime;
+
+import tango.time.Time;
+import sendero.time.data.ZoneInfo;
+
+struct DateTimeZ
+{
+    public Date		date;       /// date representation
+    public TimeOfDay	time;       /// time representation
+    public TimeZone	zone;	    /// offset from UTC
+}
+
+struct LocalTime
+{
+	public Time utc;
+	public TimeZone zone;
+}
+
+struct TimeZone
+{
+	private uint idx;
+
+	/+bool setByID(char[] id)
+	{
+		
+	}+/
+
+	/+char[] id()
+	{
+		
+	}+/
+	
+	bool setByName(char[] name)
+	{
+		return false;
+	}
+	
+	
+	char[] name()
+	{
+		return zones[idx].name;	
+	}
+
+	Time toLocal(Time utc)
+	{
+		return zones[idx].toLocal(utc);
+	}
+
+	Time toUtc(Time local)
+	{
+		return zones[idx].toUtc(local);
+	}
+	
+	/*
+
+	private struct TZImpl
+	{
+		char[] id;
+		char[] name;
+		TimeSpan offset;
+		TimeSpan dstOffset;
+		char[] format;
+		char[] dstFormat;
+		
+	}
+
+	static const TZImpl[] zones;
+	*/
+}
+
+alias TimeZone LocalClock;
