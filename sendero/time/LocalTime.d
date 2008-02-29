@@ -24,6 +24,11 @@ struct LocalTime
 	{
 		return zone.getOffsetViaUtc(utc);
 	}
+
+	char[] format()
+	{
+		return zone.format(utc);
+	}
 }
 
 version(Unittest)

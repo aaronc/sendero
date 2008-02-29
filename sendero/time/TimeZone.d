@@ -53,6 +53,11 @@ struct TimeZone
 	{
 		return zones[idx].calcOffsetViaUtc(local);
 	}
+
+	char[] format(Time utc)
+	{
+		return zones[idx].format(utc);
+	}
 }
 
 alias TimeZone LocalClock;
@@ -86,6 +91,8 @@ unittest
 		span = tz.getOffsetViaUtc(time);
 	hrs = span.hours;
 	assert(hrs == -7, to!(char[])(hrs));
+
+	assert(tz.format(time) == "PDT", tz.format(time));
 
 }
 }

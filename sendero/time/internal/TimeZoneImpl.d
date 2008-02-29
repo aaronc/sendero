@@ -62,6 +62,17 @@ struct ZoneImpl
 
 		return rules[ruleIdx].calcDSTOffsetViaLocal(local, offset) + offset;
 	}
+
+	char[] format(Time utc)
+	{
+		if(ruleIdx < 0)
+			return stdFormat;
+
+		if(rules[ruleIdx].calcDSTOffsetViaUtc(utc, offset).ticks) {
+			return dstFormat;
+		}
+		else return stdFormat;
+	}
 }
 
 struct OnRule
