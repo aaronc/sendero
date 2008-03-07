@@ -12,6 +12,12 @@ import tango.io.GrowBuffer;
 
 import sendero.time.internal.TimeZoneImpl;
 
+/*
+* This script should be ran against the data in the zoneinfo database.  The URL at time
+* of writing is ftp://elsie.nci.nih.gov/pub/tzdata2007k.tar.gz for the data and the URL for
+* zoneinfo is http://www.twinsun.com/tz/tz-link.htm.
+*/
+
 char[] header = `
 module sendero.time.data.ZoneInfo;
 
