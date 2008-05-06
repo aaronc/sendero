@@ -131,7 +131,7 @@ class FormatValidation : Validation!(char[])
 	
 	bool validate(char[] t) { return regex.test(t) != 0; }
 }
-
+/+
 class UrlFormatValidation : FormatValidation
 {	
 	mixin Singleton!(UrlFormatValidation);
@@ -141,7 +141,7 @@ class UrlFormatValidation : FormatValidation
 		super(tango.text.Regex.url);
 		error = new UrlFormatValidationError;
 	}
-}
+}+/
 
 class EmailValidation : FormatValidation
 {
