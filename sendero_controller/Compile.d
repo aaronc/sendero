@@ -21,7 +21,7 @@ struct GenParams
 {
 	char[] resType = "char[]";
 	char[] reqType = "Request";
-	char[] addImport = "import sendero.routing.Request;";
+	char[] addImport = "import sendero.http.Request;";
 }
 
 const char[] sccVer = "0.0.1";
