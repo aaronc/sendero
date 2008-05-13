@@ -157,9 +157,11 @@ package struct XmlCharIterator(Ch)
                     if (l < tmp) 
                        {
                        point += l;
-                       return true;
+                       //return true;
+                       return point;
                        }
-                    return false;
+                    //return false;
+                    throw new Exception("malformed XML");
             }
         }
         

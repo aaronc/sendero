@@ -283,7 +283,7 @@ class SenderoDataNodeProc(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt
 			return new SenderoDataNode!(TemplateCtxt)(msg);
 		}
 		else {
-			return new TemplateDataNode!(TemplateCtxt)(msg.msg);
+			return new TemplateDataNode!(TemplateCtxt)(node.value);
 		}
 	}
 }
