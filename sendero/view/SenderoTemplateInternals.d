@@ -238,7 +238,7 @@ class SenderoElemProcessor(TemplateCtxt, Template) : DefaultElemProcessor!(Templ
 	
 	protected ITemplateNode!(TemplateCtxt) processAttr(XmlNode attr, Template tmpl)
 	{
-		auto msg = parseMessage(attr.value, tmpl.functionCtxt);
+		auto msg = parseMessage(attr.rawValue, tmpl.functionCtxt);
 		if(msg.params.length) {
 			return new SenderoAttributeNode!(TemplateCtxt)(attr.prefix, attr.localName, msg);
 		}
@@ -278,12 +278,12 @@ class SenderoDataNodeProc(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt
 		if(node.type != XmlNodeType.Data)
 			return new TemplateDataNode!(TemplateCtxt)(null);
 		
-		auto msg = parseMessage(node.value, tmpl.functionCtxt);
+		auto msg = parseMessage(node.rawValue, tmpl.functionCtxt);
 		if(msg.params.length) {
 			return new SenderoDataNode!(TemplateCtxt)(msg);
 		}
 		else {
-			return new TemplateDataNode!(TemplateCtxt)(node.value);
+			return new TemplateDataNode!(TemplateCtxt)(node.rawValue);
 		}
 	}
 }
@@ -487,7 +487,7 @@ class SenderoBlockNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templa
 		if(attr.type != XmlNodeType.Attribute)
 			return new TemplateDataNode!(TemplateCtxt)(null);
 		
-		auto name = attr.value;
+		auto name = attr.rawValue;
 		auto block = new SenderoBlockContainer!(TemplateCtxt)(name);
 		auto blockAction = new SenderoBlockAction!(TemplateCtxt)(name);
 		

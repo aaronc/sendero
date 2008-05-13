@@ -311,7 +311,7 @@ bool getAttr(XmlNode node, char[] attrLocalName, inout char[] attrValue)
 	{
 		if(attr.localName == attrLocalName)
 		{
-			attrValue = attr.value;
+			attrValue = attr.rawValue;
 			return true;
 		}
 	}

@@ -337,6 +337,7 @@ class XmlParser(Ch = char)
                                localName = p [0 .. q - p];
                                }
                             type = XmlTokenType.StartElement;
+                            text.eatSpace;
                             return true;
                        }
 
@@ -346,14 +347,14 @@ class XmlParser(Ch = char)
         final bool next()
         {      
                 auto p = text.point;
-                if (*p <= 32) 
+                /+if (*p <= 32) 
                    {
                    do {
                       if (++p >= text.end)                                      
                           return doEndOfStream();
                       } while (*p <= 32);
                    text.point = p;
-                   }
+                   }+/
                 
                 if (type >= XmlTokenType.EndElement) 
                     return doMain;
@@ -384,7 +385,10 @@ class XmlParser(Ch = char)
     			case '\'':
     				q = text.forwardLocate(p, quote);	
     				rawValue = p[0 .. q - p];
-    				text.point = q + 1; //Skip end quote    				return true;
+    				text.point = q + 1; //Skip end quote
+    				
+    				text.eatSpace;
+    				    				return true;
 
     			default: 
     				return doUnexpected("\' or \"");

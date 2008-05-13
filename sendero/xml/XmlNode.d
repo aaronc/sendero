@@ -5,9 +5,8 @@
 
 module sendero.xml.XmlNode;
 
-//public import sendero.xml.XmlNodeType;
-public import tango.text.xml.PullParser;
-import sendero.xml.XmlEntities;
+public import sendero.xml.XmlNodeType;
+import sendero.xml.XmlParser;
 
 class XmlNode
 {
@@ -520,8 +519,7 @@ const char[] xmlnsURI = "http://www.w3.org/2000/xmlns/";
 
 XmlNode parseXmlTree(char[] xml)
 {
-	//auto itr = new XmlParser!(char)(xml);
-	auto itr = new PullParser!(char);
+	auto itr = new XmlParser!(char)(xml);
 	itr.reset(xml);
 	auto doc = new XmlNode;
 	doc.type = XmlNodeType.Document;
@@ -636,7 +634,6 @@ XmlNode parseXmlTree(char[] xml)
 			node.rawValue = itr.rawValue;
 			cur.append(node);
 			break;
-		case XmlTokenType.Done:
 		default:
 			break;
 		}
@@ -707,11 +704,6 @@ char[] print(XmlNode root)
 
 version(Unittest)
 {
-	const char[] testXML = "<?xml version=\"1.0\" ?><!DOCTYPE element [ <!ELEMENT element (#PCDATA)>]><element "
-	    "attr=\"1\" attr2=\"two\"><!--comment-->test&amp;&#x5a;<qual:elem /><el2 attr3 = "
-	    "'3three'><![CDATA[sdlgjsh]]><el3 />data<?pi test?></el2></element>";
-
-	
 	void benchmarkSenderoNodeParser (int iterations, char[] filename = "othello.xml") 
 	{       
 	        uint i;
@@ -743,7 +735,7 @@ version(Unittest)
 	import tango.time.StopWatch;
 	unittest
 	{
-		auto doc = parseXmlTree(testXML);
+		//auto doc = parseXmlTree(testXML);
 		//Stdout(print(doc)).newline;
 		//benchmarkSenderoNodeParser(100, "hamlet.xml");
 	}
