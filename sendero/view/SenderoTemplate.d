@@ -40,11 +40,14 @@ class SenderoTemplate : AbstractSenderoTemplate!(SenderoTemplateContext, Sendero
 	
 }
 
-version(Unittest)
+version(SenderoUnittest)
 {
 	import tango.io.Stdout;
 	import tango.group.time;
 	import sendero.msg.Error;
+	
+	import tango.io.File;
+	import qcf.Regression;
 	
 	static class Name
 	{
@@ -52,6 +55,14 @@ version(Unittest)
 		char[] first;
 		char[] last;
 		DateTime date;
+	}
+	
+	void test(char[] testName)
+	{
+		auto tmpl = SenderoTemplate.get("test/template/" ~ testName ~ ".html", "en-US");
+		assert(templ, testName);
+		scope f = new File("test/template/" ~ testName ~ "_data.json");
+		assert(f, testName);
 	}
 	
 	
