@@ -5,9 +5,9 @@
 
 module sendero.xml.XmlEntities;
 
-import sendero.util.Unicode;
-import sendero.util.StringCharIterator;
-import sendero.util.ArrayWriter;
+import sendero_base.util.Unicode;
+import sendero_base.util.StringCharIterator;
+import sendero_base.util.ArrayWriter;
 
 import Integer = tango.text.convert.Integer;
 import Unicode = tango.text.convert.Utf;

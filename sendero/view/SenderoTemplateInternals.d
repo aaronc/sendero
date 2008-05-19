@@ -9,8 +9,8 @@ import sendero.view.TemplateEngine;
 import sendero.xml.XmlNode;
 import sendero.vm.ExecutionContext;
 import sendero.vm.LocalText;
-import sendero.util.StringCharIterator;
-import sendero.util.ArrayWriter;
+import sendero_base.util.StringCharIterator;
+import sendero_base.util.ArrayWriter;
 import sendero.util.collection.NestedMap;
 import sendero.Exception;
 

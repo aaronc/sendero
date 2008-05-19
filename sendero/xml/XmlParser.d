@@ -8,8 +8,8 @@
 module sendero.xml.XmlParser;
 
 public import sendero.xml.XmlEntities;
-import sendero.util.StringCharIterator;
-import sendero.util.ArrayWriter;
+import sendero_base.util.StringCharIterator;
+import sendero_base.util.ArrayWriter;
 import sendero.xml.XmlCharIterator;
 
 enum XmlTokenType {StartElement, Attribute, EndElement, EndEmptyElement, Data, Comment, CData, Doctype, PI, None};

@@ -7,7 +7,7 @@ module sendero.view.SenderoTemplate;
 
 import sendero.view.SenderoTemplateInternals;
 import sendero.vm.ExecutionContext;
-import sendero.util.ArrayWriter;
+import sendero_base.util.ArrayWriter;
 //alias AbstractSenderoTemplateContext!(ExecutionContext, AbstractSenderoTemplateContext) SenderoTemplateContext;
 //alias AbstractSenderoTemplate!(ExecutionContext, SenderoTemplateContext) SenderoTemplate;
 

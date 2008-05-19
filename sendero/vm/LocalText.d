@@ -7,7 +7,7 @@ module sendero.vm.LocalText;
 
 import sendero.vm.ExecutionContext;
 //import sendero.util.FunctionBindingContext;
-import sendero.util.StringCharIterator;
+import sendero_base.util.StringCharIterator;
 
 version(ICU) {
 	public import mango.icu.ULocale;

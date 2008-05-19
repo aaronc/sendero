@@ -5,7 +5,7 @@
 
 module sendero.http.UrlStack;
 
-import sendero.util.collection.Stack;
+import sendero_base.util.collection.Stack;
 
 import Util = tango.text.Util;
 

@@ -13,9 +13,9 @@ import tango.io.FileScan;
 import Integer = tango.text.convert.Integer;
 import Util = tango.text.Util;
 
-import sendero.util.StringCharIterator;
-import sendero.util.ArrayWriter;
-import sendero.util.collection.Stack;
+import sendero_base.util.StringCharIterator;
+import sendero_base.util.ArrayWriter;
+import sendero_base.util.collection.Stack;
 
 struct GenParams
 {
