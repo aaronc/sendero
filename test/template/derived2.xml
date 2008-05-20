@@ -1,0 +1,6 @@
+<d:extends href="derivedtemplate.xml">
+<d:block name="x">derived2
+<d:super />
+</d:block>
+<d:block name="z">z-derived2</>
+</d:extends>

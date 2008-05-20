@@ -1,0 +1,8 @@
+<d:extends href="basetemplate.xml">
+<d:block name="x">derived
+<d:super />
+</d:block>
+<d:block name="y">derived y block
+<d:super />
+</d:block>
+</d:extends>

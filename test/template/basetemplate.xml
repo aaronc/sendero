@@ -1,0 +1,16 @@
+<html><div>Hello
+<d:msgs>
+<d:msg cls="Error">There was an error.</>
+</>
+<p d:block="x">base</p>
+<p d:block="y">
+Person's Name:
+<d:choose expr="$name">
+<d:when val="dave">David</d:when>
+<d:when val="bob">Robert</d:when>
+<d:when val="alice">Alice In Wonderland</d:when>
+<d:otherwise>I don't know who then?!?</d:otherwise>
+</d:choose>
+</p>
+<span d:block="z">_{$name}</span>
+</div></html>
