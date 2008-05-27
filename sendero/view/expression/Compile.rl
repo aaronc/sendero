@@ -21,14 +21,14 @@ start:(
 	[0-9]  @do_start_id -> number |
 	"]" -> end_index_step |
 	")" -> start |
+	"." @do_dot_step -> start |
+	"[" @do_index_step -> start |
+	"(" @do_function_call -> start |
 	space+ -> start
 ),
 identifier: (
 	[a-zA-Z_0-9] -> identifier |
-	"." @do_end_id @do_dot_step -> start |
-	"[" @do_end_id @do_index_step -> start |
-	"(" @do_end_id @do_function_call -> start |
-	[^a-zA-Z_0-9\.[(] @do_end_id @{fhold;} -> start
+	[^a-zA-Z_0-9] @do_end_id @{fhold;} -> start
 ),
 end_index_step: (
 	"(" @do_function_call -> start |
