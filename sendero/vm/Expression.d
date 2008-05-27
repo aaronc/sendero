@@ -68,17 +68,17 @@ class FunctionCall : Expression
 
 class BinaryOp(char[] op) : BinaryExpression
 {
-	this(Expression e1, Expression e2)
+	this(Expression lhs, Expression rhs)
 	{
-		super(e1, e2);
+		super(lhs, rhs);
 	}
 	
 	static assert((op == "+") || (op == "-") || (op == "/") || (op == "*") || (op == "%"));
 	
 	Var opCall(IObject ctxt)
 	{
-		auto v1 = e1(ctxt);
-		auto v2 = e2(ctxt);
+		auto v1 = lhs(ctxt);
+		auto v2 = rhs(ctxt);
 		
 		if(v1.type != VarT.Number && v2.type != VarT.Number)
 			return Var();
@@ -95,17 +95,17 @@ class BinaryOp(char[] op) : BinaryExpression
 
 class EqOp(char[] op) : BinaryExpression
 {
-	this(Expression e1, Expression e2)
+	this(Expression lhs, Expression rhs)
 	{
-		super(e1, e2);
+		super(lhs, rhs);
 	}
 	
 	static assert((op == "==") || (op == "!="));
 	
 	Var opCall(IObject ctxt)
 	{
-		auto v1 = e1(ctxt);
-		auto v2 = e2(ctxt);
+		auto v1 = lhs(ctxt);
+		auto v2 = rhs(ctxt);
 		Var res;
 		res.type = VarT.Bool;
 		switch(v1.type)
@@ -144,17 +144,17 @@ class EqOp(char[] op) : BinaryExpression
 
 class CmpOp(char[] op) : BinaryExpression
 {
-	this(Expression e1, Expression e2)
+	this(Expression lhs, Expression rhs)
 	{
-		super(e1, e2);
+		super(lhs, rhs);
 	}
 	
 	static assert((op == "<") || (op == "<=") || (op == ">=") || (op == ">"));
 	
 	Var opCall(IObject ctxt)
 	{
-		auto v1 = e1(ctxt);
-		auto v2 = e2(ctxt);
+		auto v1 = lhs(ctxt);
+		auto v2 = rhs(ctxt);
 		Var res;
 		res.type = VarT.Bool;
 		switch(v1.type)
@@ -185,14 +185,14 @@ class CmpOp(char[] op) : BinaryExpression
 
 abstract class BinaryExpression : Expression
 {
-	this(Expression e1, Expression e2)
+	this(Expression lhs, Expression rhs)
 	{
-		this.e1 = e1;
-		this.e2 = e2;
+		this.lhs = lhs;
+		this.rhs = rhs;
 	}
 	
-	Expression e1;
-	Expression e2;
+	Expression lhs;
+	Expression rhs;
 }
 
 class VarAccess : Expression

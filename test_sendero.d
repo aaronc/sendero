@@ -1,6 +1,7 @@
 //import sendero.view.SenderoTemplate;
 
 import sendero.vm.Expression;
+import sendero.vm.Expression2;
 import sendero.vm.Set;
 import sendero.vm.Object;
 import sendero.vm.Array;

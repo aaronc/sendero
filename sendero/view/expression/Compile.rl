@@ -82,13 +82,6 @@ action do_close_paren {
 		}
 }
 
-action do_space {
-	/+if(fsm.cur.state) {
-		fsm.exprStack.push(fsm.cur);
-		fsm.cur.state = State.None;
-		debug Stdout("Found space").newline;
-	}+/
-}
 
 action do_add {
 	
@@ -126,7 +119,7 @@ start:(
 	
 	"/*" -> c_comment |
 	
-	space+ @do_space -> start
+	space+ -> start
 ),
 
 identifier: (
@@ -246,3 +239,34 @@ unittest
 }
 
 }
+
+/+
+
++ -
+* /
+
+5 + 7 * 3 / 7 + 1
+
+lhs mhs rhs
+if(lhs) {
+	if(lhs.op.precedence < cur.precendence) {
+		*pRhs = curAtom;
+		lhs = new BinaryExpression(cur)(lhs, null);
+		pRhs = &lhs.rhs;
+	}
+	else {
+		if(pRhs.op.precendence < cur.precedence) {
+			*pRhs = new BinaryExpression(curAtom, null);
+		}
+		else {
+			pRhs = &lhs.rhs.rhs;
+		}
+	}
+}
+else {
+	lhs = new BinaryExpression(curAtom, null);
+	pRhs = &lhs.rhs;
+}
+
+
++/
