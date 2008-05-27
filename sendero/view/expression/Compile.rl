@@ -14,6 +14,16 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
+interface ExprBuilder
+{
+	Expression end();
+}
+
+class BinaryBuilder : ExprBuilder
+{
+	Expression end() { return null; }
+}
+
 %%{
 machine sendero_view_compile;
 
@@ -73,11 +83,15 @@ action do_close_paren {
 }
 
 action do_space {
-	if(fsm.cur.state) {
+	/+if(fsm.cur.state) {
 		fsm.exprStack.push(fsm.cur);
 		fsm.cur.state = State.None;
 		debug Stdout("Found space").newline;
-	}
+	}+/
+}
+
+action do_add {
+	
 }
 
 Expression = 
@@ -106,6 +120,12 @@ start:(
 	"=>" -> start |
 	">" -> start |
 	
+	["] -> dquote_str |
+	['] -> squote_str |
+	[`] -> backtick_str |
+	
+	"/*" -> c_comment |
+	
 	space+ @do_space -> start
 ),
 
@@ -128,8 +148,32 @@ end_call: (
 number: (
 	[0-9\.] -> number |
 	[^0-9\.] @do_end_number @{fhold;} -> start
+),
+
+dquote_str: (
+	[^\\"] -> dquote_str |
+	[\\] @{ ++fpc; } -> dquote_str |
+	["] -> start
+	
 )
 
+squote_str: (
+	[^\\'] -> squote_str |
+	[\\] @{ ++fpc; } -> squote_str |
+	['] -> start
+	
+)
+
+backtick_str: (
+	[^`] -> backtick_str |
+	[`] -> start
+	
+),
+
+c_comment: (
+	"*/" -> start |
+	any - "*/" -> c_comment	
+)
 ;
 
 main := Expression;
@@ -185,7 +229,9 @@ debug(SenderoUnittest)
 
 unittest
 {
-	parse("test.one[test2]  test3(param1) test4[step](param2)[5] ");
+	parse("x + y");
+
+	parse("test.one[test2]  test3(param1) /*a comment*/ test4[step](param2)[5]['a str'] ");
 	
 	bool caught = false;
 	try
