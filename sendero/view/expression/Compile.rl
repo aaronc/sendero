@@ -9,6 +9,8 @@ access fsm.;
 
 action do_start_id {fsm.tokenStart = fpc;}
 action do_end_id {Stdout(fsm.tokenStart[0 .. fpc - fsm.tokenStart]);}
+action do_access_step { Stdout("Found access step.").newline; }
+
 action emit { Stdout(fc); }
 
 Identifier = [a-zA-Z_][a-zA-Z_0-9]*;
@@ -32,7 +34,7 @@ start:(
 ),
 identifier: (
 	[a-zA-Z_0-9] -> identifier |
-	[.] @do_end_id -> start |
+	[.] @do_access_step @do_end_id -> start |
 	[^a-zA-Z_0-9\.] @do_end_id -> start
 );
 
