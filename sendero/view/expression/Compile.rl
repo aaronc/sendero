@@ -8,37 +8,37 @@ machine sendero_view_compile;
 access fsm.;
 
 action do_start_id {fsm.tokenStart = fpc;}
-action do_end_id {Stdout(fsm.tokenStart[0 .. fpc - fsm.tokenStart]);}
-action do_access_step { Stdout("Found access step.").newline; }
+action do_end_id {Stdout.formatln("Found identifier: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]); }
+action do_dot_step { Stdout("Found dot step").newline; }
+action do_index_step { Stdout("Found index step").newline; }
+action do_function_call { Stdout("Found function call").newline; }
 
-action emit { Stdout(fc); }
-
-Identifier = [a-zA-Z_][a-zA-Z_0-9]*;
-
-AccessStep = ('.' Identifier);
-
-##OpIndex = '[' Expression ']';
-
-VarAccess = Identifier AccessStep*;
-
-Whitespace = space*;
-
-Operator = '+';
-Atom = VarAccess;
+num_char = [0-9.];
 
 Expression = 
 start:(
-	##Identifier >start_id %end_id -> start |
 	[a-zA-Z_] @do_start_id -> identifier |
-	Whitespace -> start
+	[0-9]  @do_start_id -> number |
+	"]" -> end_index_step |
+	")" -> start |
+	space+ -> start
 ),
 identifier: (
 	[a-zA-Z_0-9] -> identifier |
-	[.] @do_access_step @do_end_id -> start |
-	[^a-zA-Z_0-9\.] @do_end_id -> start
-);
-
-##Atom (Whitespace Atom)*;
+	"." @do_end_id @do_dot_step -> start |
+	"[" @do_end_id @do_index_step -> start |
+	"(" @do_end_id @do_function_call -> start |
+	[^a-zA-Z_0-9\.[(] @do_end_id @{fhold;} -> start
+),
+end_index_step: (
+	"(" @do_function_call -> start |
+	[^(] -> start
+),
+number: (
+	num_char @do_end_id -> number |
+	any -- num_char -> start
+)
+;
 
 main := Expression;
 	
@@ -70,7 +70,7 @@ debug(SenderoUnittest)
 
 unittest
 {
-	parse("test one test ");
+	parse("test.one[test2] test3(param1) test4[step](param2)[5] ");
 }
 
 }

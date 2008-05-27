@@ -3,56 +3,59 @@ module sendero.view.expression.Compile;
 
 import tango.io.Stdout;
 
-#line 44 "sendero/view/expression/Compile.rl"
+#line 46 "sendero/view/expression/Compile.rl"
 
 
 
 #line 9 "sendero/view/expression/Compile.d"
 static const byte[] _sendero_view_compile_actions = [
-	0, 1, 0, 1, 1
+	0, 1, 0, 1, 4, 2, 1, 2, 
+	2, 1, 3, 2, 1, 4, 2, 1, 
+	5
 ];
 
 static const byte[] _sendero_view_compile_key_offsets = [
-	0, 0, 8
+	0, 0, 12, 15, 15, 25
 ];
 
 static const char[] _sendero_view_compile_trans_keys = [
-	32u, 95u, 9u, 13u, 65u, 90u, 97u, 122u, 
-	95u, 48u, 57u, 65u, 90u, 97u, 122u, 0
+	32u, 41u, 93u, 95u, 9u, 13u, 48u, 57u, 
+	65u, 90u, 97u, 122u, 46u, 48u, 57u, 40u, 
+	46u, 91u, 95u, 48u, 57u, 65u, 90u, 97u, 
+	122u, 40u, 0
 ];
 
 static const byte[] _sendero_view_compile_single_lengths = [
-	0, 2, 1
+	0, 4, 1, 0, 4, 1
 ];
 
 static const byte[] _sendero_view_compile_range_lengths = [
-	0, 3, 3
+	0, 4, 1, 0, 3, 0
 ];
 
 static const byte[] _sendero_view_compile_index_offsets = [
-	0, 0, 6
-];
-
-static const byte[] _sendero_view_compile_indicies = [
-	0, 2, 0, 2, 2, 1, 4, 4, 
-	4, 4, 3, 0
+	0, 0, 9, 12, 13, 21
 ];
 
 static const byte[] _sendero_view_compile_trans_targs = [
-	1, 0, 2, 1, 2
+	1, 1, 5, 4, 1, 2, 4, 4, 
+	0, 0, 0, 3, 0, 1, 1, 1, 
+	4, 4, 4, 4, 1, 1, 1, 0
 ];
 
 static const byte[] _sendero_view_compile_trans_actions = [
-	0, 0, 1, 3, 0
+	0, 0, 0, 1, 0, 1, 1, 1, 
+	0, 0, 0, 0, 0, 11, 5, 8, 
+	0, 0, 0, 0, 14, 3, 0, 0
 ];
 
 static const int sendero_view_compile_start = 1;
-static const int sendero_view_compile_first_final = 3;
+static const int sendero_view_compile_first_final = 6;
 static const int sendero_view_compile_error = 0;
 
 static const int sendero_view_compile_en_main = 1;
 
-#line 47 "sendero/view/expression/Compile.rl"
+#line 49 "sendero/view/expression/Compile.rl"
 
 class Fsm
 {
@@ -69,13 +72,13 @@ void parse(char[] src)
 	char* pe = p + src.length + 1;
 	char* eof = pe;
 	
-#line 69 "sendero/view/expression/Compile.d"
+#line 72 "sendero/view/expression/Compile.d"
 	{
 	 fsm.cs = sendero_view_compile_start;
 	}
-#line 63 "sendero/view/expression/Compile.rl"
+#line 65 "sendero/view/expression/Compile.rl"
 	
-#line 73 "sendero/view/expression/Compile.d"
+#line 76 "sendero/view/expression/Compile.d"
 	{
 	int _klen;
 	uint _trans;
@@ -137,7 +140,6 @@ _resume:
 	}
 
 _match:
-	_trans = _sendero_view_compile_indicies[_trans];
 	 fsm.cs = _sendero_view_compile_trans_targs[_trans];
 
 	if ( _sendero_view_compile_trans_actions[_trans] == 0 )
@@ -155,9 +157,25 @@ _match:
 	break;
 	case 1:
 #line 11 "sendero/view/expression/Compile.rl"
-	{Stdout(fsm.tokenStart[0 .. p - fsm.tokenStart]);}
+	{Stdout.formatln("Found identifier: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]); }
 	break;
-#line 152 "sendero/view/expression/Compile.d"
+	case 2:
+#line 12 "sendero/view/expression/Compile.rl"
+	{ Stdout("Found dot step").newline; }
+	break;
+	case 3:
+#line 13 "sendero/view/expression/Compile.rl"
+	{ Stdout("Found index step").newline; }
+	break;
+	case 4:
+#line 14 "sendero/view/expression/Compile.rl"
+	{ Stdout("Found function call").newline; }
+	break;
+	case 5:
+#line 31 "sendero/view/expression/Compile.rl"
+	{p--;}
+	break;
+#line 166 "sendero/view/expression/Compile.d"
 		default: break;
 		}
 	}
@@ -170,7 +188,7 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 64 "sendero/view/expression/Compile.rl"
+#line 66 "sendero/view/expression/Compile.rl"
 }
 
 debug(SenderoUnittest)
@@ -178,7 +196,7 @@ debug(SenderoUnittest)
 
 unittest
 {
-	parse("test one test ");
+	parse("test.one[test2] test3(param1) test4[step](param2)[5] ");
 }
 
 }
