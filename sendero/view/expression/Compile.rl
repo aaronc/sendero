@@ -73,9 +73,11 @@ action do_close_paren {
 }
 
 action do_space {
-	debug Stdout("Found space").newline;
-	fsm.exprStack.push(fsm.cur);
-	fsm.cur.state = State.None;
+	if(fsm.cur.state) {
+		fsm.exprStack.push(fsm.cur);
+		fsm.cur.state = State.None;
+		debug Stdout("Found space").newline;
+	}
 }
 
 Expression = 
@@ -104,7 +106,7 @@ start:(
 	"=>" -> start |
 	">" -> start |
 	
-	[\n\r\t ] -> eat_space
+	space+ @do_space -> start
 ),
 
 identifier: (
@@ -126,11 +128,6 @@ end_call: (
 number: (
 	[0-9\.] -> number |
 	[^0-9\.] @do_end_number @{fhold;} -> start
-)
-
-eat_space: (
-	[\n\r\t ] -> eat_space |
-	[^\n\r\t ] @do_space @{fhold;} -> start
 )
 
 ;
