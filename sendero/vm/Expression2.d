@@ -3,21 +3,33 @@ module sendero.vm.Expression2;
 import sendero_base.Core;
 import sendero_base.util.collection.Stack;
 
+const ubyte[13] precedence = [
+  0, 0, 0, 1, 1,
+  2, 2, 2, 2, 3,
+  3, 4, 4
+];
+
+
 struct Op {
 	enum {
-		Add,
-		Sub,
 		Div,
 		Mul,
 		Mod,
 		
-		Eq,
-		NotEq,
+		Add,
+		Sub,
 		
 		Lt,
 		LtEq,
 		GtEq,
 		Gt,
+		
+		Eq,
+		NotEq,
+		
+		And,
+		
+		Or,
 		
 		Neg,
 		Not,

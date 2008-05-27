@@ -1,7 +1,7 @@
 module sendero.view.expression.Compile;
 
 import sendero_base.Core;
-import sendero.vm.Expression;
+import sendero.vm.Expression2;
 
 import sendero_base.util.collection.Stack;
 import Integer = tango.text.convert.Integer;
@@ -14,16 +14,6 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
-interface ExprBuilder
-{
-	Expression end();
-}
-
-class BinaryBuilder : ExprBuilder
-{
-	Expression end() { return null; }
-}
-
 %%{
 machine sendero_view_compile;
 
@@ -32,60 +22,58 @@ access fsm.;
 action do_start_token {fsm.tokenStart = fpc;}
 
 action do_end_id {
-	auto token = fsm.tokenStart[0 .. fpc - fsm.tokenStart];
+	Op op;
+	op.key = fsm.tokenStart[0 .. fpc - fsm.tokenStart];
 	
-	debug Stdout.formatln("Found identifier: {}", token);
+	if(fsm.opSt.empty || fsm.opSt.top != OpT.Dot) {
+		op.op = Op.Root;
+	}
+	else {
+		op.op = Op.Key;
+	}
+	fsm.expr ~= op;
 	
-	Var var;
-	var.type = VarT.String;
-	var.string_ = token;
-	auto step = new Literal(var);
+	fsm.opSt.pop;
 	
-	switch(fsm.cur.state)
-	{
-	case State.Access:
-		fsm.cur.acc.accessSteps ~= step;
-		break;
-	case State.None:
-		fsm.cur.state = State.Access;
-		fsm.cur.acc = new VarAccess;
-		fsm.cur.acc.accessSteps ~= step;
-		break;
-	default:
-		error(`Unexpected identifier "` ~ token ~ `"`);
-		break;
-	}		
+	debug Stdout.formatln("Found identifier: {}", op.key);
 }
 
 action do_end_number { Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]); }
 
 action do_dot_step {
- 	if(fsm.cur.state != State.Access)
- 		error(`Unexpected token "."`);
+	fsm.opSt.push(OpT.Dot);
 	debug Stdout("Found dot step").newline;
 }
 action do_index_step { Stdout("Found index step").newline; }
-action do_function_call { fsm.parenExpr = Fsm.ParenExpr.Func; Stdout("Found function call").newline; }
+action do_function_call {
+	fsm.opSt.push(OpT.Paren);
+	Stdout("Found function call").newline;
+}
 
-action do_open_paren { fsm.parenExpr = Fsm.ParenExpr.Expr; }
+action do_open_paren {
+	fsm.opSt.push(OpT.Paren);
+}
 action do_close_paren {
-		auto paren = fsm.parenExpr;
-		fsm.parenExpr = Fsm.ParenExpr.None;
-		switch(paren)
-		{
-		case Fsm.ParenExpr.Expr:
-		case Fsm.ParenExpr.Func:
-			fgoto end_call;
-		default:
-			error("Missing opening parentheses");
-			break;
-		}
+	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
+		fsm.expr ~= Op(fsm.opSt.top);
+		fsm.opSt.pop;
+	}
+	fgoto end_call;
 }
 
-
-action do_add {
-	
+action do_comma {
+	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
+		fsm.expr ~= Op(fsm.opSt.top);
+		fsm.opSt.pop;
+	}
 }
+
+action do_add {	doOp(fsm, OpT.Add); }
+action do_sub {	doOp(fsm, OpT.Sub); }
+
+action do_mul {	doOp(fsm, OpT.Mul); }
+action do_div {	doOp(fsm, OpT.Div); }
+action do_mod {	doOp(fsm, OpT.Mod); }
 
 Expression = 
 start:(
@@ -98,20 +86,24 @@ start:(
 	
 	")" @do_close_paren |
 	
-	"," -> start |
+	"," @do_comma -> start |
 	
-	"+" -> start |
-	"-" -> start |
-	"/" -> start |
-	"*" -> start |
-	"%" -> start |
+	"+" @do_add -> start |
+	"-" @do_sub -> start |
+	"/" @do_div -> start |
+	"*" @do_mul -> start |
+	"%" @do_mod -> start |
 	
-	"==" -> start |
-	"!=" -> start |
 	"<" -> start |
 	"<=" -> start |
 	"=>" -> start |
 	">" -> start |
+	
+	"==" -> start |
+	"!=" -> start |
+	
+	"&&" -> start |
+	"||" -> start |
 	
 	["] -> dquote_str |
 	['] -> squote_str |
@@ -176,7 +168,7 @@ main := Expression;
 
 %% write data;
 
-
+/+
 struct ExprState
 {
 	enum { None = 0, Access, Binary };
@@ -189,22 +181,53 @@ struct ExprState
 	}
 }
 alias ExprState State;
++/
+
+enum OpT {
+	Add = Op.Add,
+	Sub = Op.Sub,
+	Mul = Op.Mul,
+	Div = Op.Div,
+	Mod = Op.Mod,
+	
+	//ExprParen,
+	//FuncParen,
+	Paren,
+	Dot,
+	Index
+};
+
+void doOp(Fsm fsm, OpT op)
+{
+	if(!fsm.opSt.empty && fsm.opSt.top <= precedence.length) {
+		if(precedence[fsm.opSt.top] < precedence[op]) {
+			fsm.opSt.push(OpT.Add);
+		}
+		else {
+			fsm.expr ~= Op(fsm.opSt.top);
+			fsm.opSt.pop;
+			fsm.opSt.push(op);
+		} 
+	}
+	else fsm.opSt.push(op);
+}
+
 
 class Fsm
 {
 	this()
 	{
-		exprStack = new Stack!(ExprState);
+		opStack = new Stack!(OpT);
 	}
 
 	int cs = 0;
 	int* stack;
 	int top;
 	char* tokenStart;
-	enum ParenExpr { None, Expr, Func }; 
-	ParenExpr parenExpr;
-	ExprState cur;
-	Stack!(ExprState) exprStack;
+	
+	Expr expr;
+	Stack!(OpT) opStack;
+	alias opStack opSt;
 }
 
 void parse(char[] src)
@@ -235,7 +258,9 @@ unittest
 	{
 		caught = true;
 	}
-	assert(caught);
+//	assert(caught);
+
+	
 }
 
 }
