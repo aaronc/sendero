@@ -18,21 +18,21 @@ void set(X)(inout Var var, X val)
 		var.type = VarT.String;
 		var.string_ = val;
 	}
-/+	else static if(is(X : IObject)) {
+	else static if(is(X : IObject)) {
 		var.type = VarT.Object;
 		var.obj_ = val;
 	}
 	else static if(is(X : IArray)) {
 		var.type = VarT.Array;
 		var.array_ = val;
-	}+/
+	}
 	else static if(is(X : Time))
 	{
 		var.type = VarT.Time;
 		var.time_ = val;
 	}
 	else {
-		static assert(false, "Unable to bind variable of type " ~ T.stringof);
+		static assert(false, "Unable to bind variable of type " ~ X.stringof);
 	}
 }
 
@@ -62,15 +62,16 @@ unittest
 	assert(v.type == VarT.String);
 	assert(v.string_ == "Hello");
 	
-	/+auto obj = new Obj;
+	auto obj = (new Obj).add("x", 3);
 	set(v, obj);
 	assert(v.type == VarT.Object);
-	assert(cast(void*)(v.obj_) == cast(void*)obj);
+	assert(v.obj_["x"].type == VarT.Number && v.obj_["x"].number_ == 3);
 	
 	auto arr = new Array;
+	arr ~= v;
 	set(v, arr);
 	assert(v.type == VarT.Array);
-	assert(cast(void*)(v.array_) == cast(void*)arr);+/
+	assert(v.array_[0].type == VarT.Object);
 	
 	auto now = Clock.now;
 	set(v, now);
