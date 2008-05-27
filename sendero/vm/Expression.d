@@ -197,6 +197,11 @@ abstract class BinaryExpression : Expression
 
 class VarAccess : Expression
 {
+	this()
+	{
+		
+	}
+	
 	this(Expression[] accessSteps)
 	{
 		this.accessSteps = accessSteps;
