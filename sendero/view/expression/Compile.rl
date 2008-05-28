@@ -19,7 +19,10 @@ machine sendero_view_compile;
 
 access fsm.;
 
+action emit { Stdout(fc).newline; }
+
 action do_start_token {fsm.tokenStart = fpc;}
+action do_start_string {fsm.tokenStart = fpc + 1;}
 
 action do_end_id {
 	Op op;
@@ -38,7 +41,14 @@ action do_end_id {
 	debug Stdout.formatln("Found identifier: {}", op.key);
 }
 
-action do_end_number { Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]); }
+action do_end_number {
+	Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]);
+}
+
+action do_end_string {
+	Stdout.formatln("Found string: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]);
+}
+
 
 action do_dot_step {
 	fsm.opSt.push(OpT.Dot);
@@ -58,7 +68,7 @@ action do_close_paren {
 		fsm.expr ~= Op(fsm.opSt.top);
 		fsm.opSt.pop;
 	}
-	fgoto end_call;
+	//fgoto end_call;
 }
 
 action do_comma {
@@ -75,22 +85,40 @@ action do_mul {	doOp(fsm, OpT.Mul); }
 action do_div {	doOp(fsm, OpT.Div); }
 action do_mod {	doOp(fsm, OpT.Mod); }
 
+c_comment = ( any )* :>> '*/' @{ debug Stdout("Found comment.").newline; };
+
 Expression = 
+		
 start:(
 	[a-zA-Z_] @do_start_token -> identifier |
 	[0-9] @do_start_token -> number |
 	
 	"(" @do_open_paren -> start |
 	
+	["] @do_start_string -> dquote_str |
+	['] @do_start_string -> squote_str |
+	[`] @do_start_string -> backtick_str |
+	
+	'/*' c_comment -> start |
+	
+	space+ -> start
+),
+
+div: (
+	"*" c_comment -> operator |
+	[^*] @do_div @{ fhold; } -> start
+)
+
+operator: (
 	"]" -> end_call |
 	
-	")" @do_close_paren |
+	")" @do_close_paren -> end_call |
 	
 	"," @do_comma -> start |
 	
 	"+" @do_add -> start |
 	"-" @do_sub -> start |
-	"/" @do_div -> start |
+	"/"  -> div |
 	"*" @do_mul -> start |
 	"%" @do_mod -> start |
 	
@@ -105,13 +133,7 @@ start:(
 	"&&" -> start |
 	"||" -> start |
 	
-	["] -> dquote_str |
-	['] -> squote_str |
-	[`] -> backtick_str |
-	
-	"/*" -> c_comment |
-	
-	space+ -> start
+	space+ -> operator
 ),
 
 identifier: (
@@ -127,37 +149,32 @@ end_call: (
 	
 	"(" @do_function_call -> start |
 	
-	[^\.[(] @{fhold;} -> start
+	[^\.[(] @{fhold;} -> operator
 ),
 
 number: (
 	[0-9\.] -> number |
-	[^0-9\.] @do_end_number @{fhold;} -> start
+	[^0-9\.] @do_end_number @{fhold;} -> operator
 ),
 
 dquote_str: (
-	[^\\"] -> dquote_str |
+	[^"\\] -> dquote_str |
 	[\\] @{ ++fpc; } -> dquote_str |
-	["] -> start
-	
-)
-
-squote_str: (
-	[^\\'] -> squote_str |
-	[\\] @{ ++fpc; } -> squote_str |
-	['] -> start
-	
-)
-
-backtick_str: (
-	[^`] -> backtick_str |
-	[`] -> start
+	["] @do_end_string -> operator
 	
 ),
 
-c_comment: (
-	"*/" -> start |
-	any - "*/" -> c_comment	
+squote_str: (
+	[^\'\\] -> squote_str |
+	[\\] @{ ++fpc; } -> squote_str |
+	['] @do_end_string -> operator
+	
+),
+
+backtick_str: (
+	[^`] -> backtick_str |
+	[`] @do_end_string -> operator
+	
 )
 ;
 
@@ -199,6 +216,7 @@ enum OpT {
 
 void doOp(Fsm fsm, OpT op)
 {
+	debug Stdout.formatln("Found operator: {}", op);
 	if(!fsm.opSt.empty && fsm.opSt.top <= precedence.length) {
 		if(precedence[fsm.opSt.top] < precedence[op]) {
 			fsm.opSt.push(OpT.Add);
@@ -246,8 +264,16 @@ debug(SenderoUnittest)
 unittest
 {
 	parse("x + y");
-
-	parse("test.one[test2]  test3(param1) /*a comment*/ test4[step](param2)[5]['a str'] ");
+	
+	Stdout.newline;
+	
+	parse("test.one[/* a comment */ test2] + test3(param1) /*another comment*/ - test4[step](param2)[5]['a str'] ");
+	
+	Stdout.newline;
+	
+	parse("`test1` + \"test \\\"2\" + 'test3'");
+	
+	Stdout.newline;
 	
 	bool caught = false;
 	try

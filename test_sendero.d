@@ -7,6 +7,7 @@ import sendero.vm.Object;
 import sendero.vm.Array;
 import sendero.view.expression.Lex;
 import sendero.view.expression.Compile;
+import sendero.util.Hash;
 
 import qcf.TestRunner;
 
