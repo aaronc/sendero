@@ -42,7 +42,13 @@ action do_end_id {
 }
 
 action do_end_number {
-	Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. fpc - fsm.tokenStart]);
+	auto token = fsm.tokenStart[0 .. fpc - fsm.tokenStart];
+	Op op;
+	op.op = Op.Val;
+	op.val.type = VarT.Number;
+	op.val.number_ = Float.parse(token);
+	fsm.expr.instructions ~= op;
+	Stdout.formatln("Found number: {}", token);
 }
 
 action do_end_string {
@@ -218,16 +224,22 @@ void doOp(Fsm fsm, OpT op)
 {
 	debug Stdout.formatln("Found operator: {}", op);
 	if(!fsm.opSt.empty && fsm.opSt.top <= precedence.length) {
-		if(precedence[fsm.opSt.top] < precedence[op]) {
-			fsm.opSt.push(OpT.Add);
+		if(precedence[fsm.opSt.top] > precedence[op]) {
+			debug Stdout.formatln("Pushing to stack {}", op);
+			fsm.opSt.push(op);
 		}
 		else {
+			debug Stdout.formatln("Pushing to instructions {}", fsm.opSt.top);
 			fsm.expr ~= Op(fsm.opSt.top);
 			fsm.opSt.pop;
+			debug Stdout.formatln("Pushing to stack {}", op);
 			fsm.opSt.push(op);
 		} 
 	}
-	else fsm.opSt.push(op);
+	else {
+		debug Stdout.formatln("Pushing to stack {}", op);
+		fsm.opSt.push(op);
+	}
 }
 
 
@@ -248,39 +260,70 @@ class Fsm
 	alias opStack opSt;
 }
 
-size_t parse(char[] src)
+
+struct Parser
 {
-	auto fsm = new Fsm;
-	char* p = src.ptr;
-	char* pe = p + src.length + 1;
-	char* eof = pe;
-	%% write init;
-	%% write exec;
+	size_t parsed;
 	
-	return p - src.ptr;
+	Expr parse(char[] src)
+	{
+		auto fsm = new Fsm;
+	
+		char* p = src.ptr;
+		char* pe = p + src.length + 1;
+		char* eof = pe;
+		%% write init;
+		%% write exec;
+		
+		parsed = p - src.ptr;
+		
+		while(!fsm.opSt.empty) {
+			auto op = fsm.opSt.top;
+			fsm.opSt.pop;
+			if(op >= precedence.length)
+				throw new Exception("Ivalid operator on stack");
+			debug Stdout.formatln("Pushing to instructions {}", op);
+			fsm.expr ~= Op(op);
+		}
+		
+		return fsm.expr;
+	}
 }
 
 debug(SenderoUnittest)
 {
 
+import sendero.vm.Object;
+
+void test(char[] src, real expected)
+{
+	Parser p;
+	auto expr = p.parse(src);
+	auto ctxt = new Obj;
+	auto res = expr.exec(ctxt);
+	assert(res.type == VarT.Number && res.number_ - expected < 1e-6, src ~ " " ~ Float.toString(res.number_));
+}
+
 unittest
 {
-	parse("x + y");
+	Parser p;
+
+	p.parse("x + y");
 	
 	Stdout.newline;
 	
-	parse("test.one[/* a comment */ test2] + test3(param1) /*another comment*/ - test4[step](param2)[5]['a str'] ");
+	p.parse("test.one[/* a comment */ test2] + test3(param1) /*another comment*/ - test4[step](param2)[5]['a str'] ");
 	
 	Stdout.newline;
 	
-	parse("`test1` + \"test \\\"2\" + 'test3'");
+	p.parse("`test1` + \"test \\\"2\" + 'test3'");
 	
 	Stdout.newline;
 	
 	bool caught = false;
 	try
 	{
-		parse(" test)");
+		p.parse(" test)");
 	}
 	catch(Exception ex)
 	{
@@ -288,7 +331,14 @@ unittest
 	}
 //	assert(caught);
 
-	assert(parse("test; STRING") == 4);
+	p.parse("test; STRING");
+
+	assert(p.parsed == 4);
+
+	test("4 + 5", 9);
+	test("8/2", 4);
+	test("1/2 + 2", 2.5);
+	test("1/4 * 3 - 8 / 2 * 7", 21);
 }
 
 }

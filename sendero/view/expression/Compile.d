@@ -15,7 +15,7 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
-#line 184 "sendero/view/expression/Compile.rl"
+#line 190 "sendero/view/expression/Compile.rl"
 
 
 
@@ -114,7 +114,7 @@ static const int sendero_view_compile_error = 0;
 
 static const int sendero_view_compile_en_main = 1;
 
-#line 187 "sendero/view/expression/Compile.rl"
+#line 193 "sendero/view/expression/Compile.rl"
 
 /+
 struct ExprState
@@ -149,16 +149,22 @@ void doOp(Fsm fsm, OpT op)
 {
 	debug Stdout.formatln("Found operator: {}", op);
 	if(!fsm.opSt.empty && fsm.opSt.top <= precedence.length) {
-		if(precedence[fsm.opSt.top] < precedence[op]) {
-			fsm.opSt.push(OpT.Add);
+		if(precedence[fsm.opSt.top] > precedence[op]) {
+			debug Stdout.formatln("Pushing to stack {}", op);
+			fsm.opSt.push(op);
 		}
 		else {
+			debug Stdout.formatln("Pushing to instructions {}", fsm.opSt.top);
 			fsm.expr ~= Op(fsm.opSt.top);
 			fsm.opSt.pop;
+			debug Stdout.formatln("Pushing to stack {}", op);
 			fsm.opSt.push(op);
 		} 
 	}
-	else fsm.opSt.push(op);
+	else {
+		debug Stdout.formatln("Pushing to stack {}", op);
+		fsm.opSt.push(op);
+	}
 }
 
 
@@ -179,20 +185,26 @@ class Fsm
 	alias opStack opSt;
 }
 
-size_t parse(char[] src)
+
+struct Parser
 {
-	auto fsm = new Fsm;
-	char* p = src.ptr;
-	char* pe = p + src.length + 1;
-	char* eof = pe;
+	size_t parsed;
 	
-#line 186 "sendero/view/expression/Compile.d"
+	Expr parse(char[] src)
+	{
+		auto fsm = new Fsm;
+	
+		char* p = src.ptr;
+		char* pe = p + src.length + 1;
+		char* eof = pe;
+		
+#line 198 "sendero/view/expression/Compile.d"
 	{
 	 fsm.cs = sendero_view_compile_start;
 	}
-#line 258 "sendero/view/expression/Compile.rl"
-	
-#line 190 "sendero/view/expression/Compile.d"
+#line 276 "sendero/view/expression/Compile.rl"
+		
+#line 202 "sendero/view/expression/Compile.d"
 	{
 	int _klen;
 	uint _trans;
@@ -296,41 +308,47 @@ _match:
 	case 3:
 #line 44 "sendero/view/expression/Compile.rl"
 	{
-	Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]);
+	auto token = fsm.tokenStart[0 .. p - fsm.tokenStart];
+	Op op;
+	op.op = Op.Val;
+	op.val.type = VarT.Number;
+	op.val.number_ = Float.parse(token);
+	fsm.expr.instructions ~= op;
+	Stdout.formatln("Found number: {}", token);
 }
 	break;
 	case 4:
-#line 48 "sendero/view/expression/Compile.rl"
+#line 54 "sendero/view/expression/Compile.rl"
 	{
 	Stdout.formatln("Found string: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]);
 }
 	break;
 	case 5:
-#line 53 "sendero/view/expression/Compile.rl"
+#line 59 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Dot);
 	debug Stdout("Found dot step").newline;
 }
 	break;
 	case 6:
-#line 57 "sendero/view/expression/Compile.rl"
+#line 63 "sendero/view/expression/Compile.rl"
 	{ Stdout("Found index step").newline; }
 	break;
 	case 7:
-#line 58 "sendero/view/expression/Compile.rl"
+#line 64 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Paren);
 	Stdout("Found function call").newline;
 }
 	break;
 	case 8:
-#line 63 "sendero/view/expression/Compile.rl"
+#line 69 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Paren);
 }
 	break;
 	case 9:
-#line 66 "sendero/view/expression/Compile.rl"
+#line 72 "sendero/view/expression/Compile.rl"
 	{
 	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
 		fsm.expr ~= Op(fsm.opSt.top);
@@ -340,7 +358,7 @@ _match:
 }
 	break;
 	case 10:
-#line 74 "sendero/view/expression/Compile.rl"
+#line 80 "sendero/view/expression/Compile.rl"
 	{
 	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
 		fsm.expr ~= Op(fsm.opSt.top);
@@ -349,54 +367,54 @@ _match:
 }
 	break;
 	case 11:
-#line 81 "sendero/view/expression/Compile.rl"
+#line 87 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Add); }
 	break;
 	case 12:
-#line 82 "sendero/view/expression/Compile.rl"
+#line 88 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Sub); }
 	break;
 	case 13:
-#line 84 "sendero/view/expression/Compile.rl"
+#line 90 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Mul); }
 	break;
 	case 14:
-#line 85 "sendero/view/expression/Compile.rl"
+#line 91 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Div); }
 	break;
 	case 15:
-#line 86 "sendero/view/expression/Compile.rl"
+#line 92 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Mod); }
 	break;
 	case 16:
-#line 88 "sendero/view/expression/Compile.rl"
+#line 94 "sendero/view/expression/Compile.rl"
 	{ debug Stdout("Found comment.").newline; }
 	break;
 	case 17:
-#line 109 "sendero/view/expression/Compile.rl"
+#line 115 "sendero/view/expression/Compile.rl"
 	{ p--; }
 	break;
 	case 18:
-#line 142 "sendero/view/expression/Compile.rl"
+#line 148 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 19:
-#line 152 "sendero/view/expression/Compile.rl"
+#line 158 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 20:
-#line 157 "sendero/view/expression/Compile.rl"
+#line 163 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 21:
-#line 162 "sendero/view/expression/Compile.rl"
+#line 168 "sendero/view/expression/Compile.rl"
 	{ ++p; }
 	break;
 	case 22:
-#line 169 "sendero/view/expression/Compile.rl"
+#line 175 "sendero/view/expression/Compile.rl"
 	{ ++p; }
 	break;
-#line 370 "sendero/view/expression/Compile.d"
+#line 388 "sendero/view/expression/Compile.d"
 		default: break;
 		}
 	}
@@ -409,32 +427,57 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 259 "sendero/view/expression/Compile.rl"
-	
-	return p - src.ptr;
+#line 277 "sendero/view/expression/Compile.rl"
+		
+		parsed = p - src.ptr;
+		
+		while(!fsm.opSt.empty) {
+			auto op = fsm.opSt.top;
+			fsm.opSt.pop;
+			if(op >= precedence.length)
+				throw new Exception("Ivalid operator on stack");
+			debug Stdout.formatln("Pushing to instructions {}", op);
+			fsm.expr ~= Op(op);
+		}
+		
+		return fsm.expr;
+	}
 }
 
 debug(SenderoUnittest)
 {
 
+import sendero.vm.Object;
+
+void test(char[] src, real expected)
+{
+	Parser p;
+	auto expr = p.parse(src);
+	auto ctxt = new Obj;
+	auto res = expr.exec(ctxt);
+	assert(res.type == VarT.Number && res.number_ - expected < 1e-6, src ~ " " ~ Float.toString(res.number_));
+}
+
 unittest
 {
-	parse("x + y");
+	Parser p;
+
+	p.parse("x + y");
 	
 	Stdout.newline;
 	
-	parse("test.one[/* a comment */ test2] + test3(param1) /*another comment*/ - test4[step](param2)[5]['a str'] ");
+	p.parse("test.one[/* a comment */ test2] + test3(param1) /*another comment*/ - test4[step](param2)[5]['a str'] ");
 	
 	Stdout.newline;
 	
-	parse("`test1` + \"test \\\"2\" + 'test3'");
+	p.parse("`test1` + \"test \\\"2\" + 'test3'");
 	
 	Stdout.newline;
 	
 	bool caught = false;
 	try
 	{
-		parse(" test)");
+		p.parse(" test)");
 	}
 	catch(Exception ex)
 	{
@@ -442,7 +485,14 @@ unittest
 	}
 //	assert(caught);
 
-	assert(parse("test; STRING") == 4);
+	p.parse("test; STRING");
+
+	assert(p.parsed == 4);
+
+	test("4 + 5", 9);
+	test("8/2", 4);
+	test("1/2 + 2", 2.5);
+	test("1/4 * 3 - 8 / 2 * 7", 21);
 }
 
 }

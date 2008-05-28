@@ -3,6 +3,8 @@ module sendero.vm.Expression2;
 import sendero_base.Core;
 import sendero_base.util.collection.Stack;
 
+debug import tango.io.Stdout;
+
 const ubyte[13] precedence = [
   0, 0, 0, 1, 1,
   2, 2, 2, 2, 3,
@@ -77,13 +79,15 @@ struct Op {
 template BinOp(char[] op)
 {
 	const char[] BinOp =
-		`auto l = stack.top; stack.pop;`
 		`auto r = stack.top; stack.pop;`
+		`auto l = stack.top; stack.pop;`
 		`if(l.type != VarT.Number && r.type != VarT.Number) stack.push(Var());`
 		`else {`
 			`Var res;`
 			`res.type = VarT.Number;`
+			`debug Stdout.format("Executing {} {} {}", l.number_,"` ~ op ~ `", r.number_);`
 			`res.number_ = l.number_ ` ~ op ~ ` r.number_;`
+			`debug Stdout.formatln(" = {}", res.number_);`
 			`stack.push(res);`
 		`}`;
 }
