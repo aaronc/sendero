@@ -15,7 +15,7 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
-#line 179 "sendero/view/expression/Compile.rl"
+#line 184 "sendero/view/expression/Compile.rl"
 
 
 
@@ -114,7 +114,7 @@ static const int sendero_view_compile_error = 0;
 
 static const int sendero_view_compile_en_main = 1;
 
-#line 182 "sendero/view/expression/Compile.rl"
+#line 187 "sendero/view/expression/Compile.rl"
 
 /+
 struct ExprState
@@ -179,7 +179,7 @@ class Fsm
 	alias opStack opSt;
 }
 
-void parse(char[] src)
+size_t parse(char[] src)
 {
 	auto fsm = new Fsm;
 	char* p = src.ptr;
@@ -190,7 +190,7 @@ void parse(char[] src)
 	{
 	 fsm.cs = sendero_view_compile_start;
 	}
-#line 253 "sendero/view/expression/Compile.rl"
+#line 258 "sendero/view/expression/Compile.rl"
 	
 #line 190 "sendero/view/expression/Compile.d"
 	{
@@ -295,38 +295,42 @@ _match:
 	break;
 	case 3:
 #line 44 "sendero/view/expression/Compile.rl"
-	{ Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]); }
+	{
+	Stdout.formatln("Found number: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]);
+}
 	break;
 	case 4:
-#line 45 "sendero/view/expression/Compile.rl"
-	{ Stdout.formatln("Found string: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]); }
+#line 48 "sendero/view/expression/Compile.rl"
+	{
+	Stdout.formatln("Found string: {}", fsm.tokenStart[0 .. p - fsm.tokenStart]);
+}
 	break;
 	case 5:
-#line 48 "sendero/view/expression/Compile.rl"
+#line 53 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Dot);
 	debug Stdout("Found dot step").newline;
 }
 	break;
 	case 6:
-#line 52 "sendero/view/expression/Compile.rl"
+#line 57 "sendero/view/expression/Compile.rl"
 	{ Stdout("Found index step").newline; }
 	break;
 	case 7:
-#line 53 "sendero/view/expression/Compile.rl"
+#line 58 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Paren);
 	Stdout("Found function call").newline;
 }
 	break;
 	case 8:
-#line 58 "sendero/view/expression/Compile.rl"
+#line 63 "sendero/view/expression/Compile.rl"
 	{
 	fsm.opSt.push(OpT.Paren);
 }
 	break;
 	case 9:
-#line 61 "sendero/view/expression/Compile.rl"
+#line 66 "sendero/view/expression/Compile.rl"
 	{
 	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
 		fsm.expr ~= Op(fsm.opSt.top);
@@ -336,7 +340,7 @@ _match:
 }
 	break;
 	case 10:
-#line 69 "sendero/view/expression/Compile.rl"
+#line 74 "sendero/view/expression/Compile.rl"
 	{
 	while(!fsm.opSt.empty && fsm.opSt.top != OpT.Paren) {
 		fsm.expr ~= Op(fsm.opSt.top);
@@ -345,54 +349,54 @@ _match:
 }
 	break;
 	case 11:
-#line 76 "sendero/view/expression/Compile.rl"
+#line 81 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Add); }
 	break;
 	case 12:
-#line 77 "sendero/view/expression/Compile.rl"
+#line 82 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Sub); }
 	break;
 	case 13:
-#line 79 "sendero/view/expression/Compile.rl"
+#line 84 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Mul); }
 	break;
 	case 14:
-#line 80 "sendero/view/expression/Compile.rl"
+#line 85 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Div); }
 	break;
 	case 15:
-#line 81 "sendero/view/expression/Compile.rl"
+#line 86 "sendero/view/expression/Compile.rl"
 	{	doOp(fsm, OpT.Mod); }
 	break;
 	case 16:
-#line 83 "sendero/view/expression/Compile.rl"
+#line 88 "sendero/view/expression/Compile.rl"
 	{ debug Stdout("Found comment.").newline; }
 	break;
 	case 17:
-#line 104 "sendero/view/expression/Compile.rl"
+#line 109 "sendero/view/expression/Compile.rl"
 	{ p--; }
 	break;
 	case 18:
-#line 137 "sendero/view/expression/Compile.rl"
+#line 142 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 19:
-#line 147 "sendero/view/expression/Compile.rl"
-	{p--;}
-	break;
-	case 20:
 #line 152 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
-	case 21:
+	case 20:
 #line 157 "sendero/view/expression/Compile.rl"
+	{p--;}
+	break;
+	case 21:
+#line 162 "sendero/view/expression/Compile.rl"
 	{ ++p; }
 	break;
 	case 22:
-#line 164 "sendero/view/expression/Compile.rl"
+#line 169 "sendero/view/expression/Compile.rl"
 	{ ++p; }
 	break;
-#line 366 "sendero/view/expression/Compile.d"
+#line 370 "sendero/view/expression/Compile.d"
 		default: break;
 		}
 	}
@@ -405,7 +409,9 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 254 "sendero/view/expression/Compile.rl"
+#line 259 "sendero/view/expression/Compile.rl"
+	
+	return p - src.ptr;
 }
 
 debug(SenderoUnittest)
@@ -436,7 +442,7 @@ unittest
 	}
 //	assert(caught);
 
-	
+	assert(parse("test; STRING") == 4);
 }
 
 }

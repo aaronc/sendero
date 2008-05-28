@@ -288,7 +288,7 @@ unittest
 	}
 //	assert(caught);
 
-	
+	assert(parse("test; STRING") == 4);
 }
 
 }
