@@ -248,7 +248,7 @@ class Fsm
 	alias opStack opSt;
 }
 
-void parse(char[] src)
+size_t parse(char[] src)
 {
 	auto fsm = new Fsm;
 	char* p = src.ptr;
@@ -256,6 +256,8 @@ void parse(char[] src)
 	char* eof = pe;
 	%% write init;
 	%% write exec;
+	
+	return p - src.ptr;
 }
 
 debug(SenderoUnittest)
