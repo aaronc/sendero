@@ -92,6 +92,22 @@ template BinOp(char[] op)
 		`}`;
 }
 
+template CmpOp(char[] op)
+{
+	const char[] CmpOp =
+		`auto r = stack.top; stack.pop;`
+		`auto l = stack.top; stack.pop;`
+		`if(l.type != VarT.Number && r.type != VarT.Number) stack.push(Var());`
+		`else {`
+			`Var res;`
+			`res.type = VarT.Bool;`
+			`debug Stdout.format("Executing {} {} {}", l.number_,"` ~ op ~ `", r.number_);`
+			`res.bool_ = l.number_ ` ~ op ~ ` r.number_;`
+			`debug Stdout.formatln(" = {}", res.bool_);`
+			`stack.push(res);`
+		`}`;
+}
+
 void enforce(lazy bool test, lazy char[] msg)
 {
 	if(!test) throw new Exception(msg);
@@ -152,6 +168,10 @@ struct Expr
 		case Op.Div: mixin(BinOp!("/")); break;
 		case Op.Mul: mixin(BinOp!("*")); break;
 		case Op.Mod: mixin(BinOp!("%")); break;
+		case Op.Lt:  mixin(CmpOp!("<")); break;
+		case Op.LtEq:  mixin(CmpOp!("<=")); break;
+		case Op.GtEq:  mixin(CmpOp!(">=")); break;
+		case Op.Gt:  mixin(CmpOp!(">")); break;
 		default:
 			assert(false);
 		}

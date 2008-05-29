@@ -8,6 +8,8 @@ import sendero.vm.Array;
 import sendero.view.expression.Compile;
 import sendero.util.Hash;
 
+//import sendero.xml.XPath;
+
 import qcf.TestRunner;
 
 int main(char[][] args)

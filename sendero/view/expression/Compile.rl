@@ -93,26 +93,30 @@ action do_mod {	doOp(fsm, OpT.Mod); }
 
 c_comment = ( any )* :>> '*/' @{ debug Stdout("Found comment.").newline; };
 
-Expression = 
-		
-start:(
+Expression := (
+
+start: (
+	any @{fhold; fgoto main;}
+),
+
+main:(
 	[a-zA-Z_] @do_start_token -> identifier |
 	[0-9] @do_start_token -> number |
 	
-	"(" @do_open_paren -> start |
+	"(" @do_open_paren -> main |
 	
 	["] @do_start_string -> dquote_str |
 	['] @do_start_string -> squote_str |
 	[`] @do_start_string -> backtick_str |
 	
-	'/*' c_comment -> start |
+	'/*' c_comment -> main |
 	
-	space+ -> start
+	space+ -> main
 ),
 
 div: (
 	"*" c_comment -> operator |
-	[^*] @do_div @{ fhold; } -> start
+	[^*] @do_div @{ fhold; } -> main
 )
 
 operator: (
@@ -120,24 +124,24 @@ operator: (
 	
 	")" @do_close_paren -> end_call |
 	
-	"," @do_comma -> start |
+	"," @do_comma -> main |
 	
-	"+" @do_add -> start |
-	"-" @do_sub -> start |
+	"+" @do_add -> main |
+	"-" @do_sub -> main |
 	"/"  -> div |
-	"*" @do_mul -> start |
-	"%" @do_mod -> start |
+	"*" @do_mul -> main |
+	"%" @do_mod -> main |
 	
-	"<" -> start |
-	"<=" -> start |
-	"=>" -> start |
-	">" -> start |
+	"<" -> main |
+	"<=" -> main |
+	"=>" -> main |
+	">" -> main |
 	
-	"==" -> start |
-	"!=" -> start |
+	"==" -> main |
+	"!=" -> main |
 	
-	"&&" -> start |
-	"||" -> start |
+	"&&" -> main |
+	"||" -> main |
 	
 	space+ -> operator
 ),
@@ -149,11 +153,11 @@ identifier: (
 ),
 
 end_call: (
-	"." @do_dot_step -> start |
+	"." @do_dot_step -> main |
 	
-	"[" @do_index_step -> start |
+	"[" @do_index_step -> main |
 	
-	"(" @do_function_call -> start |
+	"(" @do_function_call -> main |
 	
 	[^\.[(] @{fhold;} -> operator
 ),
@@ -182,10 +186,38 @@ backtick_str: (
 	[`] @do_end_string -> operator
 	
 )
-;
 
-main := Expression;
+) %{ fret; } ;
+
+Msg := (
+	start: (
+		any -- "${" -> start |
+		"${" @{ debug Stdout.formatln("Found embedded expression"); fcall Expression;}
+	)
 	
+) >{ debug Stdout.formatln("Starting to parse msg: `{}`", src);};
+	
+##"${" Expression ( ";" )? space* "}";
+##msg = (any* - "${"
+
+##main := Expression;
+
+##main := start: ( any @{ fhold; fgoto Expression; } );
+main := any @{
+	fhold;
+	switch(fsm.type)
+	{
+	case ParserT.Msg:
+		fgoto Msg;
+		break;
+	default:
+		debug assert(false);
+	case ParserT.Expr:
+		fgoto Expression;
+		break;
+	}
+};
+
 	
 }%%
 
@@ -242,6 +274,7 @@ void doOp(Fsm fsm, OpT op)
 	}
 }
 
+enum ParserT { Expr, Msg };
 
 class Fsm
 {
@@ -257,7 +290,9 @@ class Fsm
 	
 	Expr expr;
 	Stack!(OpT) opStack;
-	alias opStack opSt;
+	alias opStack opSt;	
+	
+	ParserT type = ParserT.Expr;
 }
 
 
@@ -265,9 +300,10 @@ struct Parser
 {
 	size_t parsed;
 	
-	Expr parse(char[] src)
+	Fsm parse_(char[] src, ParserT type)
 	{
 		auto fsm = new Fsm;
+		fsm.type = type;
 	
 		char* p = src.ptr;
 		char* pe = p + src.length + 1;
@@ -286,7 +322,18 @@ struct Parser
 			fsm.expr ~= Op(op);
 		}
 		
+		return fsm;
+	}
+	
+	Expr parse(char[] src)
+	{
+		auto fsm = parse_(src , ParserT.Expr);
 		return fsm.expr;
+	}
+	
+	void parseMsg(char[] src)
+	{
+		auto fsm = parse_(src , ParserT.Msg);
 	}
 }
 
@@ -302,6 +349,14 @@ void test(char[] src, real expected)
 	auto ctxt = new Obj;
 	auto res = expr.exec(ctxt);
 	assert(res.type == VarT.Number && res.number_ - expected < 1e-6, src ~ " " ~ Float.toString(res.number_));
+	Stdout.newline;
+}
+
+void testMsg(char[] src)
+{
+	Parser p;
+	p.parseMsg(src);
+	Stdout.newline;
 }
 
 unittest
@@ -339,6 +394,9 @@ unittest
 	test("8/2", 4);
 	test("1/2 + 2", 2.5);
 	test("1/4 * 3 - 8 / 2 * 7", 21);
+	
+	
+	testMsg(" A ${'message'}.");
 }
 
 }

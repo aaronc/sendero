@@ -15,7 +15,7 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
-#line 190 "sendero/view/expression/Compile.rl"
+#line 222 "sendero/view/expression/Compile.rl"
 
 
 
@@ -24,15 +24,17 @@ static const byte[] _sendero_view_compile_actions = [
 	0, 1, 0, 1, 1, 1, 4, 1, 
 	5, 1, 6, 1, 7, 1, 8, 1, 
 	9, 1, 10, 1, 11, 1, 12, 1, 
-	13, 1, 15, 1, 16, 1, 19, 1, 
-	21, 1, 22, 2, 2, 18, 2, 3, 
-	20, 2, 14, 17
+	13, 1, 15, 1, 16, 1, 17, 1, 
+	20, 1, 22, 1, 23, 1, 24, 1, 
+	25, 1, 26, 2, 2, 19, 2, 3, 
+	21, 2, 14, 18
 ];
 
 static const byte[] _sendero_view_compile_key_offsets = [
-	0, 0, 14, 16, 33, 34, 35, 38, 
-	39, 66, 68, 69, 70, 72, 75, 90, 
-	91, 92, 94, 101, 102, 104, 105, 106
+	0, 0, 0, 0, 0, 14, 16, 33, 
+	34, 35, 38, 39, 66, 68, 69, 70, 
+	72, 75, 90, 91, 92, 94, 101, 102, 
+	104, 105, 106, 108, 109, 109, 109
 ];
 
 static const char[] _sendero_view_compile_trans_keys = [
@@ -49,72 +51,79 @@ static const char[] _sendero_view_compile_trans_keys = [
 	61u, 96u, 9u, 13u, 48u, 57u, 65u, 90u, 
 	95u, 122u, 42u, 42u, 42u, 47u, 95u, 48u, 
 	57u, 65u, 90u, 97u, 122u, 96u, 61u, 62u, 
-	124u, 42u, 42u, 47u, 0
+	124u, 42u, 42u, 47u, 36u, 123u, 0
 ];
 
 static const byte[] _sendero_view_compile_single_lengths = [
-	0, 6, 2, 15, 1, 1, 3, 1, 
-	19, 2, 1, 1, 2, 1, 7, 1, 
-	1, 2, 1, 1, 0, 1, 1, 2
+	0, 0, 0, 0, 6, 2, 15, 1, 
+	1, 3, 1, 19, 2, 1, 1, 2, 
+	1, 7, 1, 1, 2, 1, 1, 0, 
+	1, 1, 2, 1, 0, 0, 1
 ];
 
 static const byte[] _sendero_view_compile_range_lengths = [
-	0, 4, 0, 1, 0, 0, 0, 0, 
-	4, 0, 0, 0, 0, 1, 4, 0, 
-	0, 0, 3, 0, 1, 0, 0, 0
+	0, 0, 0, 0, 4, 0, 1, 0, 
+	0, 0, 0, 4, 0, 0, 0, 0, 
+	1, 4, 0, 0, 0, 3, 0, 1, 
+	0, 0, 0, 0, 0, 0, 0
 ];
 
 static const ubyte[] _sendero_view_compile_index_offsets = [
-	0, 0, 11, 14, 31, 33, 35, 39, 
-	41, 65, 68, 70, 72, 75, 78, 90, 
-	92, 94, 97, 102, 104, 106, 108, 110
+	0, 0, 1, 2, 3, 14, 17, 34, 
+	36, 38, 42, 44, 68, 71, 73, 75, 
+	78, 81, 93, 95, 97, 100, 105, 107, 
+	109, 111, 113, 116, 118, 119, 120
 ];
 
 static const byte[] _sendero_view_compile_indicies = [
-	0, 2, 3, 4, 5, 8, 0, 6, 
-	7, 7, 1, 10, 11, 9, 12, 13, 
-	14, 15, 16, 17, 18, 19, 20, 21, 
-	22, 23, 0, 24, 25, 12, 1, 0, 
-	1, 0, 1, 27, 28, 29, 26, 31, 
-	30, 32, 13, 2, 14, 15, 3, 4, 
-	16, 17, 18, 19, 20, 33, 22, 23, 
-	0, 24, 8, 25, 32, 6, 7, 7, 
-	1, 10, 35, 34, 36, 30, 37, 36, 
-	37, 38, 36, 40, 40, 39, 0, 2, 
-	3, 4, 5, 0, 8, 0, 6, 7, 
-	7, 1, 41, 1, 42, 41, 42, 43, 
-	41, 45, 45, 45, 45, 44, 10, 46, 
-	0, 1, 0, 1, 47, 31, 47, 48, 
-	31, 0
+	0, 1, 2, 3, 4, 5, 6, 7, 
+	10, 3, 8, 9, 9, 2, 12, 13, 
+	11, 14, 15, 16, 17, 18, 19, 20, 
+	21, 22, 23, 24, 25, 3, 26, 27, 
+	14, 2, 3, 2, 3, 2, 29, 30, 
+	31, 28, 33, 32, 34, 15, 4, 16, 
+	17, 5, 6, 18, 19, 20, 21, 22, 
+	35, 24, 25, 3, 26, 10, 27, 34, 
+	8, 9, 9, 2, 12, 37, 36, 38, 
+	32, 39, 38, 39, 40, 38, 42, 42, 
+	41, 3, 4, 5, 6, 7, 3, 10, 
+	3, 8, 9, 9, 2, 43, 2, 44, 
+	43, 44, 45, 43, 47, 47, 47, 47, 
+	46, 12, 48, 3, 2, 3, 2, 49, 
+	33, 49, 50, 33, 52, 51, 2, 2, 
+	53, 2, 0
 ];
 
 static const byte[] _sendero_view_compile_trans_targs = [
-	1, 0, 2, 9, 1, 15, 13, 18, 
-	19, 2, 3, 2, 3, 4, 1, 5, 
-	6, 1, 1, 1, 1, 7, 14, 20, 
-	6, 21, 3, 1, 1, 1, 8, 22, 
-	8, 10, 9, 9, 11, 12, 8, 3, 
-	13, 16, 17, 1, 6, 18, 19, 23, 
-	3
+	28, 3, 0, 4, 5, 12, 4, 18, 
+	16, 21, 22, 5, 6, 5, 6, 7, 
+	4, 8, 9, 4, 4, 4, 4, 10, 
+	17, 23, 9, 24, 6, 4, 4, 4, 
+	11, 25, 11, 13, 12, 12, 14, 15, 
+	11, 6, 16, 19, 20, 4, 9, 21, 
+	22, 26, 6, 29, 30, 29
 ];
 
 static const byte[] _sendero_view_compile_trans_actions = [
-	0, 0, 3, 3, 13, 0, 1, 1, 
-	3, 0, 5, 31, 0, 0, 25, 0, 
-	15, 23, 19, 17, 21, 0, 0, 0, 
-	0, 0, 29, 11, 7, 9, 41, 0, 
-	0, 0, 0, 33, 0, 0, 27, 38, 
-	0, 0, 0, 27, 35, 0, 0, 0, 
-	27
+	41, 29, 0, 0, 3, 3, 13, 0, 
+	1, 1, 3, 0, 5, 33, 0, 0, 
+	25, 0, 15, 23, 19, 17, 21, 0, 
+	0, 0, 0, 0, 31, 11, 7, 9, 
+	49, 0, 0, 0, 0, 35, 0, 0, 
+	27, 46, 0, 0, 0, 27, 43, 0, 
+	0, 0, 27, 39, 39, 37
 ];
 
 static const int sendero_view_compile_start = 1;
-static const int sendero_view_compile_first_final = 24;
+static const int sendero_view_compile_first_final = 28;
 static const int sendero_view_compile_error = 0;
 
+static const int sendero_view_compile_en_Expression = 2;
+static const int sendero_view_compile_en_Expression_main = 4;
+static const int sendero_view_compile_en_Msg = 27;
 static const int sendero_view_compile_en_main = 1;
 
-#line 193 "sendero/view/expression/Compile.rl"
+#line 225 "sendero/view/expression/Compile.rl"
 
 /+
 struct ExprState
@@ -167,6 +176,7 @@ void doOp(Fsm fsm, OpT op)
 	}
 }
 
+enum ParserT { Expr, Msg };
 
 class Fsm
 {
@@ -182,7 +192,9 @@ class Fsm
 	
 	Expr expr;
 	Stack!(OpT) opStack;
-	alias opStack opSt;
+	alias opStack opSt;	
+	
+	ParserT type = ParserT.Expr;
 }
 
 
@@ -190,21 +202,23 @@ struct Parser
 {
 	size_t parsed;
 	
-	Expr parse(char[] src)
+	Fsm parse_(char[] src, ParserT type)
 	{
 		auto fsm = new Fsm;
+		fsm.type = type;
 	
 		char* p = src.ptr;
 		char* pe = p + src.length + 1;
 		char* eof = pe;
 		
-#line 198 "sendero/view/expression/Compile.d"
+#line 211 "sendero/view/expression/Compile.d"
 	{
 	 fsm.cs = sendero_view_compile_start;
+	 fsm.top = 0;
 	}
-#line 276 "sendero/view/expression/Compile.rl"
+#line 312 "sendero/view/expression/Compile.rl"
 		
-#line 202 "sendero/view/expression/Compile.d"
+#line 216 "sendero/view/expression/Compile.d"
 	{
 	int _klen;
 	uint _trans;
@@ -391,30 +405,59 @@ _match:
 	{ debug Stdout("Found comment.").newline; }
 	break;
 	case 17:
-#line 115 "sendero/view/expression/Compile.rl"
-	{ p--; }
+#line 99 "sendero/view/expression/Compile.rl"
+	{p--; { fsm.cs = 4; if (true) goto _again;}}
 	break;
 	case 18:
-#line 148 "sendero/view/expression/Compile.rl"
-	{p--;}
+#line 119 "sendero/view/expression/Compile.rl"
+	{ p--; }
 	break;
 	case 19:
-#line 158 "sendero/view/expression/Compile.rl"
+#line 152 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 20:
-#line 163 "sendero/view/expression/Compile.rl"
+#line 162 "sendero/view/expression/Compile.rl"
 	{p--;}
 	break;
 	case 21:
-#line 168 "sendero/view/expression/Compile.rl"
-	{ ++p; }
+#line 167 "sendero/view/expression/Compile.rl"
+	{p--;}
 	break;
 	case 22:
-#line 175 "sendero/view/expression/Compile.rl"
+#line 172 "sendero/view/expression/Compile.rl"
 	{ ++p; }
 	break;
-#line 388 "sendero/view/expression/Compile.d"
+	case 23:
+#line 179 "sendero/view/expression/Compile.rl"
+	{ ++p; }
+	break;
+	case 24:
+#line 195 "sendero/view/expression/Compile.rl"
+	{ debug Stdout.formatln("Found embedded expression"); { fsm.stack[ fsm.top++] =  fsm.cs;  fsm.cs = 2; if (true) goto _again;}}
+	break;
+	case 25:
+#line 198 "sendero/view/expression/Compile.rl"
+	{ debug Stdout.formatln("Starting to parse msg: `{}`", src);}
+	break;
+	case 26:
+#line 206 "sendero/view/expression/Compile.rl"
+	{
+	p--;
+	switch(fsm.type)
+	{
+	case ParserT.Msg:
+		{ fsm.cs = 27; if (true) goto _again;}
+		break;
+	default:
+		debug assert(false);
+	case ParserT.Expr:
+		{ fsm.cs = 2; if (true) goto _again;}
+		break;
+	}
+}
+	break;
+#line 427 "sendero/view/expression/Compile.d"
 		default: break;
 		}
 	}
@@ -427,7 +470,7 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 277 "sendero/view/expression/Compile.rl"
+#line 313 "sendero/view/expression/Compile.rl"
 		
 		parsed = p - src.ptr;
 		
@@ -440,7 +483,18 @@ _again:
 			fsm.expr ~= Op(op);
 		}
 		
+		return fsm;
+	}
+	
+	Expr parse(char[] src)
+	{
+		auto fsm = parse_(src , ParserT.Expr);
 		return fsm.expr;
+	}
+	
+	void parseMsg(char[] src)
+	{
+		auto fsm = parse_(src , ParserT.Msg);
 	}
 }
 
@@ -456,6 +510,14 @@ void test(char[] src, real expected)
 	auto ctxt = new Obj;
 	auto res = expr.exec(ctxt);
 	assert(res.type == VarT.Number && res.number_ - expected < 1e-6, src ~ " " ~ Float.toString(res.number_));
+	Stdout.newline;
+}
+
+void testMsg(char[] src)
+{
+	Parser p;
+	p.parseMsg(src);
+	Stdout.newline;
 }
 
 unittest
@@ -493,6 +555,9 @@ unittest
 	test("8/2", 4);
 	test("1/2 + 2", 2.5);
 	test("1/4 * 3 - 8 / 2 * 7", 21);
+	
+	
+	testMsg(" A ${'message'}.");
 }
 
 }
