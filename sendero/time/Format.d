@@ -71,7 +71,7 @@ enum {
 	V,
 	VVVV,
 	String
-}
+};
 	int op;
 	char[] str;
 }

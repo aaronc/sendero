@@ -59,5 +59,47 @@
                 return <month>{data($m)}</month>
             }
         </wide>
+        <narrow>
+            {
+                for $m in //monthWidth[@type = 'narrow']/month
+                return <month>{data($m)}</month>
+            }
+        </narrow>
     </months>
+    <days>
+        <abbreviated>
+            {
+                for $m in //dayWidth[@type = 'abbreviated']/day
+                return <day>{data($m)}</day>
+            }
+        </abbreviated>
+        <wide>
+            {
+                for $m in //dayWidth[@type = 'wide']/day
+                return <day>{data($m)}</day>
+            }
+        </wide>
+        <narrow>
+            {
+                for $m in //dayWidth[@type = 'narrow']/day
+                return <day>{data($m)}</day>
+            }
+        </narrow>
+    </days>
+    <quarters>
+        <abbreviated>
+            {
+                for $m in //quarterWidth[@type = 'abbreviated']/quarter
+                return <quarter>{data($m)}</quarter>
+            }
+        </abbreviated>
+        <wide>
+            {
+                for $m in //quarterWidth[@type = 'wide']/quarter
+                return <quarter>{data($m)}</quarter>
+            }
+        </wide>
+    </quarters>
+    <am>{data(//am)}</am>
+    <pm>{data(//pm)}</pm>
 </result>
