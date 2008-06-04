@@ -91,6 +91,11 @@ struct VariableBinding
 			type = cast(VarT)VarT.DateTime;
 			dateTime_ = val;
 		}
+		else static if(is(X == DateTime))
+		{
+			type = cast(VarT)VarT.DateTime;
+			dateTime_ = Clock.fromDate(val);
+		}
 	/*	else static if(is(X == Date))
 		{
 			type = cast(VarT)VarT.DateTime;
@@ -120,8 +125,8 @@ struct VariableBinding
 			objBinding = new ClassBinding!(X)(val);
 		}
 		else {
-			debug assert(false, "Unable to bind variable");
 			type = cast(VarT)VarT.Null;
+			debug assert(false, "Unable to bind variable of type " ~ X.stringof);
 		}
 	}
 	
@@ -165,8 +170,8 @@ struct VariableBinding
 		case VarT.Bool:
 			if(v.type == VarT.Bool) return bool_ == v.bool_;
 			return false;
-		case VarT.DateTime:
-			if(v.type == VarT.DateTime) return dateTime_ == v.dateTime_ ? true : false;
+//		case VarT.DateTime:
+			//if(v.type == VarT.DateTime) return dateTime_ == v.dateTime_ ? true : false;
 			return false;
 		case VarT.Array:
 			if(v.type == VarT.Array) return arrayBinding == v.arrayBinding;
@@ -305,8 +310,8 @@ struct VariableBinding
 				res.set(0); return res;
 			}
 		}
-		case VarT.DateTime:
-			res.set(dateTime_ + v.dateTime_.span); return res;
+		//case VarT.DateTime:
+//			res.set(dateTime_ + v.dateTime_.span); return res;
 		default:
 			return res;
 		}
@@ -341,8 +346,8 @@ struct VariableBinding
 				res.set(0); return res;
 			}
 		}
-		case VarT.DateTime:
-			res.set(dateTime_ - v.dateTime_); return res;
+	//	case VarT.DateTime:
+			//res.set(dateTime_ - v.dateTime_); return res;
 		default:
 			return res;
 		}

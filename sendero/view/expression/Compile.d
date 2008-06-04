@@ -15,7 +15,7 @@ void error(char[] msg)
 	throw new Exception(msg);
 }
 
-#line 222 "sendero/view/expression/Compile.rl"
+#line 236 "sendero/view/expression/Compile.rl"
 
 
 
@@ -34,7 +34,7 @@ static const byte[] _sendero_view_compile_key_offsets = [
 	0, 0, 0, 0, 0, 14, 16, 33, 
 	34, 35, 38, 39, 66, 68, 69, 70, 
 	72, 75, 90, 91, 92, 94, 101, 102, 
-	104, 105, 106, 108, 109, 109, 109
+	104, 105, 106, 108, 109, 110, 111, 111
 ];
 
 static const char[] _sendero_view_compile_trans_keys = [
@@ -51,28 +51,28 @@ static const char[] _sendero_view_compile_trans_keys = [
 	61u, 96u, 9u, 13u, 48u, 57u, 65u, 90u, 
 	95u, 122u, 42u, 42u, 42u, 47u, 95u, 48u, 
 	57u, 65u, 90u, 97u, 122u, 96u, 61u, 62u, 
-	124u, 42u, 42u, 47u, 36u, 123u, 0
+	124u, 42u, 42u, 47u, 36u, 36u, 123u, 0
 ];
 
 static const byte[] _sendero_view_compile_single_lengths = [
 	0, 0, 0, 0, 6, 2, 15, 1, 
 	1, 3, 1, 19, 2, 1, 1, 2, 
 	1, 7, 1, 1, 2, 1, 1, 0, 
-	1, 1, 2, 1, 0, 0, 1
+	1, 1, 2, 1, 1, 1, 0, 0
 ];
 
 static const byte[] _sendero_view_compile_range_lengths = [
 	0, 0, 0, 0, 4, 0, 1, 0, 
 	0, 0, 0, 4, 0, 0, 0, 0, 
 	1, 4, 0, 0, 0, 3, 0, 1, 
-	0, 0, 0, 0, 0, 0, 0
+	0, 0, 0, 0, 0, 0, 0, 0
 ];
 
 static const ubyte[] _sendero_view_compile_index_offsets = [
 	0, 0, 1, 2, 3, 14, 17, 34, 
 	36, 38, 42, 44, 68, 71, 73, 75, 
 	78, 81, 93, 95, 97, 100, 105, 107, 
-	109, 111, 113, 116, 118, 119, 120
+	109, 111, 113, 116, 118, 120, 122, 123
 ];
 
 static const byte[] _sendero_view_compile_indicies = [
@@ -90,18 +90,18 @@ static const byte[] _sendero_view_compile_indicies = [
 	3, 8, 9, 9, 2, 43, 2, 44, 
 	43, 44, 45, 43, 47, 47, 47, 47, 
 	46, 12, 48, 3, 2, 3, 2, 49, 
-	33, 49, 50, 33, 52, 51, 2, 2, 
-	53, 2, 0
+	33, 49, 50, 33, 52, 51, 54, 53, 
+	55, 53, 53, 2, 0
 ];
 
 static const byte[] _sendero_view_compile_trans_targs = [
-	28, 3, 0, 4, 5, 12, 4, 18, 
+	31, 3, 0, 4, 5, 12, 4, 18, 
 	16, 21, 22, 5, 6, 5, 6, 7, 
 	4, 8, 9, 4, 4, 4, 4, 10, 
 	17, 23, 9, 24, 6, 4, 4, 4, 
 	11, 25, 11, 13, 12, 12, 14, 15, 
 	11, 6, 16, 19, 20, 4, 9, 21, 
-	22, 26, 6, 29, 30, 29
+	22, 26, 6, 28, 29, 28, 29, 30
 ];
 
 static const byte[] _sendero_view_compile_trans_actions = [
@@ -111,19 +111,19 @@ static const byte[] _sendero_view_compile_trans_actions = [
 	0, 0, 0, 0, 31, 11, 7, 9, 
 	49, 0, 0, 0, 0, 35, 0, 0, 
 	27, 46, 0, 0, 0, 27, 43, 0, 
-	0, 0, 27, 39, 39, 37
+	0, 0, 27, 39, 39, 0, 0, 37
 ];
 
 static const int sendero_view_compile_start = 1;
-static const int sendero_view_compile_first_final = 28;
+static const int sendero_view_compile_first_final = 31;
 static const int sendero_view_compile_error = 0;
 
 static const int sendero_view_compile_en_Expression = 2;
-static const int sendero_view_compile_en_Expression_main = 4;
+static const int sendero_view_compile_en_Expression_expression_main = 4;
 static const int sendero_view_compile_en_Msg = 27;
 static const int sendero_view_compile_en_main = 1;
 
-#line 225 "sendero/view/expression/Compile.rl"
+#line 239 "sendero/view/expression/Compile.rl"
 
 /+
 struct ExprState
@@ -214,11 +214,10 @@ struct Parser
 #line 211 "sendero/view/expression/Compile.d"
 	{
 	 fsm.cs = sendero_view_compile_start;
-	 fsm.top = 0;
 	}
-#line 312 "sendero/view/expression/Compile.rl"
+#line 326 "sendero/view/expression/Compile.rl"
 		
-#line 216 "sendero/view/expression/Compile.d"
+#line 215 "sendero/view/expression/Compile.d"
 	{
 	int _klen;
 	uint _trans;
@@ -433,15 +432,15 @@ _match:
 	{ ++p; }
 	break;
 	case 24:
-#line 195 "sendero/view/expression/Compile.rl"
-	{ debug Stdout.formatln("Found embedded expression"); { fsm.stack[ fsm.top++] =  fsm.cs;  fsm.cs = 2; if (true) goto _again;}}
+#line 203 "sendero/view/expression/Compile.rl"
+	{ debug Stdout.formatln("Found embedded expr"); }
 	break;
 	case 25:
-#line 198 "sendero/view/expression/Compile.rl"
+#line 212 "sendero/view/expression/Compile.rl"
 	{ debug Stdout.formatln("Starting to parse msg: `{}`", src);}
 	break;
 	case 26:
-#line 206 "sendero/view/expression/Compile.rl"
+#line 220 "sendero/view/expression/Compile.rl"
 	{
 	p--;
 	switch(fsm.type)
@@ -457,7 +456,7 @@ _match:
 	}
 }
 	break;
-#line 427 "sendero/view/expression/Compile.d"
+#line 426 "sendero/view/expression/Compile.d"
 		default: break;
 		}
 	}
@@ -470,7 +469,7 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 313 "sendero/view/expression/Compile.rl"
+#line 327 "sendero/view/expression/Compile.rl"
 		
 		parsed = p - src.ptr;
 		

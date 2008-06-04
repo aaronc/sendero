@@ -287,7 +287,7 @@ class Literal : Expression
 
 debug(SenderoUnittest)
 {
-	import sendero.vm.Set;
+	import sendero_base.Set;
 	import sendero.vm.Object;
 	import sendero.vm.Array;
 	

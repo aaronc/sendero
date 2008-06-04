@@ -21,6 +21,7 @@ else {
 	import Float = tango.text.convert.Float;
 	import tango.text.locale.Convert;
 	import tango.text.locale.Core;
+	import sendero.time.Format;
 }
 
 import tango.group.time;
@@ -352,11 +353,13 @@ class Message : IMessage
 					return formatDateTime(res, t, p.formatString);
 				case DATE_STYLE_LONG:
 				case DATE_STYLE_FULL:
-					return formatDateTime(res, t, "G");
+					return formatDateTime_(t);
+					//return formatDateTime(res, t, "G");
 				case DATE_STYLE_SHORT:
 				case DATE_STYLE_MEDIUM:
 				default:
-					return formatDateTime(res, t, "g");
+					return formatDateTime_(t);
+					//return formatDateTime(res, t, "g");
 				}
 				break;
 			}

@@ -93,7 +93,7 @@ action do_mod {	doOp(fsm, OpT.Mod); }
 
 c_comment = ( any )* :>> '*/' @{ debug Stdout("Found comment.").newline; };
 
-Expression := (
+expression = (
 
 start: (
 	any @{fhold; fgoto main;}
@@ -187,12 +187,26 @@ backtick_str: (
 	
 )
 
-) %{ fret; } ;
+) %{ debug Stdout.formatln("Finished parsing expr."); fret; } ;
+
+Expression := expression;
+
+##msg_expr = expression '}';
 
 Msg := (
 	start: (
-		any -- "${" -> start |
-		"${" @{ debug Stdout.formatln("Found embedded expression"); fcall Expression;}
+		[^$] -> start |
+		[$] -> dollar
+	),
+	
+	dollar: (
+		[{] @{ debug Stdout.formatln("Found embedded expr"); } -> e |
+		[^{] -> start
+	),  
+	
+	e: (
+		##msg_expr -> start
+		any -> start
 	)
 	
 ) >{ debug Stdout.formatln("Starting to parse msg: `{}`", src);};
