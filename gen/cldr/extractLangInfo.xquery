@@ -25,14 +25,12 @@
 }
 </metazoneInfo>
     { let $df := //dateFormats
-        return
-        <dateFormats>
-        <full>{data($df/*[@type = 'full']//pattern[1])}</full>
-        <long>{data($df/*[@type = 'long']//pattern[1])}</long>
-        <medium>{data($df/*[@type = 'medium']//pattern[1])}</medium>
-        <short>{data($df/*[@type = 'short']//pattern[1])}</short>
-        </dateFormats>
-      }
+        return 
+          <formats>&quot;{data($df/*[@type = 'full']//pattern[1])}&quot;,
+        &quot;{data($df/*[@type = 'long']//pattern[1])}&quot;,
+        &quot;{data($df/*[@type = 'medium']//pattern[1])}&quot;,
+        &quot;{data($df/*[@type = 'short']//pattern[1])}&quot;</formats>
+    }
       
     { let $df := //timeFormats
         return
