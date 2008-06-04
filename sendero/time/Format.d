@@ -7,17 +7,17 @@ import Int = tango.text.convert.Integer;
 
 alias Int.toString itoa;
 
-private struct F 
+private struct Format
 {
-enum {
+enum F {
 	G,
 	GGGG,
 	GGGGG,
-	y,
+//	y,
 	yy,
-	yyy,
+//	yyy,
 	yyyy,
-	yyyyy,
+//	yyyyy,
 	Y,
 	u,
 	Q,
@@ -72,18 +72,28 @@ enum {
 	VVVV,
 	String
 };
-	int op;
-	char[] str;
+	F[] ops;
+	char[][] strings;
 }
 
-char[] formatDateTime_(Time t, F[] pattern)
+char[] formatDateTime_(Time t, Format pattern)
 {
 	auto dt = Clock.toDate(t);
 	char[] res;
-	foreach(f; pattern)
+	uint strCtr = 0;
+	foreach(f; pattern.ops)
 	{
 	switch(f.op)
 	{
+	case F.String:
+		debug assert(strCtr < patternstrings.length);
+		res ~= pattern.strings[strCtr];
+		++strCtr;
+		break;
+	case F.yy:
+		
+	case F.yyyy:
+		
 	}
 	}
 }
