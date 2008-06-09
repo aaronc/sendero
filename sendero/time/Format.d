@@ -75,7 +75,7 @@ enum F {
 	F[] ops;
 	char[][] strings;
 }
-
+/+
 char[] formatDateTime_(Time t, Format pattern)
 {
 	auto dt = Clock.toDate(t);
@@ -97,7 +97,7 @@ char[] formatDateTime_(Time t, Format pattern)
 	}
 	}
 }
-
++/
 
 char[] formatDateTime_(Time t)
 {
@@ -114,7 +114,7 @@ char[] formatDateTime_(Time t)
 			itoa(dt.time.hours) ~ ':' ~
 			itoa(dt.time.minutes) ~ ' ' ~ ampm;
 }
-
+/+
 char[] formatLocalTime(LocalTime lt)
 {
 	auto dt = Clock.toDate(lt.utc);
@@ -130,3 +130,4 @@ char[] formatLocalTime(LocalTime lt)
 			itoa(dt.time.hours) ~ ':' ~
 			itoa(dt.time.minutes) ~ ' ' ~ ampm;
 }
++/
