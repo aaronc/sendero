@@ -14,7 +14,11 @@ import tango.core.Traits;
 
 bool loadFromFile(T)(inout T t, char[] filename)
 {
-	auto infile = new FileConduit(filename, FileConduit.ReadExisting);
+	FileConduit.Style style;
+	style.access = FileConduit.Access.Read;
+	style.open = FileConduit.Open.Exists;
+	style.share = FileConduit.Share.Read;
+	auto infile = new FileConduit(filename, style);
 	if(!infile)
 		return false;
 	
