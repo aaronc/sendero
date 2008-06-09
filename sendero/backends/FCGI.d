@@ -87,8 +87,12 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 				auto q = ("QUERY_STRING" in fcgiRequest.args);
 				
 				char[] url;
-				auto r = ("REDIRECT_URL" in fcgiRequest.args);
-				if(r) {	url = *r; }
+				auto r = ("REQUEST_URI" in fcgiRequest.args);
+				if(r) {
+					url = *r;
+					auto qIndex = locate(*r, '?');
+					url = url[0 .. qIndex];
+				}
 				
 				char[] rawPost;
 				if(method == HttpMethod.Post) {
@@ -145,6 +149,13 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 					stdout.write("Content-type: text/html\r\n\r\n");		
 					debug stdout.write("Sendero error: " ~ ex.toString);
 					else stdout.write("Error");
+					debug(SenderoDebugFCGIVars) {
+						stdout.write("<br /><br /><h1>FCGI Variables:</h1>");
+						foreach(k, v; fcgiRequest.args)
+						{
+							stdout.write(k ~ " = " ~ v ~ "<br />");
+						}						
+					}
 				}
 				
 				if(errorHandler) {
