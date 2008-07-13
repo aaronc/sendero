@@ -11,6 +11,7 @@ import tango.core.Traits;
 
 public import sendero.util.Reflection;
 public import sendero.db.SqlGen;
+import sendero.db.Bind;
 
 debug import tango.io.Stdout;
 
@@ -274,10 +275,4 @@ bool compare(BindType[] t1, BindType[] t2)
 	for(uint i = 0; i < len; ++i)
 		if(t1[i] != t2[i]) return false;
 	return true;
-}
-
-struct BindInfo
-{
-	BindType[] types;
-	void* ptrs;
 }

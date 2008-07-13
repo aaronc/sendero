@@ -17,3 +17,18 @@ interface IConverter(T) : IAbstractConverter
 {
 	Error convert(Param p, inout T t);
 }
+
+/+
+//TODO:
+
+abstract class AbstractConverter
+{
+	Error error;
+}
+
+abstract class Converter(T) : AbstractConverter
+{
+	bool convert(Param p, inout T t);
+}
+
++/
