@@ -1,18 +1,16 @@
-<d:text>
-
 APDDeclaration
 {
-	module sendero.xml.XPath;
+module sendero.xml.xpath10.Parser;
 
-	import sendero.xml.xpath10.Expression;
-	import sendero.xml.XmlNode;
+import sendero.xml.xpath10.Expression;
+import sendero.xml.XmlNode;
 
-	import tango.io.Stdout;
-	import tango.text.convert.Integer;
-	import Float = tango.text.convert.Float;
+import tango.io.Stdout;
+import Integer = tango.text.convert.Integer;
+import Float = tango.text.convert.Float;
 
-		
-	public import sendero.util.ExecutionContext;
+	
+public import sendero.vm.ExecutionContext;
 	
 
 version(TestApaged)
@@ -21,8 +19,8 @@ version(TestApaged)
 
     void main(string[] args)
     {
-        if ( args.length &lt; 2 )
-            throw new Exception("Usage: arithmetic &lt;expression>");
+        if ( args.length < 2 )
+            throw new Exception("Usage: arithmetic <expression>");
         SyntaxTree* root;
         if ( parse("", args[1], root, true) ) {
             Expression value;
@@ -38,34 +36,6 @@ version(TestApaged)
             Stdout.format("Invalid expression: {}\n", args[1]);
         }
     }
-}
-else
-{
-	bool compileXPath10(char[] xpath, inout Expression expr)
-	{
-		SyntaxTree* root;
-		if ( parse("", xpath, root, true) ) {
-            Expression value;
-            root.Expr(expr);
-			return true;
-		}
-		else return false;
-	}
-	
-	ExecutionContext createXPathContext(XmlNode node)
-	{
-		auto ctxt = new ExecutionContext;
-		ctxt.contextNode = node;
-		return ctxt;
-	}
-	
-	Var execXPath10(char[] xpath, XmlNode node)
-	{
-		Expression expr;
-		if(!compileXPath10(xpath, expr)) return Var();
-		auto ctxt = createXPathContext(node);
-		return expr.exec(ctxt);
-	}
 }
 
 }
@@ -168,7 +138,7 @@ RelationalExpr(inout Expression value)
 		AdditiveExpr(value);
 	}
 	
-	RelationalExpr "&lt;" AdditiveExpr	
+	RelationalExpr "<" AdditiveExpr	
 	{
 		Expression x, y;
 		RelationalExpr(x);
@@ -190,7 +160,7 @@ RelationalExpr(inout Expression value)
 		value.binaryExpr.expr ~= y;
 	}
 	
-	RelationalExpr "&lt;=" AdditiveExpr
+	RelationalExpr "<=" AdditiveExpr
 	{
 		Expression x, y;
 		RelationalExpr(x);
@@ -350,7 +320,7 @@ PathExpr(inout Expression expr)
 		RelativeLocationPath(step2);
 		
 		expr.type = ExpressionT.FuncCall;
-		step = new XPathStep(&amp;constructNodeSetViewer!(DescendantOrSelfAxisViewer));
+		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		step.setNextStep(step2);
 		expr.func.func = new XPathExpressionFn!(true)(step);
 		expr.func.params ~= e;
@@ -427,7 +397,7 @@ AbsoluteLocationPath(inout IStep step)
 	{
 		//step = new XPathStep!(Axis.self);
 		//debug assert(false, "TODO");
-		new XPathStep(&amp;constructNodeSetViewer!(SelfAxisViewer));
+		new XPathStep(&constructNodeSetViewer!(SelfAxisViewer));
 	}
 	
 	AbbreviatedAbsoluteLocationPath
@@ -440,7 +410,7 @@ AbbreviatedAbsoluteLocationPath(inout IStep step)
 {
 	"//" RelativeLocationPath
 	{
-		step = new XPathStep(&amp;constructNodeSetViewer!(DescendantOrSelfAxisViewer));
+		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		IStep step2;
 		RelativeLocationPath(step2);
 		step.setNextStep = step2;
@@ -474,7 +444,7 @@ AbbreviatedRelativeLocationPath(inout IStep step)
 	{
 		IStep step2, step3;
 		RelativeLocationPath(step);
-		step2 = new XPathStep(&amp;constructNodeSetViewer!(DescendantOrSelfAxisViewer));
+		step2 = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		Step(step3);
 		step2.setNextStep = step3;
 		step.setNextStep = step2;
@@ -495,43 +465,43 @@ Step(inout IStep step)
 		switch(axis)
 		{
 		case Axis.ancestor:
-			step = new XPathStep(&amp;constructNodeSetViewer!(AncestorAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(AncestorAxisViewer), test, predicates);
 			break;
 		case Axis.ancestor_or_self:
-			step = new XPathStep(&amp;constructNodeSetViewer!(AncestorOrSelfAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(AncestorOrSelfAxisViewer), test, predicates);
 			break;
 		case Axis.attribute:
-			step = new XPathStep(&amp;constructNodeSetViewer!(AttributeAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(AttributeAxisViewer), test, predicates);
 			break;
 		case Axis.child:
-			step = new XPathStep(&amp;constructNodeSetViewer!(ChildAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(ChildAxisViewer), test, predicates);
 			break;
 		case Axis.descendant:
-			step = new XPathStep(&amp;constructNodeSetViewer!(DescendantAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(DescendantAxisViewer), test, predicates);
 			break;
 		case Axis.descendant_or_self:
-			step = new XPathStep(&amp;constructNodeSetViewer!(DescendantOrSelfAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer), test, predicates);
 			break;
 		case Axis.following:
-			step = new XPathStep(&amp;constructNodeSetViewer!(FollowingAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(FollowingAxisViewer), test, predicates);
 			break;
 		case Axis.following_sibling:
-			step = new XPathStep(&amp;constructNodeSetViewer!(FollowingSiblingAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(FollowingSiblingAxisViewer), test, predicates);
 			break;
 		case Axis.namespace:
 			debug assert(false, "namespace axis deprecated");
 			break;
 		case Axis.parent:
-			step = new XPathStep(&amp;constructNodeSetViewer!(ParentAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(ParentAxisViewer), test, predicates);
 			break;
 		case Axis.preceding:
-			step = new XPathStep(&amp;constructNodeSetViewer!(PrecedingAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(PrecedingAxisViewer), test, predicates);
 			break;
 		case Axis.preceding_sibling:
-			step = new XPathStep(&amp;constructNodeSetViewer!(PrecedingSiblingAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(PrecedingSiblingAxisViewer), test, predicates);
 			break;
 		case Axis.self:
-			step = new XPathStep(&amp;constructNodeSetViewer!(SelfAxisViewer), test, predicates);
+			step = new XPathStep(&constructNodeSetViewer!(SelfAxisViewer), test, predicates);
 			break;
 		default:
 			debug assert(false);
@@ -544,10 +514,10 @@ Step(inout IStep step)
 		switch(axis)
 		{
 		case Axis.parent:
-			step = new XPathStep(&amp;constructNodeSetViewer!(AncestorAxisViewer));
+			step = new XPathStep(&constructNodeSetViewer!(AncestorAxisViewer));
 			break;
 		case Axis.self:
-			step = new XPathStep(&amp;constructNodeSetViewer!(AncestorAxisViewer));
+			step = new XPathStep(&constructNodeSetViewer!(AncestorAxisViewer));
 			break;
 		default:
 			debug assert(false);
@@ -698,7 +668,7 @@ PrimaryExpr(inout Expression value)
 {
     regexp("[0-9]+")
     {
-		long val = atoi(_ST_match);
+		long val = Integer.atoi(_ST_match);
 		value.type = ExpressionT.Value;
 		value.val.set(val);
     }
@@ -727,8 +697,6 @@ PrimaryExpr(inout Expression value)
 	{
 		VarRef(value);
 	}
-
-	<d:block name="extend_PrimaryExpr" />
 
     "(" Expr ")"
     { Expr(value); }
@@ -843,4 +811,3 @@ VarName
 {
 
 }
-</d:text>
