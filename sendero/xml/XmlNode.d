@@ -541,17 +541,7 @@ XmlNode parseXmlTree(char[] xml)
 			auto node = new XmlNode;
 			node.type = XmlNodeType.Element;
 			node.prefix = itr.prefix;
-			
-			if(itr.prefix) {
-				auto pURI = itr.prefix in inscopeNSs;
-				if(pURI) node.uriID = *pURI;
-				else {
-					debug(XmlNamespaces) assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
-					node.uriID = 0;
-				}
-			}
-			else node.uriID = defNamespace;
-			
+				
 			node.localName = itr.localName;
 			node.parent_ = cur;
 			if(!cur.lastChild_) {
@@ -572,30 +562,7 @@ XmlNode parseXmlTree(char[] xml)
 			cur.append(node);
 			break;
 		case XmlTokenType.Attribute:
-			if(itr.prefix) {
-				if(itr.prefix == "xmlns") {
-					uint uri;
-					if(itr.rawValue != "") {
-						auto pURI = (itr.rawValue in namespaceURIs);
-						if(!pURI) {
-							uri = namespaceURIs.length + 1;
-							namespaceURIs[itr.rawValue] = uri;
-						}
-						else uri = *pURI;
-					}
-					else uri = 0;
-					
-					if(!itr.localName) defNamespace = uri;
-					else inscopeNSs[itr.localName] = uri;
-				}
-				auto pURI = itr.prefix in inscopeNSs;
-				if(pURI) cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, *pURI);
-				else {
-					debug(XmlNamespaces) assert(false, "Unresolved namespace prefix:" ~ itr.prefix);
-					cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, 0);
-				}
-			}
-			else cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, defNamespace);
+			cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, 0);
 			break;
 		case XmlTokenType.EndElement:
 			if(!cur.hasChildren) {
@@ -639,7 +606,6 @@ XmlNode parseXmlTree(char[] xml)
 		}
 	}
 	
-	doc.namespaceURIs = namespaceURIs;
 	return doc;
 }
 
