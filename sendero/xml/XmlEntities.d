@@ -5,15 +5,9 @@
 
 module sendero.xml.XmlEntities;
 
-<<<<<<< .merge_file_a04220
-import sendero.util.Unicode;
-import sendero.util.StringCharIterator;
-import sendero.util.ArrayWriter;
-=======
 import sendero_base.util.Unicode;
 import sendero_base.util.StringCharIterator;
 import sendero_base.util.ArrayWriter;
->>>>>>> .merge_file_a00188
 
 import Integer = tango.text.convert.Integer;
 import Unicode = tango.text.convert.Utf;
