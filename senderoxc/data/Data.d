@@ -1,11 +1,21 @@
-module senderoxc.Data;
+module senderoxc.data.Data;
 
+import senderoxc.data.IObjectReflector;
 import decorated_d.Decoration;
 
-class DataContext : DecoratorContext
+class DataContext : IDecoratorContext
 {
-	DecoratorResponder init(DeclarationInfo decl, ContextBinder binder, Var[] Params = null)
+	this()
 	{
+		iobj = new IObjectContext;
+	}
+	
+	IObjectContext iobj;
+	
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
+	{
+		auto res = new DataResponder(decl);
+		res.iobj = iobj.init(decl, binder, params);
 		//binder.bindDecorator(DeclType.Field, "required");
 		//binder.bindDecorator(DeclType.Field, "regex"); // value = a string literal, class = an identifier
 		//binder.bindDecorator(DeclType.Field, "minLength");
@@ -26,11 +36,11 @@ class DataContext : DecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		return new DataResponder(decl);
+		return res;
 	}
 }
 
-class DataResponder : DecoratorResponder
+class DataResponder : IDecoratorResponder
 {
 	this(DeclarationInfo decl)
 	{
@@ -38,10 +48,11 @@ class DataResponder : DecoratorResponder
 	}
 	
 	DeclarationInfo decl;
+	IObjectResponder iobj;
 	
-	void finish(DeclarationWriter writer)
+	void finish(IDeclarationWriter writer)
 	{
-		writer.addBaseType("IObject");
-		writer.addBaseType("IBindable");
+		iobj.finish(writer);
+		//writer.addBaseType("IBindable");
 	}
 }

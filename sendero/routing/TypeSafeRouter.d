@@ -12,9 +12,9 @@ const ubyte GET = 0;
 const ubyte POST = 1;
 const ubyte ALL = 2;
 
-template Route(Ret, Req, bool UseDelegates = false)
+template Route(ResT, ReqT, bool UseDelegates = false)
 {
-	Ret route(Req routeParams, void* ptr = null)
+	ResT route(ReqT routeParams, void* ptr = null)
 	in
 	{
 		assert(routeParams !is null);
@@ -26,7 +26,7 @@ template Route(Ret, Req, bool UseDelegates = false)
 	}
 	body
 	{	
-		Ret error(char[] msg = "")
+		ResT error(char[] msg = "")
 		{
 			if(errHandler) return errHandler.exec(routeParams, ptr);
 			else throw new Exception("Routing error: " ~ msg);
@@ -78,9 +78,9 @@ template Route(Ret, Req, bool UseDelegates = false)
 	}
 }
 
-template TypeSafeRouterDef(Ret, Req)
+template TypeSafeRouterDef(ResT, ReqT)
 {
-	alias IFunctionWrapper!(Ret, Req) Routing;
+	alias IFunctionWrapper!(ResT, ReqT) Routing;
 	
 	private struct Routes
 	{
@@ -101,16 +101,16 @@ template TypeSafeRouterDef(Ret, Req)
 	Routes postRoutes;
 	Routing errHandler;
 	
-	static TypeSafeRouter!(Ret, Req) opCall()
+	static TypeSafeRouter!(ResT, ReqT) opCall()
 	{
-		TypeSafeRouter!(Ret, Req) router;
+		TypeSafeRouter!(ResT, ReqT) router;
 		return router;
 	}
 	
 	void map(T)(ubyte method, char[] route, T t, char[][] paramNames)
 	{
 		Routing routing;
-		routing = new FunctionWrapper!(T, Req)(t, paramNames);
+		routing = new FunctionWrapper!(T, ReqT)(t, paramNames);
 		
 		switch(method)
 		{
@@ -130,20 +130,20 @@ template TypeSafeRouterDef(Ret, Req)
 	
 	void setErrorHandler(T)(T t, char[][] paramNames)
 	{
-		errHandler = new FunctionWrapper!(T, Req)(t, paramNames);
+		errHandler = new FunctionWrapper!(T, ReqT)(t, paramNames);
 	}
 }
 
-struct TypeSafeRouter(Ret, Req)
+struct TypeSafeRouter(ResT, ReqT)
 {
-	mixin TypeSafeRouterDef!(Ret, Req);
-	mixin Route!(Ret, Req);
+	mixin TypeSafeRouterDef!(ResT, ReqT);
+	mixin Route!(ResT, ReqT);
 }
 
-struct TypeSafeInstanceRouter(Ret, Req)
+struct TypeSafeInstanceRouter(ResT, ReqT)
 {
-	mixin TypeSafeRouterDef!(Ret, Req);
-	mixin Route!(Ret, Req, true);
+	mixin TypeSafeRouterDef!(ResT, ReqT);
+	mixin Route!(ResT, ReqT, true);
 }
 
 

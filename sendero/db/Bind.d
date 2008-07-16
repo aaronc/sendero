@@ -15,3 +15,23 @@ interface IBindable {
 	 */
 	BindInfo[] bind(char[][] fieldNames = null);
 }
+
+// Ideas:
+
+struct Binder
+{
+	BindType[] types;
+	
+	package void*[] offsets;
+	
+	void bind(void* instPtr, ref void*[] ptrs)
+	{
+		
+	}
+}
+
+interface IBinder
+{
+	BindType[] types;
+	void*[] bind(void* ptr);
+}
