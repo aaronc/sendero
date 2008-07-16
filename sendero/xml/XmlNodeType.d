@@ -1,5 +1,6 @@
 /** 
- * Copyright: Copyright (C) 2007 Aaron Craelius.  All rights reserved.
+ * Copyright: Copyright (C) 2008 Aaron Craelius.  All rights reserved.
+ * License:   $(LGPL)
  * Authors:   Aaron Craelius
  */
 

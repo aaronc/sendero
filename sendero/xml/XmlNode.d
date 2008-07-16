@@ -5,7 +5,7 @@
 
 module sendero.xml.XmlNode;
 
-public import sendero.xml.XmlNodeType;
+public import sendero_base.xml.XmlNodeType;
 import sendero.xml.XmlParser;
 
 class XmlNode
