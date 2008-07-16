@@ -8,7 +8,7 @@ module sendero.vm.ExecutionContext;
 public import sendero.json.JsonObject;
 
 import sendero.util.Reflection;
-import sendero.xml.XmlNode;
+import sendero_base.xml.XmlNode;
 
 public import tango.core.Traits;
 public import tango.group.time;

@@ -13,7 +13,7 @@ debug(SenderoUnittest) {
 
 import tango.io.Stdout;
 import tango.io.File;
-import sendero.xml.XmlNode;
+import sendero_base.xml.XmlNode;
 	
 unittest
 {

@@ -6,7 +6,7 @@
 module sendero.xml.xpath10.Expression;
 
 import sendero.vm.ExecutionContext;
-import sendero.xml.XmlNode;
+import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 

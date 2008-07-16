@@ -20,7 +20,7 @@
 module sendero.xml.xpath10.Parser;
 
 import sendero.xml.xpath10.Expression;
-import sendero.xml.XmlNode;
+import sendero_base.xml.XmlNode;
 
 import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
