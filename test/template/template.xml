@@ -7,7 +7,7 @@
   </head>
   <body>
 	_{greeting("me")}
-	<xi:include href="test\header.xml" />
+	<xi:include href="test/header.xml" />
     _{greeting($user)}
     _{greeting("me")}
     _{greeting("world")}

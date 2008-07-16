@@ -1,0 +1,161 @@
+= Sendero User Manual
+
+[WARNING]
+.API will change
+=============================================================================
+This document describes the API Sendero's pre-alpha development version.  No releases have been made yet and the API even for the alpha version will be significantly different.  A number of those changes are already described in the document - Sendero Design.  This document is simply here to describe the code that is actually in the repository.
+=============================================================================
+
+== The Sendero Contoller Compiler - _senderocc_
+Sendero controllers are written in a modified version of D that is converted into standard D source code using a command line program called _senderocc_.
+
+=== Installation ===
+The source for _senderocc_ can be found in the `sendero_controller` directory.
+
+=== Usage ===
+_senderocc_ accepts source code files with the `.dc` extension.
+
+=== Syntax ===
+
+[WARNING]
+.Syntax will change
+===========================
+The syntax describe here is for the pre-alpha version of sendero controllers.  In future versions, a different syntax will be used based on DecoratedD.  This will allow for a standardized tool for preprocessing D-source code files.
+===========================
+
+== Sendero Xml Templates ==
+
+Sendero provides a sophisticated
+
+== Template Syntax ==
+
+[NOTE]
+.This syntax is more stable
+While there are currently plans to change other parts of the Sendero API, we believe that the template language will remain fairly similar to what is described below.  The main thing that _will_ change is the Expression Syntax.
+
+=== `d:for` ===
+
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<ul>
+	<d:for each="$x in $myList">
+		<li>_{$x}</li>
+	</d:for>
+</ul>
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+=== `d:block`, `d:extends`, `d:super` ===
+
+A base template:
+
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<html>
+	<head></head>
+	<body>
+		<div>
+			<p d:block="x">base x block</p>
+			<p d:block="y"></p>
+		</div>
+	</body>
+</html>
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A derived template:
+
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<d:extends href="base.html">
+	<d:block name="x">
+		derived x block
+		<d:super />
+	</d:block>
+	<d:block name="y">derived y block </>
+</d:extends>
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+will render:
+
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<html>
+	<head></head>
+	<body>
+		<div>
+			<p>
+				derived x block
+				base x block
+			</p>
+			<p>derived y block</p>
+		</div>
+	</body>
+</html>
+source~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=== `d:if` ===
+
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~
+<d:if test="$items.length">
+	<ul>
+    		<li d:for="$item in $items">
+			_{$item.name}
+		</li>
+	</ul>
+</d:if>
+source~~~~~~~~~~~~~~~~~~~~~~~~
+
+=== `d:choose`, `d:when`, `d:otherwise` ===
+[xml]
+source~~~~~~~~~~~~~~~~~~~~~~~~
+<d:choose expr="$name">
+	<d:when val="dave">David</d:when>
+	<d:when val="bob">Robert</d:when>
+	<d:when val="alice">Alice In Wonderland</d:when>
+	<d:otherwise>I don't know who then?!?</d:otherwise>
+</d:choose>
+source~~~~~~~~~~~~~~~~~~~~~~~~
+
+=== Expression Syntax ===
+
+[WARNING]
+.Expression synax will change
+==========================
+The expression syntax described here will change soon.  In particular, the `$` character will no longer be necessary for prefixing variable references.  This seems like a cleaner syntax more consistent with D.  The `$` prefix was intially chosen for XPath compatibilty, but the current thinking is that there are better ways to do this.
+==========================
+
+The value of all attribute and data nodes is parsed for expressions.  If no expressions are found, the node is appended to the syntax tree as literal data.  Within data nodes, expressions are enclosed between the `${` and `}` delimiters.
+
+-------
+	<p>The value of the expression "$expr": _{$expr}</p>
+------- 
+
+*Expression syntax grammar*
+
+-----------------
+Expression
+	VarRef
+	FunctionCall
+	Number
+	String
+
+VarRef
+	VarRef "." Identifier;
+	"$" Identifier
+
+FunctionCall
+	Identifier "(" ParamList? ")"
+
+ParamList
+	ParamList "," Expression
+	Expression
+
+EmbeddedExpression
+	"_{" Expression "}"
+	"_{" Expression ";" FormmatingFlags "}"
+
+FormattingFlags
+	FormattingFlags "," Identifier
+	Identifier
+-----------------

@@ -5,9 +5,9 @@
 
 module sendero.json.JsonParser;
 
-public import sendero.util.ICharIterator;
-import sendero.util.StringCharIterator;
-import sendero.util.collection.Stack;
+
+import sendero_base.util.StringCharIterator;
+import sendero_base.util.collection.Stack;
 
 enum JSONTokenType { Name, String, Number, BeginObject, EndObject, BeginArray, EndArray, True, False, Null, Empty };
 

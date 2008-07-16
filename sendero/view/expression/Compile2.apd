@@ -1,0 +1,288 @@
+APDDeclaration
+{
+	module sendero.view.expression.Compile2;
+	
+	import tango.io.Stdout;
+	import tango.text.convert.Integer;
+	import Float = tango.text.convert.Float;
+
+version(TestApaged)
+{
+/+	import sendero.util.LocalText;
+
+    void main(string[] args)
+    {
+        if ( args.length &lt; 2 )
+            throw new Exception("Usage: arithmetic &lt;expression>");
+        SyntaxTree* root;
+        if ( parse("", args[1], root, true) ) {
+            Expression value;
+            root.Expr(value);
+            debug root.print;
+			auto ctxt = new ExecutionContext;
+			auto res = value.exec(ctxt);
+			auto text = Message.renderParam(ctxt, res);
+            Stdout.format("{} = {}\n", args[1], text);
+        }
+        else
+        {
+            Stdout.format("Invalid expression: {}\n", args[1]);
+        }
+    }+/
+}
+
+}
+
+Whitespace
+{
+    regexp("[ \\t\\n\\r]+");
+}
+
+Expr(inout Expression expr)
+{
+	OrExpr
+	{
+		OrExpr(expr);
+	}
+	
+}
+
+OrExpr(inout Expression value)
+{
+	AndExpr
+	{
+		AndExpr(value);
+	}
+	
+	OrExpr "||" AndExpr
+	{
+		Expression x, y;
+	}
+}
+
+AndExpr(inout Expression value)
+{
+	EqualityExpr
+	{
+		EqualityExpr(value);
+	}
+	
+	AndExpr "&&" EqualityExpr
+	{
+		Expression x, y;
+		AndExpr(x);
+		EqualityExpr(y);
+	}
+}
+
+EqualityExpr(inout Expression value)
+{
+	RelationalExpr
+	{
+		RelationalExpr(value);
+	}
+	
+	EqualityExpr "==" RelationalExpr
+	{
+		Expression x, y;
+		EqualityExpr(x);
+		RelationalExpr(y);
+	}
+	
+	EqualityExpr "!=" RelationalExpr
+	{
+		Expression x, y;
+		EqualityExpr(x);
+		RelationalExpr(y);
+	}
+}
+
+RelationalExpr(inout Expression value)
+{
+	AdditiveExpr
+	{
+		AdditiveExpr(value);
+	}
+	
+	RelationalExpr "<" AdditiveExpr	
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+	}
+	
+	RelationalExpr ">" AdditiveExpr	
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+	}
+	
+	RelationalExpr "<=" AdditiveExpr
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+	}
+	
+	RelationalExpr ">=" AdditiveExpr
+	{
+		Expression x, y;
+		RelationalExpr(x);
+		AdditiveExpr(y);
+	}
+}
+
+AdditiveExpr(inout Expression value)
+{
+    AdditiveExpr "+" MulExpr
+    {
+		Expression x, y;
+        AdditiveExpr(x);
+        MulExpr(y);
+    }
+
+    AdditiveExpr "-" MulExpr
+    {
+        Expression x, y;
+        AdditiveExpr(x);
+        MulExpr(y);
+    }
+
+    MulExpr
+    { MulExpr(value); }
+}
+
+MulExpr(inout Expression value)
+{
+    MulExpr "*" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+        value.type = ExpressionT.Binary;
+		value.binaryExpr.type = BinaryExpressionT.Mul;
+		value.binaryExpr.expr ~= x;
+		value.binaryExpr.expr ~= y;
+    }
+	
+	MulExpr "div" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+    }
+	
+	MulExpr "mod" UnaryExpr
+    {
+        Expression x, y;
+        UnaryExpr(x);
+        MulExpr(y);
+    }
+
+    UnaryExpr
+    { UnaryExpr(value); }
+}
+
+
+UnaryExpr(inout Expression value)
+{
+	"-" UnaryExpr
+	{
+		Expression val;
+        UnaryExpr(val);
+	}
+	
+	PrimaryExpr
+	{ PrimaryExpr(value); }
+
+}
+
+Literal(char[] value)
+{
+	regexp('"[^"]*"')
+	{
+		value = _ST_match[1 .. $-1];
+	}
+	
+	regexp("'[^']*'")
+	{
+		value = _ST_match[1 .. $-1];
+	}
+}
+
+PrimaryExpr(inout Expression value)
+{
+    regexp("[0-9]+")
+    {
+		long val = atoi(_ST_match);
+    }
+	
+	regexp("[0-9]+\\.[0-9]+")
+    {
+		double val = Float.parse(_ST_match);
+    }
+	
+	Literal
+	{
+		char[] val;
+		Literal(val);
+	}
+	
+	FuncCall
+	{
+		FuncCall(value);
+	}
+	
+	VarRef
+	{
+		VarRef(value);
+	}
+
+    "(" Expr ")"
+    { Expr(value); }
+}
+
+FuncCall(inout Expression expr)
+{
+	VarRef "(" ExprList ")"
+	{
+		expr.type = ExpressionT.FuncCall;
+		ExprList(expr.func.params);
+	}
+}
+
+ExprList(inout Expression[] args)
+{
+	Expr "," ExprList
+	{
+		Expression expr;
+		Expression exprList[];
+		Expr(expr);
+		ExprList(exprList);
+		args ~= expr;
+		args ~= exprList;
+	}
+	
+	Expr
+	{
+		Expression expr;
+		args ~= expr; 
+	}
+	
+	epsilon;
+}
+
+
+
+VarRef()
+{
+	VarRef "." Identifier;
+	VarRef "[" Expr "]";
+	Identifier;
+}
+
+Identifier()
+{
+	regexp("[A-Za-z_][A-Za-z_0-9]*");
+}

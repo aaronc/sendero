@@ -11,7 +11,8 @@ import tango.net.Uri;
 import tango.net.http.HttpClient;
 import tango.net.http.HttpConst;
 
-import sendero.util.ArrayWriter;
+import sendero_base.util.ArrayWriter;
+
 
 struct Param
 {

@@ -7,7 +7,8 @@ module sendero.view.SenderoTemplate;
 
 import sendero.view.SenderoTemplateInternals;
 import sendero.vm.ExecutionContext;
-import sendero.util.ArrayWriter;
+
+import sendero_base.util.ArrayWriter;
 //alias AbstractSenderoTemplateContext!(ExecutionContext, AbstractSenderoTemplateContext) SenderoTemplateContext;
 //alias AbstractSenderoTemplate!(ExecutionContext, SenderoTemplateContext) SenderoTemplate;
 
@@ -40,12 +41,16 @@ class SenderoTemplate : AbstractSenderoTemplate!(SenderoTemplateContext, Sendero
 	
 }
 
-version(Unittest)
+
+debug(SenderoUnittest)
 {
 	import tango.io.Stdout;
 	import tango.group.time;
 	import sendero.msg.Error;
 	
+	import tango.io.File;
+	import qcf.Regression;
+
 	static class Name
 	{
 		uint somenumber;
@@ -54,6 +59,23 @@ version(Unittest)
 		DateTime date;
 	}
 	
+	struct Tester
+	{
+		static Regression r;
+		static this()
+		{
+			r = new Regression("json"); 
+		}
+		
+		static void test(char[] testName)
+		{
+			auto tmpl = SenderoTemplate.get("test/template/" ~ testName ~ ".html", "en-US");
+			assert(tmpl, testName);
+			scope f = new File("test/template/" ~ testName ~ "_data.json");
+			assert(f, testName);
+		}
+	}
+	alias Tester.test test;
 	
 unittest
 {
@@ -92,6 +114,9 @@ unittest
 	}
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
+	
+
+	SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
@@ -137,7 +162,8 @@ unittest
 	n.date.date.day = 3;
 	names ~= n;
 	
-	auto complex = SenderoTemplate.get("test/complex.xml", null);
+
+	auto complex = SenderoTemplate.get("complex.xml", null);
 	complex["person"] = n;
 	complex["names"] = names;
 	Stdout(complex.render).newline;

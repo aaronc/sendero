@@ -6,11 +6,12 @@
 module sendero.json.JsonObject;
 
 import sendero.json.JsonParser;
-import sendero.util.StringCharIterator;
+
+import sendero_base.util.StringCharIterator;
 
 import Float = tango.text.convert.Float;
 
-import sendero.util.ArrayWriter;
+import sendero_base.util.ArrayWriter;
 
 /**
  * Enumerates the seven acceptable JSON value types.

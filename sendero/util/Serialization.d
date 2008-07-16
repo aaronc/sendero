@@ -14,6 +14,7 @@ import tango.core.Traits;
 
 bool loadFromFile(T)(inout T t, char[] filename)
 {
+
 	FileConduit.Style style;
 	style.access = FileConduit.Access.Read;
 	style.open = FileConduit.Open.Exists;

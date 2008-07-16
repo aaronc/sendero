@@ -1,0 +1,8 @@
+= Sendero Design
+
+Sendero will be dependent on SenderoBase and DecoratedD.
+
+== Components
+Both Sendero's model and controller interface will use DecoratedD.
+
+== Controllers
