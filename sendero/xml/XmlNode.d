@@ -14,7 +14,6 @@ public:
 	XmlNodeType type;
 	char[] prefix;
 	char[] localName;
-	uint uriID = 0;
 	
 	final char[] name()
     {
@@ -168,13 +167,12 @@ public:
 		}
 	}
 	
-	final void appendAttribute(char[] prefix, char[] localName, char[] value, uint uriID = 0)
+	final void appendAttribute(char[] prefix, char[] localName, char[] value)
 	{
 		auto attr = new XmlNode;
 		attr.prefix = prefix;
 		attr.localName = localName;
 		attr.rawValue = value;
-		attr.uriID = uriID;
 		attr.parent_ = this;
 		attr.type = XmlNodeType.Attribute;
 		if(!firstAttr_) {
@@ -199,7 +197,6 @@ private:
 	
 	XmlNode firstAttr_ = null;
 	XmlNode lastAttr_ = null;
-	uint[char[]] namespaceURIs;
 }
 
 
@@ -562,7 +559,7 @@ XmlNode parseXmlTree(char[] xml)
 			cur.append(node);
 			break;
 		case XmlTokenType.Attribute:
-			cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue, 0);
+			cur.appendAttribute(itr.prefix, itr.localName, itr.rawValue);
 			break;
 		case XmlTokenType.EndElement:
 			if(!cur.hasChildren) {
