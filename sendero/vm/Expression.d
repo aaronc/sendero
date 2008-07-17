@@ -332,28 +332,28 @@ class VarAccess : IExpression
 	}
 }
 
-class Subscript : IExpression
+class VarPath : IExpression
 {
-	this(IExpression base, char[][] subscript)
+	this(char[][] path)
 	{
-		this.base = base;
-		this.subscript = subscript;
+		this.path = path;
 	}
 	
-	IExpression base;
-	char[][] subscript;
+	char[][] path;
 	
 	Var opCall(IObject ctxt)
 	{
-		auto var = base(ctxt);
-		if(var.type != VarT.Object)
-			return Var();
+		auto obj = ctxt;
+		Var var;
 		
-		foreach(step; subscript)
+		foreach(step; path)
 		{
-			if(var.type != VarT.Object)
-				return Var();
-			var = var.obj_[step];
+			if(!obj) return Var();
+			
+			var = obj[step];
+			
+			if(var.type != VarT.Object) obj = null;
+			else obj = var.obj_;
 		}
 		
 		return var;

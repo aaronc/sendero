@@ -410,13 +410,6 @@ Predicate(inout IExpression expr)
 	{
 		Expr(expr);
 	}
-	
-	/*"." IdentifierList
-	{
-		char[][] path;
-		IdentifierList(path);
-		expr = new Subscript(expr, path);
-	}*/
 }
 
 PredicateList(inout PredicateTest[] predicates)
@@ -717,23 +710,23 @@ NameTest(inout ITest test)
 	{
 		test = new WildcardTest;
 	}
+	
 	NCName ":*"
 	{
 		char[] prefix;
 		NCName(prefix);
 		test = new WildcardPrefixTest(prefix);	
 	}
+	
 	QName
 	{
-		VarAccess access;
-		QName(access);
-		/+VarPath path;
+		char[][] path;
 		QName(path);
 		debug assert(path.length);
 		if(path.length == 1)
 			test = new QNameTest(null, path[0]);
 		else if(path.length == 2)
-			test = new QNameTest(path[0], path[1]);+/
+			test = new QNameTest(path[0], path[1]);
 	}
 }
 
@@ -785,14 +778,17 @@ PrimaryExpr(inout IExpression expr)
 
 VarRef(inout IExpression expr)
 {
-	"$" QName
+	/*"$" QName
 	{
 		/+expr.type = ExpressionT.Var;
 		QName(expr.var);+/
-	}
+	}*/
 	
-	"$" Path
+	"$" VarAccess = VarAcc
 	{
+		IExpression[] path;
+		VarAcc(path);
+		expr = new VarAccess(path);
 		/+expr.type = ExpressionT.Var;
 		Path(expr.var);+/
 	}
@@ -829,12 +825,12 @@ FuncCall(inout IExpression expr)
 		//expr.type = ExpressionT.Value;
 		//expr.val.set(false);
 	}
-/*
+
 	QName "(" ExprList ")"
 	{
 		//expr.type = ExpressionT.FuncCall;
 		//ExprList(expr.func.params);
-	}*/
+	}
 }
 
 ExprList(inout IExpression[] args)
@@ -858,26 +854,26 @@ ExprList(inout IExpression[] args)
 	epsilon;
 }
 
-QName(inout VarAccess path)
+QName(inout char[][] path)
 {
 	NCName
 	{
-		/+char[] localname;
+		char[] localname;
 		NCName(localname);
-		path.path ~= localname;+/
+		path ~= localname;
 	}
 	
 	NCName ":" NCName = NCName2
 	{
-		/+char[] prefix, localname;
+		char[] prefix, localname;
 		NCName(prefix);
 		NCName2(localname);
-		path.path ~= prefix;
-		path.path ~= localname;+/
+		path ~= prefix;
+		path ~= localname;
 	}
 }
 
-IdentifierList(ref char[][] path)
+/*IdentifierList(ref char[][] path)
 {
 	IdentifierList "." NCName
 	{
@@ -891,7 +887,7 @@ IdentifierList(ref char[][] path)
 		char[] value; NCName(value);
 		path ~= value;
 	}
-}
+}*/
 
 NCName(out char[] value)
 {
@@ -902,15 +898,29 @@ NCName(out char[] value)
 	}
 }
 
-Path(inout VarAccess path)
+VarAccess(IExpression[] path)
 {
-	regexp("[A-Za-z_][A-Za-z_0-9]*('.'[A-Za-z_][A-Za-z_0-9]*)*")
+
+	VarAccess "." NCName
 	{
-		//path = VarPath(_ST_match);
+		VarAccess(path);
+		char[] name; NCName(name);
+		Var v; set(v, name);
+		path ~= new Literal(v);
 	}
-} 
-
-VarName
-{
-
+	
+	VarAccess "[" Expr "]"
+	{
+		VarAccess(path);
+		IExpression expr;
+		Expr(expr);
+		path ~= expr;
+	}
+	
+	NCName
+	{
+		char[] name; NCName(name);
+		Var v; set(v, name);
+		path ~= new Literal(v);
+	}
 }
