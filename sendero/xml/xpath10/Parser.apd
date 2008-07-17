@@ -9,8 +9,6 @@ import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
-	
-//public import sendero.vm.ExecutionContext;
 public import sendero_base.Core;
 import sendero_base.Set;
 import sendero.vm.Expression;
@@ -108,14 +106,6 @@ EqualityExpr(inout IExpression expr)
 		IExpression x, y;
 		EqualityExpr(x); RelationalExpr(y);
 		expr = new EqOp!("==")(x, y);
-	
-		/+IExpression x, y;
-		EqualityExpr(x);
-		RelationalExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Eq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 	
 	EqualityExpr "!=" RelationalExpr
@@ -123,14 +113,6 @@ EqualityExpr(inout IExpression expr)
 		IExpression x, y;
 		EqualityExpr(x); RelationalExpr(y);
 		expr = new EqOp!("!=")(x, y);
-	
-		/+IExpression x, y;
-		EqualityExpr(x);
-		RelationalExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.NotEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 }
 
@@ -146,14 +128,6 @@ RelationalExpr(inout IExpression expr)
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!("<")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Lt;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 	
 	RelationalExpr ">" AdditiveExpr	
@@ -161,14 +135,6 @@ RelationalExpr(inout IExpression expr)
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!(">")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Gr;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 	
 	RelationalExpr "<=" AdditiveExpr
@@ -176,14 +142,6 @@ RelationalExpr(inout IExpression expr)
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!("<=")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.LtEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 	
 	RelationalExpr ">=" AdditiveExpr
@@ -191,14 +149,6 @@ RelationalExpr(inout IExpression expr)
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!(">=")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.GrEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
 	}
 }
 
@@ -209,14 +159,6 @@ AdditiveExpr(inout IExpression expr)
     	IExpression x, y;
 		AdditiveExpr(x); MulExpr(y);
 		expr = new BinaryOp!("+")(x, y);
-    
-		/+IExpression x, y;
-        AdditiveExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Add;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
     }
 
     AdditiveExpr "-" MulExpr
@@ -224,14 +166,6 @@ AdditiveExpr(inout IExpression expr)
     	IExpression x, y;
 		AdditiveExpr(x); MulExpr(y);
 		expr = new BinaryOp!("-")(x, y);
-    
-        /+IExpression x, y;
-        AdditiveExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Sub;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
     }
 
     MulExpr
@@ -245,14 +179,6 @@ MulExpr(inout IExpression expr)
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("*")(x, y);
-    
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Mul;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
     }
 	
 	MulExpr "div" UnaryExpr
@@ -260,14 +186,6 @@ MulExpr(inout IExpression expr)
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("/")(x, y);
-    
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Div;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
     }
 	
 	MulExpr "mod" UnaryExpr
@@ -275,14 +193,6 @@ MulExpr(inout IExpression expr)
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("%")(x, y);
-    	
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Mod;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
     }
 
     UnaryExpr
@@ -297,12 +207,6 @@ UnaryExpr(inout IExpression expr)
 		IExpression e;
         UnaryExpr(e);
         expr = new Negative(e);
-	
-		/+IExpression val;
-        UnaryExpr(val);
-        value.type = ExpressionT.FuncCall;
-		value.func.func = new NegativeFn();
-		value.func.params ~= val;+/
 	}
 
 	UnionExpr
@@ -323,12 +227,6 @@ UnionExpr(inout IExpression expr)
 		PathExpr(expr2);
 
 		expr = new UnionExpr(expr1, expr2);
-	
-		/+IExpression expr1, expr2;
-		UnionExpr(expr1);
-		PathExpr(expr2);
-		expr.type = ExpressionT.FuncCall;
-		expr.func.func = new UnionFn(expr1, expr2);+/
 	}
 }
 
@@ -339,9 +237,6 @@ PathExpr(inout IExpression expr)
 		IStep step;
 		LocationPath(step);
 		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, null );
-		
-		/+expr.type = ExpressionT.FuncCall;
-		expr.func.func = new XPathExpressionFn!(false)(step);+/
 	}
 	
 	FilterExpr
@@ -358,10 +253,6 @@ PathExpr(inout IExpression expr)
 		RelativeLocationPath(step);
 		
 		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, [e] );
-		
-		/+expr.type = ExpressionT.FuncCall;
-		expr.func.func = new XPathExpressionFn!(true)(step);
-		expr.func.params ~= e;+/
 	}
 	
 	FilterExpr "//" RelativeLocationPath
@@ -737,9 +628,6 @@ PrimaryExpr(inout IExpression expr)
     	long val = Integer.atoi(_ST_match);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+long val = Integer.atoi(_ST_match);
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
     }
 	
 	regexp("[0-9]+\\.[0-9]+")
@@ -747,9 +635,6 @@ PrimaryExpr(inout IExpression expr)
     	double val = Float.parse(_ST_match);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+double val = Float.parse(_ST_match);
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
     }
 	
 	Literal = Lit
@@ -757,9 +642,6 @@ PrimaryExpr(inout IExpression expr)
 		char[] val;	Lit(val);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
 	}
 	
 	FuncCall
@@ -798,15 +680,11 @@ FuncCall(inout IExpression expr)
 {
 	"last" "(" ")"
 	{
-		//expr.type = ExpressionT.FuncCall;
-		//expr.func.func = new LastFn();
 		expr = new LastExpr;
 	}
 	
 	"position" "(" ")"
 	{
-		//expr.type = ExpressionT.FuncCall;
-		//expr.func.func = new PositionFn();
 		expr = new PositionExpr;
 	}
 	
@@ -814,20 +692,17 @@ FuncCall(inout IExpression expr)
 	{
 		Var v; set(v, true);
 		expr = new Literal(v); 
-		//expr.type = ExpressionT.Value;
-		//expr.val.set(true);
 	}
 	
 	"false" "(" ")"
 	{
 		Var v; set(v, false);
 		expr = new Literal(v);
-		//expr.type = ExpressionT.Value;
-		//expr.val.set(false);
 	}
 
 	QName "(" ExprList ")"
 	{
+		debug assert(false);
 		//expr.type = ExpressionT.FuncCall;
 		//ExprList(expr.func.params);
 	}

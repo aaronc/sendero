@@ -26,8 +26,6 @@ import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
-	
-//public import sendero.vm.ExecutionContext;
 public import sendero_base.Core;
 import sendero_base.Set;
 import sendero.vm.Expression;
@@ -159,7 +157,7 @@ void _S_Expr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) OrExpr = &_ST_children[0]._S_OrExpr;
 
-#line 54 "Parser.apd"
+#line 52 "Parser.apd"
 
 		OrExpr(expr);
         break;
@@ -168,7 +166,7 @@ void _S_Expr(inout IExpression expr)
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
         void delegate() ExprTerminator = &_ST_children[1]._S_ExprTerminator;
 
-#line 59 "Parser.apd"
+#line 57 "Parser.apd"
 
 		Expr(expr);
         break;
@@ -199,7 +197,7 @@ void _S_OrExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) AndExpr = &_ST_children[0]._S_AndExpr;
 
-#line 72 "Parser.apd"
+#line 70 "Parser.apd"
 
 		AndExpr(expr);
         break;
@@ -208,7 +206,7 @@ void _S_OrExpr(inout IExpression expr)
         void delegate(inout IExpression expr) OrExpr = &_ST_children[0]._S_OrExpr;
         void delegate(inout IExpression expr) AndExpr = &_ST_children[1]._S_AndExpr;
 
-#line 77 "Parser.apd"
+#line 75 "Parser.apd"
 
 		IExpression x, y;
 		OrExpr(x); AndExpr(y);
@@ -228,7 +226,7 @@ void _S_AndExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
 
-#line 87 "Parser.apd"
+#line 85 "Parser.apd"
 
 		EqualityExpr(expr);
         break;
@@ -237,7 +235,7 @@ void _S_AndExpr(inout IExpression expr)
         void delegate(inout IExpression expr) AndExpr = &_ST_children[0]._S_AndExpr;
         void delegate(inout IExpression expr) EqualityExpr = &_ST_children[1]._S_EqualityExpr;
 
-#line 92 "Parser.apd"
+#line 90 "Parser.apd"
 
 		IExpression x, y;
 		AndExpr(x); EqualityExpr(y);
@@ -257,7 +255,7 @@ void _S_EqualityExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
 
-#line 102 "Parser.apd"
+#line 100 "Parser.apd"
 
 		RelationalExpr(expr);
         break;
@@ -266,38 +264,22 @@ void _S_EqualityExpr(inout IExpression expr)
         void delegate(inout IExpression expr) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
 
-#line 107 "Parser.apd"
+#line 105 "Parser.apd"
 
 		IExpression x, y;
 		EqualityExpr(x); RelationalExpr(y);
 		expr = new EqOp!("==")(x, y);
-	
-		/+IExpression x, y;
-		EqualityExpr(x);
-		RelationalExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Eq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 9:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
 
-#line 122 "Parser.apd"
+#line 112 "Parser.apd"
 
 		IExpression x, y;
 		EqualityExpr(x); RelationalExpr(y);
 		expr = new EqOp!("!=")(x, y);
-	
-		/+IExpression x, y;
-		EqualityExpr(x);
-		RelationalExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.NotEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
 
     default:
@@ -313,7 +295,7 @@ void _S_RelationalExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
 
-#line 140 "Parser.apd"
+#line 122 "Parser.apd"
 
 		AdditiveExpr(expr);
         break;
@@ -322,76 +304,44 @@ void _S_RelationalExpr(inout IExpression expr)
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
-#line 145 "Parser.apd"
+#line 127 "Parser.apd"
 
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!("<")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Lt;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 12:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
-#line 160 "Parser.apd"
+#line 134 "Parser.apd"
 
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!(">")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Gr;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 13:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
-#line 175 "Parser.apd"
+#line 141 "Parser.apd"
 
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!("<=")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.LtEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 14:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
-#line 190 "Parser.apd"
+#line 148 "Parser.apd"
 
 		IExpression x, y;
 		RelationalExpr(x); AdditiveExpr(y);
 		expr = new CmpOp!(">=")(x, y);
-	
-		/+IExpression x, y;
-		RelationalExpr(x);
-		AdditiveExpr(y);
-		value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.GrEq;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
 
     default:
@@ -408,44 +358,28 @@ void _S_AdditiveExpr(inout IExpression expr)
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
         void delegate(inout IExpression expr) MulExpr = &_ST_children[1]._S_MulExpr;
 
-#line 208 "Parser.apd"
+#line 158 "Parser.apd"
 
     	IExpression x, y;
 		AdditiveExpr(x); MulExpr(y);
 		expr = new BinaryOp!("+")(x, y);
-    
-		/+IExpression x, y;
-        AdditiveExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Add;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 16:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
         void delegate(inout IExpression expr) MulExpr = &_ST_children[1]._S_MulExpr;
 
-#line 223 "Parser.apd"
+#line 165 "Parser.apd"
 
     	IExpression x, y;
 		AdditiveExpr(x); MulExpr(y);
 		expr = new BinaryOp!("-")(x, y);
-    
-        /+IExpression x, y;
-        AdditiveExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Sub;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 17:
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) MulExpr = &_ST_children[0]._S_MulExpr;
 
-#line 238 "Parser.apd"
+#line 172 "Parser.apd"
  MulExpr(expr);
         break;
 
@@ -463,63 +397,39 @@ void _S_MulExpr(inout IExpression expr)
         void delegate(inout IExpression expr) MulExpr = &_ST_children[0]._S_MulExpr;
         void delegate(inout IExpression expr) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
-#line 244 "Parser.apd"
+#line 178 "Parser.apd"
 
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("*")(x, y);
-    
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Mul;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 19:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) MulExpr = &_ST_children[0]._S_MulExpr;
         void delegate(inout IExpression expr) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
-#line 259 "Parser.apd"
+#line 185 "Parser.apd"
 
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("/")(x, y);
-    
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Div;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 20:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) MulExpr = &_ST_children[0]._S_MulExpr;
         void delegate(inout IExpression expr) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
-#line 274 "Parser.apd"
+#line 192 "Parser.apd"
 
     	IExpression x, y;
 		MulExpr(x); UnaryExpr(y);
 		expr = new BinaryOp!("%")(x, y);
-    	
-        /+IExpression x, y;
-        UnaryExpr(x);
-        MulExpr(y);
-        value.type = ExpressionT.Binary;
-		value.binaryExpr.type = BinaryExpressionT.Mod;
-		value.binaryExpr.expr ~= x;
-		value.binaryExpr.expr ~= y;+/
         break;
     case 21:
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
 
-#line 289 "Parser.apd"
+#line 199 "Parser.apd"
  UnaryExpr(expr);
         break;
 
@@ -536,23 +446,17 @@ void _S_UnaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
 
-#line 296 "Parser.apd"
+#line 206 "Parser.apd"
 
 		IExpression e;
         UnaryExpr(e);
         expr = new Negative(e);
-	
-		/+IExpression val;
-        UnaryExpr(val);
-        value.type = ExpressionT.FuncCall;
-		value.func.func = new NegativeFn();
-		value.func.params ~= val;+/
         break;
     case 23:
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) UnionExpr = &_ST_children[0]._S_UnionExpr;
 
-#line 309 "Parser.apd"
+#line 213 "Parser.apd"
  UnionExpr(expr);
         break;
 
@@ -569,7 +473,7 @@ void _S_UnionExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) PathExpr = &_ST_children[0]._S_PathExpr;
 
-#line 315 "Parser.apd"
+#line 219 "Parser.apd"
 
 		PathExpr(expr);
         break;
@@ -578,19 +482,13 @@ void _S_UnionExpr(inout IExpression expr)
         void delegate(inout IExpression expr) UExpr = &_ST_children[0]._S_UnionExpr;
         void delegate(inout IExpression expr) PathExpr = &_ST_children[1]._S_PathExpr;
 
-#line 320 "Parser.apd"
+#line 224 "Parser.apd"
 
 		IExpression expr1, expr2;
 		UExpr(expr1);
 		PathExpr(expr2);
 
 		expr = new UnionExpr(expr1, expr2);
-	
-		/+IExpression expr1, expr2;
-		UnionExpr(expr1);
-		PathExpr(expr2);
-		expr.type = ExpressionT.FuncCall;
-		expr.func.func = new UnionFn(expr1, expr2);+/
         break;
 
     default:
@@ -606,20 +504,17 @@ void _S_PathExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) LocationPath = &_ST_children[0]._S_LocationPath;
 
-#line 338 "Parser.apd"
+#line 236 "Parser.apd"
 
 		IStep step;
 		LocationPath(step);
 		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, null );
-		
-		/+expr.type = ExpressionT.FuncCall;
-		expr.func.func = new XPathExpressionFn!(false)(step);+/
         break;
     case 27:
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) FilterExpr = &_ST_children[0]._S_FilterExpr;
 
-#line 348 "Parser.apd"
+#line 243 "Parser.apd"
 
 		FilterExpr(expr);
         break;
@@ -628,7 +523,7 @@ void _S_PathExpr(inout IExpression expr)
         void delegate(inout IExpression expr) FilterExpr = &_ST_children[0]._S_FilterExpr;
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
 
-#line 353 "Parser.apd"
+#line 248 "Parser.apd"
 
 		IExpression e;
 		IStep step;
@@ -637,17 +532,13 @@ void _S_PathExpr(inout IExpression expr)
 		RelativeLocationPath(step);
 		
 		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, [e] );
-		
-		/+expr.type = ExpressionT.FuncCall;
-		expr.func.func = new XPathExpressionFn!(true)(step);
-		expr.func.params ~= e;+/
         break;
     case 29:
         debug assert(_ST_children.length == 2);
         void delegate(inout IExpression expr) FilterExpr = &_ST_children[0]._S_FilterExpr;
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
 
-#line 368 "Parser.apd"
+#line 259 "Parser.apd"
 
 		IExpression e;
 		IStep step, step2;
@@ -685,7 +576,7 @@ void _S_FilterExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) PrimaryExpr = &_ST_children[0]._S_PrimaryExpr;
 
-#line 396 "Parser.apd"
+#line 287 "Parser.apd"
 
 		PrimaryExpr(expr);
         break;
@@ -694,7 +585,7 @@ void _S_FilterExpr(inout IExpression expr)
         void delegate(inout IExpression expr) FilterExpr = &_ST_children[0]._S_FilterExpr;
         void delegate(inout IExpression expr) Predicate = &_ST_children[1]._S_Predicate;
 
-#line 401 "Parser.apd"
+#line 292 "Parser.apd"
 
 		debug assert(false, "TODO");
         break;
@@ -712,7 +603,7 @@ void _S_Predicate(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
 
-#line 410 "Parser.apd"
+#line 301 "Parser.apd"
 
 		Expr(expr);
         break;
@@ -731,7 +622,7 @@ void _S_PredicateList(inout PredicateTest[] predicates)
         void delegate(inout IExpression expr) Predicate = &_ST_children[0]._S_Predicate;
         void delegate(inout PredicateTest[] predicates) PredicateList = &_ST_children[1]._S_PredicateList;
 
-#line 418 "Parser.apd"
+#line 309 "Parser.apd"
 
 		IExpression expr;
 		Predicate(expr);
@@ -745,7 +636,7 @@ void _S_PredicateList(inout PredicateTest[] predicates)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Predicate = &_ST_children[0]._S_Predicate;
 
-#line 430 "Parser.apd"
+#line 321 "Parser.apd"
 
 		IExpression expr;
 		Predicate(expr);
@@ -769,7 +660,7 @@ void _S_LocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
-#line 443 "Parser.apd"
+#line 334 "Parser.apd"
 
 		RelativeLocationPath(step);
         break;
@@ -777,7 +668,7 @@ void _S_LocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) AbsoluteLocationPath = &_ST_children[0]._S_AbsoluteLocationPath;
 
-#line 448 "Parser.apd"
+#line 339 "Parser.apd"
 
 		AbsoluteLocationPath(step);
         break;
@@ -795,14 +686,14 @@ void _S_AbsoluteLocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
-#line 456 "Parser.apd"
+#line 347 "Parser.apd"
 
 		RelativeLocationPath(step);
         break;
     case 39:
         debug assert(_ST_children.length == 0);
 
-#line 461 "Parser.apd"
+#line 352 "Parser.apd"
 
 		//step = new XPathStep!(Axis.self);
 		//debug assert(false, "TODO");
@@ -812,7 +703,7 @@ void _S_AbsoluteLocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) AbbreviatedAbsoluteLocationPath = &_ST_children[0]._S_AbbreviatedAbsoluteLocationPath;
 
-#line 468 "Parser.apd"
+#line 359 "Parser.apd"
 
 		AbbreviatedAbsoluteLocationPath(step);
         break;
@@ -830,7 +721,7 @@ void _S_AbbreviatedAbsoluteLocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
-#line 476 "Parser.apd"
+#line 367 "Parser.apd"
 
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		IStep step2;
@@ -851,7 +742,7 @@ void _S_RelativeLocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) Step = &_ST_children[0]._S_Step;
 
-#line 487 "Parser.apd"
+#line 378 "Parser.apd"
 
 		Step(step);
         break;
@@ -860,7 +751,7 @@ void _S_RelativeLocationPath(inout IStep step)
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
         void delegate(inout IStep step) Step = &_ST_children[1]._S_Step;
 
-#line 492 "Parser.apd"
+#line 383 "Parser.apd"
 
 		IStep step2;
 		RelativeLocationPath(step);
@@ -871,7 +762,7 @@ void _S_RelativeLocationPath(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(inout IStep step) AbbreviatedRelativeLocationPath = &_ST_children[0]._S_AbbreviatedRelativeLocationPath;
 
-#line 500 "Parser.apd"
+#line 391 "Parser.apd"
 
 		AbbreviatedRelativeLocationPath(step);
         break;
@@ -890,7 +781,7 @@ void _S_AbbreviatedRelativeLocationPath(inout IStep step)
         void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
         void delegate(inout IStep step) Step = &_ST_children[1]._S_Step;
 
-#line 508 "Parser.apd"
+#line 399 "Parser.apd"
 
 		IStep step2, step3;
 		RelativeLocationPath(step);
@@ -915,7 +806,7 @@ void _S_Step(inout IStep step)
         void delegate(inout ITest test) NodeTest = &_ST_children[1]._S_NodeTest;
         void delegate(inout PredicateTest[] predicates) PredicateList = &_ST_children[2]._S_PredicateList;
 
-#line 521 "Parser.apd"
+#line 412 "Parser.apd"
 
 		Axis axis;
 		AxisSpecifier(axis);
@@ -973,7 +864,7 @@ void _S_Step(inout IStep step)
         debug assert(_ST_children.length == 1);
         void delegate(out Axis axis) AbbreviatedStep = &_ST_children[0]._S_AbbreviatedStep;
 
-#line 575 "Parser.apd"
+#line 466 "Parser.apd"
 
 		Axis axis;
 		AbbreviatedStep(axis);
@@ -1002,14 +893,14 @@ void _S_AbbreviatedStep(out Axis axis)
     case 48:
         debug assert(_ST_children.length == 0);
 
-#line 595 "Parser.apd"
+#line 486 "Parser.apd"
 
 		axis = Axis.self;
         break;
     case 49:
         debug assert(_ST_children.length == 0);
 
-#line 599 "Parser.apd"
+#line 490 "Parser.apd"
 
 		axis = Axis.parent;
         break;
@@ -1027,7 +918,7 @@ void _S_AxisSpecifier(out Axis axis)
         debug assert(_ST_children.length == 1);
         void delegate(out Axis axis) AxisName = &_ST_children[0]._S_AxisName;
 
-#line 607 "Parser.apd"
+#line 498 "Parser.apd"
 
 		AxisName(axis);
         break;
@@ -1035,7 +926,7 @@ void _S_AxisSpecifier(out Axis axis)
         debug assert(_ST_children.length == 1);
         void delegate(out bool attr) AbbreviatedAxisSpecifier = &_ST_children[0]._S_AbbreviatedAxisSpecifier;
 
-#line 612 "Parser.apd"
+#line 503 "Parser.apd"
 
 		bool attr;
 		AbbreviatedAxisSpecifier(attr);
@@ -1055,79 +946,79 @@ void _S_AxisName(out Axis axis)
     case 52:
         debug assert(_ST_children.length == 0);
 
-#line 622 "Parser.apd"
+#line 513 "Parser.apd"
  axis = Axis.ancestor;
         break;
     case 53:
         debug assert(_ST_children.length == 0);
 
-#line 623 "Parser.apd"
+#line 514 "Parser.apd"
  axis = Axis.ancestor_or_self;
         break;
     case 54:
         debug assert(_ST_children.length == 0);
 
-#line 624 "Parser.apd"
+#line 515 "Parser.apd"
  axis = Axis.attribute;
         break;
     case 55:
         debug assert(_ST_children.length == 0);
 
-#line 625 "Parser.apd"
+#line 516 "Parser.apd"
  axis = Axis.child;
         break;
     case 56:
         debug assert(_ST_children.length == 0);
 
-#line 626 "Parser.apd"
+#line 517 "Parser.apd"
  axis = Axis.descendant;
         break;
     case 57:
         debug assert(_ST_children.length == 0);
 
-#line 627 "Parser.apd"
+#line 518 "Parser.apd"
  axis = Axis.descendant_or_self;
         break;
     case 58:
         debug assert(_ST_children.length == 0);
 
-#line 628 "Parser.apd"
+#line 519 "Parser.apd"
  axis = Axis.following;
         break;
     case 59:
         debug assert(_ST_children.length == 0);
 
-#line 629 "Parser.apd"
+#line 520 "Parser.apd"
  axis = Axis.following_sibling;
         break;
     case 60:
         debug assert(_ST_children.length == 0);
 
-#line 630 "Parser.apd"
+#line 521 "Parser.apd"
  axis = Axis.namespace;
         break;
     case 61:
         debug assert(_ST_children.length == 0);
 
-#line 631 "Parser.apd"
+#line 522 "Parser.apd"
  axis = Axis.parent;
         break;
     case 62:
         debug assert(_ST_children.length == 0);
 
-#line 632 "Parser.apd"
+#line 523 "Parser.apd"
  axis = Axis.preceding;
         break;
     case 63:
         debug assert(_ST_children.length == 0);
 
-#line 633 "Parser.apd"
+#line 524 "Parser.apd"
  axis = Axis.preceding_sibling;
         break;
     case 64:
         debug assert(_ST_children.length == 0);
 
-#line 634 "Parser.apd"
+#line 525 "Parser.apd"
  axis = Axis.self;
         break;
 
@@ -1143,14 +1034,14 @@ void _S_AbbreviatedAxisSpecifier(out bool attr)
     case 65:
         debug assert(_ST_children.length == 0);
 
-#line 640 "Parser.apd"
+#line 531 "Parser.apd"
 
 		attr = true;
         break;
     case 66:
         debug assert(_ST_children.length == 0);
 
-#line 645 "Parser.apd"
+#line 536 "Parser.apd"
 
 		attr = false;
         break;
@@ -1168,7 +1059,7 @@ void _S_NodeTest(inout ITest test)
         debug assert(_ST_children.length == 1);
         void delegate(inout ITest test) NameTest = &_ST_children[0]._S_NameTest;
 
-#line 653 "Parser.apd"
+#line 544 "Parser.apd"
 
 		NameTest(test);
         break;
@@ -1176,7 +1067,7 @@ void _S_NodeTest(inout ITest test)
         debug assert(_ST_children.length == 1);
         void delegate(inout ITest test) NodeType = &_ST_children[0]._S_NodeType;
 
-#line 658 "Parser.apd"
+#line 549 "Parser.apd"
 
 		NodeType(test);
         break;
@@ -1184,7 +1075,7 @@ void _S_NodeTest(inout ITest test)
         debug assert(_ST_children.length == 1);
         void delegate(char[] value) Literal = &_ST_children[0]._S_Literal;
 
-#line 663 "Parser.apd"
+#line 554 "Parser.apd"
 
 		auto piTest = new PIKindTest;
 		Literal(piTest.literal);
@@ -1203,28 +1094,28 @@ void _S_NodeType(inout ITest test)
     case 70:
         debug assert(_ST_children.length == 0);
 
-#line 673 "Parser.apd"
+#line 564 "Parser.apd"
 
 		test = new CommentKindTest;
         break;
     case 71:
         debug assert(_ST_children.length == 0);
 
-#line 678 "Parser.apd"
+#line 569 "Parser.apd"
 
 		test = new TextKindTest;
         break;
     case 72:
         debug assert(_ST_children.length == 0);
 
-#line 683 "Parser.apd"
+#line 574 "Parser.apd"
 
 		test = new PIKindTest;
         break;
     case 73:
         debug assert(_ST_children.length == 0);
 
-#line 688 "Parser.apd"
+#line 579 "Parser.apd"
 
 		test = new NodeKindTest;
         break;
@@ -1241,14 +1132,14 @@ void _S_Literal(char[] value)
     case 74:
         debug assert(_ST_children.length == 0);
 
-#line 697 "Parser.apd"
+#line 588 "Parser.apd"
 
 		value = _ST_match[1 .. $-1];
         break;
     case 75:
         debug assert(_ST_children.length == 0);
 
-#line 702 "Parser.apd"
+#line 593 "Parser.apd"
 
 		value = _ST_match[1 .. $-1];
         break;
@@ -1265,7 +1156,7 @@ void _S_NameTest(inout ITest test)
     case 76:
         debug assert(_ST_children.length == 0);
 
-#line 710 "Parser.apd"
+#line 601 "Parser.apd"
 
 		test = new WildcardTest;
         break;
@@ -1273,7 +1164,7 @@ void _S_NameTest(inout ITest test)
         debug assert(_ST_children.length == 1);
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
 
-#line 715 "Parser.apd"
+#line 606 "Parser.apd"
 
 		char[] prefix;
 		NCName(prefix);
@@ -1283,7 +1174,7 @@ void _S_NameTest(inout ITest test)
         debug assert(_ST_children.length == 1);
         void delegate(inout char[][] path) QName = &_ST_children[0]._S_QName;
 
-#line 722 "Parser.apd"
+#line 613 "Parser.apd"
 
 		char[][] path;
 		QName(path);
@@ -1306,45 +1197,36 @@ void _S_PrimaryExpr(inout IExpression expr)
     case 79:
         debug assert(_ST_children.length == 0);
 
-#line 736 "Parser.apd"
+#line 627 "Parser.apd"
 
     	long val = Integer.atoi(_ST_match);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+long val = Integer.atoi(_ST_match);
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
         break;
     case 80:
         debug assert(_ST_children.length == 0);
 
-#line 746 "Parser.apd"
+#line 634 "Parser.apd"
 
     	double val = Float.parse(_ST_match);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+double val = Float.parse(_ST_match);
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
         break;
     case 81:
         debug assert(_ST_children.length == 1);
         void delegate(char[] value) Lit = &_ST_children[0]._S_Literal;
 
-#line 756 "Parser.apd"
+#line 641 "Parser.apd"
 
 		char[] val;	Lit(val);
 		Var v; set(v, val);
 		expr = new Literal(v);
-		/+
-		value.type = ExpressionT.Value;
-		value.val.set(val);+/
         break;
     case 82:
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) FuncCall = &_ST_children[0]._S_FuncCall;
 
-#line 766 "Parser.apd"
+#line 648 "Parser.apd"
 
 		FuncCall(expr);
         break;
@@ -1352,7 +1234,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) VarRef = &_ST_children[0]._S_VarRef;
 
-#line 771 "Parser.apd"
+#line 653 "Parser.apd"
 
 		VarRef(expr);
         break;
@@ -1360,7 +1242,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
 
-#line 776 "Parser.apd"
+#line 658 "Parser.apd"
  Expr(expr);
         break;
 
@@ -1377,7 +1259,7 @@ void _S_VarRef(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(IExpression[] path) VarAcc = &_ST_children[0]._S_VarAccess;
 
-#line 788 "Parser.apd"
+#line 670 "Parser.apd"
 
 		IExpression[] path;
 		VarAcc(path);
@@ -1398,25 +1280,21 @@ void _S_FuncCall(inout IExpression expr)
     case 86:
         debug assert(_ST_children.length == 0);
 
-#line 800 "Parser.apd"
+#line 682 "Parser.apd"
 
-		//expr.type = ExpressionT.FuncCall;
-		//expr.func.func = new LastFn();
 		expr = new LastExpr;
         break;
     case 87:
         debug assert(_ST_children.length == 0);
 
-#line 807 "Parser.apd"
+#line 687 "Parser.apd"
 
-		//expr.type = ExpressionT.FuncCall;
-		//expr.func.func = new PositionFn();
 		expr = new PositionExpr;
         break;
     case 88:
         debug assert(_ST_children.length == 0);
 
-#line 814 "Parser.apd"
+#line 692 "Parser.apd"
 
 		Var v; set(v, true);
 		expr = new Literal(v);
@@ -1424,13 +1302,19 @@ void _S_FuncCall(inout IExpression expr)
     case 89:
         debug assert(_ST_children.length == 0);
 
-#line 822 "Parser.apd"
+#line 698 "Parser.apd"
 
 		Var v; set(v, false);
 		expr = new Literal(v);
         break;
     case 90:
         debug assert(_ST_children.length == 2);
+        void delegate(inout char[][] path) QName = &_ST_children[0]._S_QName;
+        void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
+
+#line 704 "Parser.apd"
+
+		debug assert(false);
         break;
 
     default:
@@ -1447,7 +1331,7 @@ void _S_ExprList(inout IExpression[] args)
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
         void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
 
-#line 839 "Parser.apd"
+#line 714 "Parser.apd"
 
 		IExpression expr;
 		IExpression exprList[];
@@ -1460,7 +1344,7 @@ void _S_ExprList(inout IExpression[] args)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
 
-#line 849 "Parser.apd"
+#line 724 "Parser.apd"
 
 		IExpression expr;
 		args ~= expr;
@@ -1482,7 +1366,7 @@ void _S_QName(inout char[][] path)
         debug assert(_ST_children.length == 1);
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
 
-#line 860 "Parser.apd"
+#line 735 "Parser.apd"
 
 		char[] localname;
 		NCName(localname);
@@ -1493,7 +1377,7 @@ void _S_QName(inout char[][] path)
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
         void delegate(out char[] value) NCName2 = &_ST_children[1]._S_NCName;
 
-#line 867 "Parser.apd"
+#line 742 "Parser.apd"
 
 		char[] prefix, localname;
 		NCName(prefix);
@@ -1514,7 +1398,7 @@ void _S_NCName(out char[] value)
     case 96:
         debug assert(_ST_children.length == 0);
 
-#line 896 "Parser.apd"
+#line 771 "Parser.apd"
 
 		value = _ST_match;
         break;
@@ -1533,7 +1417,7 @@ void _S_VarAccess(IExpression[] path)
         void delegate(IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
         void delegate(out char[] value) NCName = &_ST_children[1]._S_NCName;
 
-#line 905 "Parser.apd"
+#line 780 "Parser.apd"
 
 		VarAccess(path);
 		char[] name; NCName(name);
@@ -1545,7 +1429,7 @@ void _S_VarAccess(IExpression[] path)
         void delegate(IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
         void delegate(inout IExpression expr) Expr = &_ST_children[1]._S_Expr;
 
-#line 913 "Parser.apd"
+#line 788 "Parser.apd"
 
 		VarAccess(path);
 		IExpression expr;
@@ -1556,7 +1440,7 @@ void _S_VarAccess(IExpression[] path)
         debug assert(_ST_children.length == 1);
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
 
-#line 921 "Parser.apd"
+#line 796 "Parser.apd"
 
 		char[] name; NCName(name);
 		Var v; set(v, name);
@@ -1571,7 +1455,7 @@ void _S_VarAccess(IExpression[] path)
 // generated code end
 }
 
-#line 1575 "Parser.d"
+#line 1459 "Parser.d"
 // Written in the D programming language
 
 /*
@@ -5972,7 +5856,7 @@ bool wsLexer(string input, out uint token, out string match)
 }
 // generated code end
 
-#line 5976 "Parser.d"
+#line 5860 "Parser.d"
 // Written in the D programming language
 
 /*
