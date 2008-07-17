@@ -331,9 +331,12 @@ class PredicateTest
 			return res.bool_;
 		case VarT.Number:
 			auto pos = ctxt["@XPathPos"];
-			if(pos.type != VarT.Number)
+			if(pos.type != VarT.Number) {
 				return false;
-			return cast(size_t)pos.number_ == cast(size_t)res.number_;
+			}
+			size_t rn = cast(size_t)res.number_;
+			size_t pn = cast(size_t)pos.number_;
+			return rn == pn ? true : false;
 		case VarT.Array:
 			return res.array_.length > 0;
 		case VarT.XmlNode:
@@ -476,8 +479,9 @@ class XPathStep : IStep
 			}
 			else {
 				v = ctxt["@XPathCtxtNode"];
-				if(v.type == VarT.XmlNode)
+				if(v.type == VarT.XmlNode) {
 					res ~= v.xmlNode_;
+				}
 			}
 			return res;
 		}
@@ -487,8 +491,10 @@ class XPathStep : IStep
 	final XmlNode[] exec(IObject ctxt)
 	{
 		Var v = ctxt["@XPathCtxtNode"];
-		if(v.type != VarT.XmlNode)
+		if(v.type != VarT.XmlNode) {
+			debug Stdout.formatln("@XPathCtxtNode not found");
 			return null;
+		}
 		
 		auto ctxtNode = v.xmlNode_;
 		
@@ -527,8 +533,9 @@ class XPathStep : IStep
 		Var v;
 		set(v, pos); ctxt["@XPathPos"] =  v;
 		set(v, true); ctxt["@XPathLast"] =  v;
-		return testNode!(true)(ctxt); //FIXME
+		auto res = testNode!(true)(ctxt);
 		set(v, false); ctxt["@XPathLast"] =  v;
 		pos = 0;
+		return res;
 	}
 }

@@ -22,7 +22,7 @@ module sendero.xml.xpath10.Parser;
 import sendero.xml.xpath10.Expression;
 import sendero_base.xml.XmlNode;
 
-import tango.io.Stdout;
+debug import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
@@ -1179,10 +1179,14 @@ void _S_NameTest(inout ITest test)
 		char[][] path;
 		QName(path);
 		debug assert(path.length);
-		if(path.length == 1)
+		if(path.length == 1) {
 			test = new QNameTest(null, path[0]);
-		else if(path.length == 2)
+			debug Stdout.formatln("Creating QNameTest for {}", path[0]);
+		}
+		else if(path.length == 2) {
 			test = new QNameTest(path[0], path[1]);
+			debug Stdout.formatln("Creating QNameTest for {}:{}", path[0], path[1]);
+		}
         break;
 
     default:
@@ -1197,7 +1201,7 @@ void _S_PrimaryExpr(inout IExpression expr)
     case 79:
         debug assert(_ST_children.length == 0);
 
-#line 627 "Parser.apd"
+#line 631 "Parser.apd"
 
     	long val = Integer.atoi(_ST_match);
 		Var v; set(v, val);
@@ -1206,7 +1210,7 @@ void _S_PrimaryExpr(inout IExpression expr)
     case 80:
         debug assert(_ST_children.length == 0);
 
-#line 634 "Parser.apd"
+#line 638 "Parser.apd"
 
     	double val = Float.parse(_ST_match);
 		Var v; set(v, val);
@@ -1216,7 +1220,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(char[] value) Lit = &_ST_children[0]._S_Literal;
 
-#line 641 "Parser.apd"
+#line 645 "Parser.apd"
 
 		char[] val;	Lit(val);
 		Var v; set(v, val);
@@ -1226,7 +1230,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) FuncCall = &_ST_children[0]._S_FuncCall;
 
-#line 648 "Parser.apd"
+#line 652 "Parser.apd"
 
 		FuncCall(expr);
         break;
@@ -1234,7 +1238,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) VarRef = &_ST_children[0]._S_VarRef;
 
-#line 653 "Parser.apd"
+#line 657 "Parser.apd"
 
 		VarRef(expr);
         break;
@@ -1242,7 +1246,7 @@ void _S_PrimaryExpr(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
 
-#line 658 "Parser.apd"
+#line 662 "Parser.apd"
  Expr(expr);
         break;
 
@@ -1259,7 +1263,7 @@ void _S_VarRef(inout IExpression expr)
         debug assert(_ST_children.length == 1);
         void delegate(IExpression[] path) VarAcc = &_ST_children[0]._S_VarAccess;
 
-#line 670 "Parser.apd"
+#line 674 "Parser.apd"
 
 		IExpression[] path;
 		VarAcc(path);
@@ -1280,21 +1284,22 @@ void _S_FuncCall(inout IExpression expr)
     case 86:
         debug assert(_ST_children.length == 0);
 
-#line 682 "Parser.apd"
+#line 686 "Parser.apd"
 
+		debug Stdout.formatln("found last");
 		expr = new LastExpr;
         break;
     case 87:
         debug assert(_ST_children.length == 0);
 
-#line 687 "Parser.apd"
+#line 692 "Parser.apd"
 
 		expr = new PositionExpr;
         break;
     case 88:
         debug assert(_ST_children.length == 0);
 
-#line 692 "Parser.apd"
+#line 697 "Parser.apd"
 
 		Var v; set(v, true);
 		expr = new Literal(v);
@@ -1302,7 +1307,7 @@ void _S_FuncCall(inout IExpression expr)
     case 89:
         debug assert(_ST_children.length == 0);
 
-#line 698 "Parser.apd"
+#line 703 "Parser.apd"
 
 		Var v; set(v, false);
 		expr = new Literal(v);
@@ -1312,7 +1317,7 @@ void _S_FuncCall(inout IExpression expr)
         void delegate(inout char[][] path) QName = &_ST_children[0]._S_QName;
         void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
 
-#line 704 "Parser.apd"
+#line 709 "Parser.apd"
 
 		debug assert(false);
         break;
@@ -1331,7 +1336,7 @@ void _S_ExprList(inout IExpression[] args)
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
         void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
 
-#line 714 "Parser.apd"
+#line 719 "Parser.apd"
 
 		IExpression expr;
 		IExpression exprList[];
@@ -1344,7 +1349,7 @@ void _S_ExprList(inout IExpression[] args)
         debug assert(_ST_children.length == 1);
         void delegate(inout IExpression expr) Expr = &_ST_children[0]._S_Expr;
 
-#line 724 "Parser.apd"
+#line 729 "Parser.apd"
 
 		IExpression expr;
 		args ~= expr;
@@ -1366,7 +1371,7 @@ void _S_QName(inout char[][] path)
         debug assert(_ST_children.length == 1);
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
 
-#line 735 "Parser.apd"
+#line 740 "Parser.apd"
 
 		char[] localname;
 		NCName(localname);
@@ -1377,7 +1382,7 @@ void _S_QName(inout char[][] path)
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
         void delegate(out char[] value) NCName2 = &_ST_children[1]._S_NCName;
 
-#line 742 "Parser.apd"
+#line 747 "Parser.apd"
 
 		char[] prefix, localname;
 		NCName(prefix);
@@ -1398,7 +1403,7 @@ void _S_NCName(out char[] value)
     case 96:
         debug assert(_ST_children.length == 0);
 
-#line 771 "Parser.apd"
+#line 776 "Parser.apd"
 
 		value = _ST_match;
         break;
@@ -1417,7 +1422,7 @@ void _S_VarAccess(IExpression[] path)
         void delegate(IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
         void delegate(out char[] value) NCName = &_ST_children[1]._S_NCName;
 
-#line 780 "Parser.apd"
+#line 785 "Parser.apd"
 
 		VarAccess(path);
 		char[] name; NCName(name);
@@ -1429,7 +1434,7 @@ void _S_VarAccess(IExpression[] path)
         void delegate(IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
         void delegate(inout IExpression expr) Expr = &_ST_children[1]._S_Expr;
 
-#line 788 "Parser.apd"
+#line 793 "Parser.apd"
 
 		VarAccess(path);
 		IExpression expr;
@@ -1440,7 +1445,7 @@ void _S_VarAccess(IExpression[] path)
         debug assert(_ST_children.length == 1);
         void delegate(out char[] value) NCName = &_ST_children[0]._S_NCName;
 
-#line 796 "Parser.apd"
+#line 801 "Parser.apd"
 
 		char[] name; NCName(name);
 		Var v; set(v, name);
@@ -1455,7 +1460,7 @@ void _S_VarAccess(IExpression[] path)
 // generated code end
 }
 
-#line 1459 "Parser.d"
+#line 1464 "Parser.d"
 // Written in the D programming language
 
 /*
@@ -5856,7 +5861,7 @@ bool wsLexer(string input, out uint token, out string match)
 }
 // generated code end
 
-#line 5860 "Parser.d"
+#line 5865 "Parser.d"
 // Written in the D programming language
 
 /*

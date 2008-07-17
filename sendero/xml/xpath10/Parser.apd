@@ -5,7 +5,7 @@ module sendero.xml.xpath10.Parser;
 import sendero.xml.xpath10.Expression;
 import sendero_base.xml.XmlNode;
 
-import tango.io.Stdout;
+debug import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
@@ -614,10 +614,14 @@ NameTest(inout ITest test)
 		char[][] path;
 		QName(path);
 		debug assert(path.length);
-		if(path.length == 1)
+		if(path.length == 1) {
 			test = new QNameTest(null, path[0]);
-		else if(path.length == 2)
+			debug Stdout.formatln("Creating QNameTest for {}", path[0]);
+		}
+		else if(path.length == 2) {
 			test = new QNameTest(path[0], path[1]);
+			debug Stdout.formatln("Creating QNameTest for {}:{}", path[0], path[1]);
+		}
 	}
 }
 

@@ -28,9 +28,8 @@ class SenderoInheritingObject : IObject
 		if(pVar) {
 			*pVar = var;
 		}
-		else if(parent) {
-			if(parent[key].type != VarT.Null)
-				parent[key] = var;
+		else if(parent && parent[key].type != VarT.Null) {
+			parent[key] = var;
 		}
 		else members[key] = var;
 	}
