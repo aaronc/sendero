@@ -8,13 +8,16 @@ import tango.io.Stdout;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
-public import sendero.vm.ExecutionContext;
+import sendero_base.Core;
+import sendero_base.Set; 
+import sendero.vm.InheritingObject;
+import sendero.vm.Expression;
+//public import sendero.vm.ExecutionContext;
 
-bool compileXPath10(char[] xpath, inout Expression expr)
+bool compileXPath10(char[] xpath, inout IExpression expr)
 {
 	SyntaxTree* root;
 	if ( parse("", xpath, root, true) ) {
-            Expression value;
             root.Expr(expr);
 			return true;
 		}
@@ -24,16 +27,16 @@ bool compileXPath10(char[] xpath, inout Expression expr)
 ExecutionContext createXPathContext(XmlNode node)
 {
 	auto ctxt = new ExecutionContext;
-	ctxt.contextNode = node;
+	Var v; set(v, node); ctxt["@XPathCtxtNode"] = v;
 	return ctxt;
 }
 
 Var execXPath10(char[] xpath, XmlNode node)
 {
-	Expression expr;
+	IExpression expr;
 	if(!compileXPath10(xpath, expr)) return Var();
 	auto ctxt = createXPathContext(node);
-	return expr.exec(ctxt);
+	return expr(ctxt);
 }
 
 
@@ -51,14 +54,14 @@ debug(SenderoUnittest) {
 			char[] res;
 			if(var.type == VarT.Array)
 			{
-				foreach(node; var.arrayBinding)
+				foreach(node; var.array_)
 				{
-					assert(node.type == VarT.Node);
-					res ~= print(node.xmlNode);
+					assert(node.type == VarT.XmlNode);
+					res ~= print(node.xmlNode_);
 				}
 			}
-			else if(var.type == VarT.Node)
-				res = print(var.xmlNode);
+			else if(var.type == VarT.XmlNode)
+				res = print(var.xmlNode_);
 			return res;
 		}
 		
@@ -75,16 +78,16 @@ debug(SenderoUnittest) {
 		
 		auto speech1 = execXPath10("//SPEECH[1]", root);
 		auto ctxt = new ExecutionContext;
-		ctxt.addVar("speech1", speech1);
+		ctxt["speech1"] = speech1;
 		regress("2.xml", printRes(speech1));
 		
 		auto speechLast = execXPath10("//SPEECH[last()]", root);
-		ctxt.addVar("speechLast", speechLast);
+		ctxt["speechLast"] = speechLast;
 		regress("3.xml", printRes(speechLast));
 		
-		Expression expr;
+		IExpression expr;
 		assert(compileXPath10("$speech1/LINE", expr));
-		auto res2 = expr.exec(ctxt);
+		auto res2 = expr(ctxt);
 		regress("4.xml", printRes(res2));
 		
 		auto personae = execXPath10("//PERSONAE[last()][TITLE]", root);

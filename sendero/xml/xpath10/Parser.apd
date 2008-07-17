@@ -25,7 +25,7 @@ version(TestApaged)
             throw new Exception("Usage: arithmetic <expression>");
         SyntaxTree* root;
         if ( parse("", args[1], root, true) ) {
-            Expression value;
+            IExpression value;
             root.Expr(value);
             debug root.print;
 			auto ctxt = new ExecutionContext;
@@ -47,7 +47,7 @@ Whitespace
     regexp("[ \\t\\n\\r]+");
 }
 
-Expr(inout Expression expr)
+Expr(inout IExpression expr)
 {
 	OrExpr
 	{
@@ -65,7 +65,7 @@ ExprTerminator()
 	regexp("[,\}]");
 }
 
-OrExpr(inout Expression value)
+OrExpr(inout IExpression value)
 {
 	AndExpr
 	{
@@ -74,7 +74,7 @@ OrExpr(inout Expression value)
 	
 	OrExpr "or" AndExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		OrExpr(x);
 		AndExpr(y);
 		value.type = ExpressionT.Binary;
@@ -84,7 +84,7 @@ OrExpr(inout Expression value)
 	}
 }
 
-AndExpr(inout Expression value)
+AndExpr(inout IExpression value)
 {
 	EqualityExpr
 	{
@@ -93,7 +93,7 @@ AndExpr(inout Expression value)
 	
 	AndExpr "and" EqualityExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		AndExpr(x);
 		EqualityExpr(y);
 		value.type = ExpressionT.Binary;
@@ -103,7 +103,7 @@ AndExpr(inout Expression value)
 	}
 }
 
-EqualityExpr(inout Expression value)
+EqualityExpr(inout IExpression value)
 {
 	RelationalExpr
 	{
@@ -112,7 +112,7 @@ EqualityExpr(inout Expression value)
 	
 	EqualityExpr "=" RelationalExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		EqualityExpr(x);
 		RelationalExpr(y);
 		value.type = ExpressionT.Binary;
@@ -123,7 +123,7 @@ EqualityExpr(inout Expression value)
 	
 	EqualityExpr "!=" RelationalExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		EqualityExpr(x);
 		RelationalExpr(y);
 		value.type = ExpressionT.Binary;
@@ -133,7 +133,7 @@ EqualityExpr(inout Expression value)
 	}
 }
 
-RelationalExpr(inout Expression value)
+RelationalExpr(inout IExpression value)
 {
 	AdditiveExpr
 	{
@@ -142,7 +142,7 @@ RelationalExpr(inout Expression value)
 	
 	RelationalExpr "<" AdditiveExpr	
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		RelationalExpr(x);
 		AdditiveExpr(y);
 		value.type = ExpressionT.Binary;
@@ -153,7 +153,7 @@ RelationalExpr(inout Expression value)
 	
 	RelationalExpr ">" AdditiveExpr	
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		RelationalExpr(x);
 		AdditiveExpr(y);
 		value.type = ExpressionT.Binary;
@@ -164,7 +164,7 @@ RelationalExpr(inout Expression value)
 	
 	RelationalExpr "<=" AdditiveExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		RelationalExpr(x);
 		AdditiveExpr(y);
 		value.type = ExpressionT.Binary;
@@ -175,7 +175,7 @@ RelationalExpr(inout Expression value)
 	
 	RelationalExpr ">=" AdditiveExpr
 	{
-		/+Expression x, y;
+		/+IExpression x, y;
 		RelationalExpr(x);
 		AdditiveExpr(y);
 		value.type = ExpressionT.Binary;
@@ -185,11 +185,11 @@ RelationalExpr(inout Expression value)
 	}
 }
 
-AdditiveExpr(inout Expression value)
+AdditiveExpr(inout IExpression value)
 {
     AdditiveExpr "+" MulExpr
     {
-		/+Expression x, y;
+		/+IExpression x, y;
         AdditiveExpr(x);
         MulExpr(y);
         value.type = ExpressionT.Binary;
@@ -200,7 +200,7 @@ AdditiveExpr(inout Expression value)
 
     AdditiveExpr "-" MulExpr
     {
-        /+Expression x, y;
+        /+IExpression x, y;
         AdditiveExpr(x);
         MulExpr(y);
         value.type = ExpressionT.Binary;
@@ -213,11 +213,11 @@ AdditiveExpr(inout Expression value)
     { MulExpr(value); }
 }
 
-MulExpr(inout Expression value)
+MulExpr(inout IExpression value)
 {
     MulExpr "*" UnaryExpr
     {
-        /+Expression x, y;
+        /+IExpression x, y;
         UnaryExpr(x);
         MulExpr(y);
         value.type = ExpressionT.Binary;
@@ -228,7 +228,7 @@ MulExpr(inout Expression value)
 	
 	MulExpr "div" UnaryExpr
     {
-        /+Expression x, y;
+        /+IExpression x, y;
         UnaryExpr(x);
         MulExpr(y);
         value.type = ExpressionT.Binary;
@@ -239,7 +239,7 @@ MulExpr(inout Expression value)
 	
 	MulExpr "mod" UnaryExpr
     {
-        /+Expression x, y;
+        /+IExpression x, y;
         UnaryExpr(x);
         MulExpr(y);
         value.type = ExpressionT.Binary;
@@ -253,11 +253,11 @@ MulExpr(inout Expression value)
 }
 
 
-UnaryExpr(inout Expression value)
+UnaryExpr(inout IExpression value)
 {
 	"-" UnaryExpr
 	{
-		/+Expression val;
+		/+IExpression val;
         UnaryExpr(val);
         value.type = ExpressionT.FuncCall;
 		value.func.func = new NegativeFn();
@@ -268,7 +268,7 @@ UnaryExpr(inout Expression value)
 	{ UnionExpr(value); }
 }
 
-UnionExpr(inout Expression expr)
+UnionExpr(inout IExpression expr)
 {
 	PathExpr
 	{
@@ -277,7 +277,7 @@ UnionExpr(inout Expression expr)
 	
 	UnionExpr "|" PathExpr
 	{
-		/+Expression expr1, expr2;
+		/+IExpression expr1, expr2;
 		UnionExpr(expr1);
 		PathExpr(expr2);
 		expr.type = ExpressionT.FuncCall;
@@ -285,7 +285,7 @@ UnionExpr(inout Expression expr)
 	}
 }
 
-PathExpr(inout Expression expr)
+PathExpr(inout IExpression expr)
 {
 	LocationPath
 	{
@@ -302,7 +302,7 @@ PathExpr(inout Expression expr)
 	
 	FilterExpr "/" RelativeLocationPath
 	{
-		/+Expression e;
+		/+IExpression e;
 		IStep step;
 		
 		FilterExpr(e);
@@ -315,7 +315,7 @@ PathExpr(inout Expression expr)
 	
 	FilterExpr "//" RelativeLocationPath
 	{
-		/+Expression e;
+		/+IExpression e;
 		IStep step, step2;
 		
 		FilterExpr(e);
@@ -329,7 +329,7 @@ PathExpr(inout Expression expr)
 	}
 }
 
-FilterExpr(inout Expression expr)
+FilterExpr(inout IExpression expr)
 {
 	PrimaryExpr
 	{
@@ -343,7 +343,7 @@ FilterExpr(inout Expression expr)
 }
 
 
-Predicate(inout Expression expr)
+Predicate(inout IExpression expr)
 {
 	"[" Expr "]"
 	{
@@ -355,7 +355,7 @@ PredicateList(inout PredicateTest[] predicates)
 {
 	Predicate PredicateList
 	{
-		/+Expression expr;
+		/+IExpression expr;
 		Predicate(expr);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;
@@ -367,7 +367,7 @@ PredicateList(inout PredicateTest[] predicates)
 	
 	Predicate
 	{
-		/+Expression expr;
+		/+IExpression expr;
 		Predicate(expr);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;+/
@@ -666,7 +666,7 @@ NameTest(inout ITest test)
 	}
 }
 
-PrimaryExpr(inout Expression value)
+PrimaryExpr(inout IExpression value)
 {
     regexp("[0-9]+")
     {
@@ -704,7 +704,7 @@ PrimaryExpr(inout Expression value)
     { Expr(value); }
 }
 
-VarRef(inout Expression expr)
+VarRef(inout IExpression expr)
 {
 	"$" QName
 	{
@@ -719,7 +719,7 @@ VarRef(inout Expression expr)
 	}
 }
 
-FuncCall(inout Expression expr)
+FuncCall(inout IExpression expr)
 {
 	"last" "(" ")"
 	{
@@ -752,12 +752,12 @@ FuncCall(inout Expression expr)
 	}
 }
 
-ExprList(inout Expression[] args)
+ExprList(inout IExpression[] args)
 {
 	Expr "," ExprList
 	{
-		/+Expression expr;
-		Expression exprList[];
+		/+IExpression expr;
+		IExpression exprList[];
 		Expr(expr);
 		ExprList(exprList);
 		args ~= expr;
@@ -766,7 +766,7 @@ ExprList(inout Expression[] args)
 	
 	Expr
 	{
-		/+Expression expr;
+		/+IExpression expr;
 		args ~= expr;+/
 	}
 	
