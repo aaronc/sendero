@@ -1,12 +1,11 @@
 module sendero.vm.Expression;
 
-import sendero_base.Core;
+public import sendero_base.Core;
 
 interface Expression
 {
 	Var opCall(IObject);
 }
-
 
 class FunctionCall : Expression
 {
