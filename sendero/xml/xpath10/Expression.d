@@ -31,12 +31,16 @@ class XPathExpressionFn(bool filter = false)
 
 		scope ctxt = new ExecutionContext(parentCtxt);
 		static if(filter) {
-			if(!params.length || params[0].type != VarT.Node) return Var();
-			ctxt["@XPathCtxtNode"] = params[0].xmlNode;
+			if(!params.length || params[0].type != VarT.XmlNode)
+				return Var();
+			ctxt["@XPathCtxtNode"] = params[0];
 		}
-		else ctxt["@XPathCtxtNode"] = parentCtxt.contextNode;
+		else {
+			//ctxt["@XPathCtxtNode"] = parentCtxt.contextNode;
+			ctxt["@XPathCtxtNode"] = parentCtxt["@XPathCtxtNode"];
+		}
 		
-		auto res = rootStep(ctxt);
+		auto res = rootStep.exec(ctxt);
 		res ~= rootStep.finish(ctxt);
 		if(!res.length) return Var();
 		else {
@@ -44,7 +48,7 @@ class XPathExpressionFn(bool filter = false)
 			if(res.length == 1)
 				set(var, res[0]);
 			else
-				set(var, res);
+				set(var, new XmlNodeSet(res));
 			return var;
 		}
 		
@@ -52,17 +56,62 @@ class XPathExpressionFn(bool filter = false)
 	}
 }
 
-class PositionFn
+class XmlNodeSet : IArray
 {
-	Var exec(Var[] params, IObject ctxt)
+	this(XmlNode[] nodes)
+	{
+		this.nodes = nodes;
+	}
+	
+	XmlNode[] nodes;
+	
+	int opApply (int delegate (inout Var val) dg)
+	{		
+		int res;
+		foreach(ref XmlNode node; nodes)
+		{
+			Var v;
+			v.type = VarT.XmlNode;
+			v.xmlNode_ = node;
+			if((res = dg(v)) != 0) break;
+		}
+		return res;
+	}
+	
+	Var opIndex(size_t i)
+	{
+		if(i > nodes.length)
+			return Var();
+		
+		Var res;
+		res.type = VarT.XmlNode;
+		res.xmlNode_ = nodes[i];
+		return res;
+	}
+	
+	size_t length()
+	{
+		return nodes.length;
+	}
+	
+	void opCatAssign(Var v)
+	{
+		if(v.type == VarT.XmlNode)
+			nodes ~= v.xmlNode_;
+	}
+}
+
+class PositionExpr : IExpression
+{
+	Var opCall(IObject ctxt)
 	{
 		return ctxt["@XPathPos"];
 	}
 }
 
-class LastFn
+class LastExpr : IExpression
 {
-	Var exec(Var[] params, IObject ctxt)
+	Var opCall(IObject ctxt)
 	{
 		//auto var = ctxt["@XPathLast"];
 		return ctxt["@XPathLast"];
@@ -81,16 +130,16 @@ class CountFn
 	}
 }
 
-class UnionFn
+class UnionExpr : IExpression
 {
 	this(IExpression expr1, IExpression expr2)
-	{
+	{	
 		this.expr1 = expr1;
 		this.expr2 = expr2;
 	}
 	private IExpression expr1, expr2;
 
-	Var exec(Var[] params, IObject ctxt)
+	Var opCall(IObject ctxt)
 	{
 		auto v1 = expr1(ctxt);
 		auto v2 = expr2(ctxt); 
@@ -201,12 +250,12 @@ class Filter
 	}
 }
 
-class FilterPredicate
+class FilterPredicate : IExpression
 {
 	IExpression filter;
 	IExpression predicate;
 	
-	Var exec(Var[] params, IObject ctxt)
+	Var opCall(IObject ctxt)
 	{
 		auto var = filter(ctxt);
 		switch(var.type)

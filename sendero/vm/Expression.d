@@ -65,6 +65,28 @@ class FunctionCall : IExpression
 	}
 }
 
+class Negative : IExpression
+{
+	this(IExpression expr)
+	{
+		this.expr = expr;
+	}
+	
+	IExpression expr;
+	
+	Var opCall(IObject ctxt)
+	{
+		auto var = expr(ctxt);
+		if(var.type != VarT.Number)
+			return Var();
+		
+		Var res;
+		res.type = VarT.Number;
+		res.number_ = - var.number_;
+		return res;
+	}
+}
+
 class BinaryOp(char[] op) : BinaryExpression
 {
 	this(IExpression lhs, IExpression rhs)
@@ -127,7 +149,7 @@ class EqOp(char[] op) : BinaryExpression
 			break;
 		case VarT.Time:
 			if(v2.type == VarT.Time) {
-				mixin(`res.bool_ = v1.time_ ` ~ op ~ ` v2.time_;`);
+				mixin(`res.bool_ = cast(bool)(v1.time_ ` ~ op ~ ` v2.time_);`);
 			}
 			else {
 				res.bool_ = false;
@@ -179,6 +201,48 @@ class CmpOp(char[] op) : BinaryExpression
 			break;
 		}
 		return res;
+	}
+}
+
+class LogicalOp(char[] op) : BinaryExpression
+{
+	this(IExpression lhs, IExpression rhs)
+	{
+		super(lhs, rhs);
+	}
+	
+	Var opCall(IObject ctxt)
+	{
+		static assert((op == "||") || (op == "&&"));
+		
+		auto b1 = varToBool(lhs(ctxt));
+		auto b2 = varToBool(rhs(ctxt));
+		
+		Var res; res.type = VarT.Bool;
+		mixin(`res.bool_ = b1 ` ~ op ~ ` b2;`);
+		return res;
+	}
+}
+
+bool varToBool(Var var)
+{
+	switch(var.type)
+	{
+	case VarT.Number:
+		return var.number_ != 0 ? true : false;
+	case VarT.Time:
+		return var.time_.ticks != 0 ? true : false;
+	case VarT.Array:
+		return var.array_.length > 0 ? true : false;
+	case VarT.String:
+		return var.string_.length > 0 ? true : false;
+	case VarT.Void:
+	case VarT.XmlNode:
+	case VarT.Object:
+		return true;
+	case VarT.Null:
+	default:
+		return false;
 	}
 }
 
@@ -268,6 +332,33 @@ class VarAccess : IExpression
 	}
 }
 
+class Subscript : IExpression
+{
+	this(IExpression base, char[][] subscript)
+	{
+		this.base = base;
+		this.subscript = subscript;
+	}
+	
+	IExpression base;
+	char[][] subscript;
+	
+	Var opCall(IObject ctxt)
+	{
+		auto var = base(ctxt);
+		if(var.type != VarT.Object)
+			return Var();
+		
+		foreach(step; subscript)
+		{
+			if(var.type != VarT.Object)
+				return Var();
+			var = var.obj_[step];
+		}
+		
+		return var;
+	}
+}
 
 class Literal : IExpression
 {
@@ -292,11 +383,13 @@ debug(SenderoUnittest)
 	
 	unittest
 	{
-		Var v1, v2, res;
+		Var v1, v2, v3, res;
 		set(v1, 5);
 		set(v2, 10);
+		set(v3, 0);
 		auto l1 = new Literal(v1);
 		auto l2 = new Literal(v2);
+		auto l3 = new Literal(v3);
 		auto ctxt = new Obj;
 		
 		auto add = new BinaryOp!("+")(l1, l2);
@@ -310,5 +403,13 @@ debug(SenderoUnittest)
 		auto eq = new EqOp!("!=")(l1, l2);
 		res = eq(ctxt);
 		assert(res.type == VarT.Bool && res.bool_ == true);
+		
+		auto or = new LogicalOp!("||")(l1, l3);
+		res = or(ctxt);
+		assert(res.type == VarT.Bool && res.bool_ == true);
+		
+		auto and = new LogicalOp!("&&")(l1, l3);
+		res = and(ctxt);
+		assert(res.type == VarT.Bool && res.bool_ == false);
 	}	
 }
