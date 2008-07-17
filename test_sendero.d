@@ -5,7 +5,6 @@ import sendero.vm.Expression;
 import sendero.vm.Object;
 import sendero.vm.Array;
 //import sendero.view.expression.Compile;
-import sendero.util.Hash;
 
 import sendero.xml.xpath10.Expression;
 import sendero.xml.XPath;

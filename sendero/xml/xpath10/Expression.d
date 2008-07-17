@@ -16,24 +16,43 @@ import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
-class XPathExpressionFn(bool filter = false)
+class XPathExpr(bool filter = false) : IExpression
 {
-	this(IStep rootStep)
+	static if(filter)
 	{
-		this.rootStep = rootStep;
+		this(IStep rootStep, IExpression filterExpr)
+		{
+			this.rootStep = rootStep;
+			this.filterExpr = filterExpr;
+		}
+		IExpression filterExpr;
+	}
+	else
+	{
+		this(IStep rootStep)
+		{
+			this.rootStep = rootStep;
+		}
 	}
 	
 	IStep rootStep;
 	
-	Var exec(Var[] params, IObject parentCtxt)
+	Var opCall(IObject parentCtxt)
 	{
 		if(!rootStep) return Var();
 
 		scope ctxt = new ExecutionContext(parentCtxt);
 		static if(filter) {
-			if(!params.length || params[0].type != VarT.XmlNode)
+			/+if(!params.length || params[0].type != VarT.XmlNode) {
+				debug Stdout.formatln("Can't find context node");
 				return Var();
-			ctxt["@XPathCtxtNode"] = params[0];
+			}+/
+			auto ctxtNode = filterExpr(parentCtxt);
+			if(ctxtNode.type != VarT.XmlNode && ctxtNode.type != VarT.Array) {
+				debug Stdout.formatln("Can't find context node, instead got type: {}", ctxtNode.type);
+				return Var();
+			}
+			ctxt["@XPathCtxtNode"] = ctxtNode;
 		}
 		else {
 			//ctxt["@XPathCtxtNode"] = parentCtxt.contextNode;
@@ -491,9 +510,20 @@ class XPathStep : IStep
 	final XmlNode[] exec(IObject ctxt)
 	{
 		Var v = ctxt["@XPathCtxtNode"];
-		if(v.type != VarT.XmlNode) {
+		if(v.type != VarT.XmlNode && v.type != VarT.Array) {
 			debug Stdout.formatln("@XPathCtxtNode not found");
 			return null;
+		}
+		
+		if(v.type == VarT.Array) {
+			debug Stdout.formatln("Doing operations on a node set @XPathCtxtNode");
+			auto nodeSet = v.array_;
+			XmlNode[] res;
+			foreach(n; nodeSet) {
+				ctxt["@XPathCtxtNode"] = n;
+				res ~= exec(ctxt);
+			}
+			ctxt["@XPathCtxtNode"] = v;
 		}
 		
 		auto ctxtNode = v.xmlNode_;

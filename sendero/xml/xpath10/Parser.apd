@@ -236,7 +236,7 @@ PathExpr(inout IExpression expr)
 	{
 		IStep step;
 		LocationPath(step);
-		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, null );
+		expr = new XPathExpr!(false)(step);
 	}
 	
 	FilterExpr
@@ -252,7 +252,8 @@ PathExpr(inout IExpression expr)
 		FilterExpr(e);
 		RelativeLocationPath(step);
 		
-		expr = new FunctionCall( &(new XPathExpressionFn!(false)(step)).exec, [e] );
+		expr = new XPathExpr!(true)(step, e);
+		//expr = new FunctionCall( &(new XPathExpressionFn!(true)(step, e)).exec, null );
 	}
 	
 	FilterExpr "//" RelativeLocationPath
@@ -265,7 +266,8 @@ PathExpr(inout IExpression expr)
 		
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		step.setNextStep(step2);
-		expr = new FunctionCall( &(new XPathExpressionFn!(true)(step)).exec, [e] );
+		expr = new XPathExpr!(true)(step, e);
+		//expr = new FunctionCall( &(new XPathExpressionFn!(true)(step, e)).exec, null );
 	
 		/+IExpression e;
 		IStep step, step2;
@@ -777,7 +779,7 @@ NCName(out char[] value)
 	}
 }
 
-VarAccess(IExpression[] path)
+VarAccess(ref IExpression[] path)
 {
 
 	VarAccess "." NCName

@@ -85,6 +85,9 @@ debug(SenderoUnittest) {
 		ctxt["speechLast"] = speechLast;
 		regress("3.xml", printRes(speechLast));
 		
+		foreach(k, v; ctxt)
+			Stdout.formatln("Key:{}",k);
+		
 		IExpression expr;
 		assert(compileXPath10("$speech1/LINE", expr));
 		auto res2 = expr(ctxt);

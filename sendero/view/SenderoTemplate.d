@@ -58,27 +58,11 @@ debug(SenderoUnittest)
 		char[] last;
 		DateTime date;
 	}
-	
-	struct Tester
-	{
-		static Regression r;
-		static this()
-		{
-			r = new Regression("json"); 
-		}
-		
-		static void test(char[] testName)
-		{
-			auto tmpl = SenderoTemplate.get("test/template/" ~ testName ~ ".html", "en-US");
-			assert(tmpl, testName);
-			scope f = new File("test/template/" ~ testName ~ "_data.json");
-			assert(f, testName);
-		}
-	}
-	alias Tester.test test;
-	
+
 unittest
 {
+	auto r = new Regression("template");
+	
 	Msg.post(new Error);
 	
 	/+auto bigtable = "<table>"
@@ -110,7 +94,8 @@ unittest
 	StopWatch btWatch;
 	btWatch.start;
 	for(uint i = 0; i < 2; ++i) {
-		Stdout(inst.render);
+		//Stdout(inst.render);
+		r.regress("bigtable_output.html", inst.render);
 	}
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
@@ -120,11 +105,13 @@ unittest
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
-	Stdout(derived.render).newline;
+	//Stdout(derived.render).newline;
+	r.regress("derivedtemplate_output.html", derived.render);
 	
 	auto derived2 = SenderoTemplate.get("derived2.xml", null);
 	derived2["name"] = "alice";
-	Stdout(derived2.render).newline;
+	//Stdout(derived2.render).newline;
+	r.regress("derived2_output.html", derived2.render);
 	
 	Msg.clear;
 	
@@ -166,6 +153,7 @@ unittest
 	auto complex = SenderoTemplate.get("complex.xml", null);
 	complex["person"] = n;
 	complex["names"] = names;
-	Stdout(complex.render).newline;
+	//Stdout(complex.render).newline;
+	r.regress("complex_output.html", complex.render);
 }
 }

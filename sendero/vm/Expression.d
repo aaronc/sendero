@@ -2,6 +2,8 @@ module sendero.vm.Expression;
 
 public import sendero_base.Core;
 
+debug import tango.io.Stdout;
+
 interface IExpression
 {
 	Var opCall(IObject);
@@ -228,6 +230,8 @@ bool varToBool(Var var)
 {
 	switch(var.type)
 	{
+	case VarT.Bool:
+		return var.bool_;
 	case VarT.Number:
 		return var.number_ != 0 ? true : false;
 	case VarT.Time:
@@ -277,18 +281,21 @@ class VarAccess : IExpression
 		Var val;
 		val.type = VarT.Object;
 		val.obj_ = ctxt;
+		debug Stdout.formatln("VarAccess about to execute {} steps", accessSteps.length);
 		foreach(step; accessSteps)
 		{
 			auto stepVal = step(ctxt);
 			switch(stepVal.type)
 			{
 			case VarT.Number:
+				debug Stdout.formatln("AccessStep Number:{}", stepVal.number_);
 				if(val.type == VarT.Array) {
 					val = val.array_[cast(size_t)stepVal.number_];
 				}
 				else return Var();
 				break;
 			case VarT.String:
+				debug Stdout.formatln("AccessStep String:{}", stepVal.string_);
 				if(val.type == VarT.Object) {
 					val = val.obj_[stepVal.string_];
 				}
@@ -299,6 +306,7 @@ class VarAccess : IExpression
 				break;
 			}
 		}
+		debug Stdout.formatln("VarAccess returning type:{}", val.type);
 		return val;
 	}
 	
