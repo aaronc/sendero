@@ -5,7 +5,7 @@
 
 module sendero.view.TemplateEngine;
 
-public import sendero.xml.XmlNode;
+public import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 

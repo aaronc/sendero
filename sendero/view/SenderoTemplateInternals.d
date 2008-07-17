@@ -6,7 +6,7 @@
 module sendero.view.SenderoTemplateInternals;
 
 import sendero.view.TemplateEngine;
-import sendero.xml.XmlNode;
+import sendero_base.xml.XmlNode;;
 import sendero.vm.ExecutionContext;
 import sendero.vm.LocalText;
 import sendero_base.util.StringCharIterator;

@@ -5,12 +5,18 @@
 
 module sendero.xml.xpath10.Expression;
 
-import sendero.vm.ExecutionContext;
+//import sendero.vm.ExecutionContext;
+import sendero_base.Core;
+import sendero_base.Set;
+import sendero.vm.Object;
+import sendero.vm.Array;
+import sendero.vm.InheritingObject;
+import sendero.vm.Expression;
 import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
-class XPathExpressionFn(bool filter = false)  : IFunctionBinding
+class XPathExpressionFn(bool filter = false)
 {
 	this(IStep rootStep)
 	{
@@ -19,26 +25,26 @@ class XPathExpressionFn(bool filter = false)  : IFunctionBinding
 	
 	IStep rootStep;
 	
-	VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
+	Var exec(Var[] params, IObject parentCtxt)
 	{
 		if(!rootStep) return Var();
 
 		scope ctxt = new ExecutionContext(parentCtxt);
 		static if(filter) {
 			if(!params.length || params[0].type != VarT.Node) return Var();
-			ctxt.contextNode = params[0].xmlNode;
+			ctxt["@XPathCtxtNode"] = params[0].xmlNode;
 		}
-		else ctxt.contextNode = parentCtxt.contextNode;
+		else ctxt["@XPathCtxtNode"] = parentCtxt.contextNode;
 		
-		auto res = rootStep.exec(ctxt);
+		auto res = rootStep(ctxt);
 		res ~= rootStep.finish(ctxt);
 		if(!res.length) return Var();
 		else {
 			Var var;
 			if(res.length == 1)
-				var.set(res[0]);
+				set(var, res[0]);
 			else
-				var.set(res);
+				set(var, res);
 			return var;
 		}
 		
@@ -46,56 +52,56 @@ class XPathExpressionFn(bool filter = false)  : IFunctionBinding
 	}
 }
 
-class PositionFn : IFunctionBinding
+class PositionFn
 {
-	VariableBinding exec(VariableBinding[] params, ExecutionContext ctxt)
+	Var exec(Var[] params, IObject ctxt)
 	{
-		return ctxt.getVar("@XPathPos");
+		return ctxt["@XPathPos"];
 	}
 }
 
-class LastFn : IFunctionBinding
+class LastFn
 {
-	VariableBinding exec(VariableBinding[] params, ExecutionContext ctxt)
+	Var exec(Var[] params, IObject ctxt)
 	{
-		auto var = ctxt.getVar("@XPathLast");
-		return ctxt.getVar("@XPathLast");
+		//auto var = ctxt["@XPathLast"];
+		return ctxt["@XPathLast"];
 	}
 }
 
-class CountFn : IFunctionBinding
+class CountFn
 {
-	VariableBinding exec(VariableBinding[] params, ExecutionContext ctxt)
+	Var exec(Var[] params, IObject ctxt)
 	{
 		if(!params.length || params[0].type != VarT.Array) return Var();
-		long count = params[0].arrayBinding.length;
+		long count = params[0].array_.length;
 		Var var;
-		var.set(count);
+		set(var, count);
 		return var;
 	}
 }
 
-class UnionFn : IFunctionBinding
+class UnionFn
 {
-	this(Expression expr1, Expression expr2)
+	this(IExpression expr1, IExpression expr2)
 	{
 		this.expr1 = expr1;
 		this.expr2 = expr2;
 	}
-	private Expression expr1, expr2;
+	private IExpression expr1, expr2;
 
-	VariableBinding exec(VariableBinding[] params, ExecutionContext ctxt)
+	Var exec(Var[] params, IObject ctxt)
 	{
-		auto v1 = expr1.exec(ctxt);
-		auto v2 = expr2.exec(ctxt); 
+		auto v1 = expr1(ctxt);
+		auto v2 = expr2(ctxt); 
 		Var res;
 		res.type = VarT.Array;
-		res.arrayBinding = new UnionWrapper(v1, v2);
+		res.array_ = new UnionWrapper(v1, v2);
 		return res;
 	}
 }
 
-class UnionWrapper : IArrayBinding
+class UnionWrapper : IArray
 {
 	this(Var v1, Var v2)
 	{
@@ -103,13 +109,18 @@ class UnionWrapper : IArrayBinding
 		this.v2 = v2;
 	}
 	
+	void opCatAssign(Var v)
+	{
+		
+	}
+	
 	private Var v1, v2;
 	
-	int opApply (int delegate (inout VariableBinding val) dg)
+	int opApply (int delegate (inout Var val) dg)
 	{
 		int res;
 		
-		bool doArray(IArrayBinding array)
+		bool doArray(IArray array)
 		{
 			foreach(x; array)
 			{
@@ -121,31 +132,31 @@ class UnionWrapper : IArrayBinding
 		
 		if(v1.type == VarT.Array)
 		{
-			if(!doArray(v1.arrayBinding)) return res;
+			if(!doArray(v1.array_)) return res;
 		}
 		else if ((res = dg(v1)) != 0) return res;
 		
 		if(v2.type == VarT.Array)
 		{
-			if(!doArray(v2.arrayBinding)) return res;
+			if(!doArray(v2.array_)) return res;
 		}
 		else if ((res = dg(v2)) != 0) return res;
 		
 		return res;
 	}
 	
-	VariableBinding opIndex(size_t i)
+	Var opIndex(size_t i)
 	{
 		if(v1.type == VarT.Array)
 		{
-			auto len1 = v1.arrayBinding.length;
-			if(i < len1) return v1.arrayBinding[i];
+			auto len1 = v1.array_.length;
+			if(i < len1) return v1.array_[i];
 			
 			i -= len1;
 			
 			if(v2.type == VarT.Array)
 			{
-				if(i < v2.arrayBinding.length) return v2.arrayBinding[i];
+				if(i < v2.array_.length) return v2.array_[i];
 			}
 			else if(i == 0) return v2;
 		}
@@ -156,7 +167,7 @@ class UnionWrapper : IArrayBinding
 			
 			if(v2.type == VarT.Array)
 			{
-				if(i < v2.arrayBinding.length) return v2.arrayBinding[i];
+				if(i < v2.array_.length) return v2.array_[i];
 			}
 			else if(i == 0) return v2;
 		}
@@ -168,13 +179,13 @@ class UnionWrapper : IArrayBinding
 		size_t len = 0;
 		if(v1.type == VarT.Array)
 		{
-			len += v1.arrayBinding.length;
+			len += v1.array_.length;
 		}
 		else ++len;
 		
 		if(v2.type == VarT.Array)
 		{
-			len += v2.arrayBinding.length;
+			len += v2.array_.length;
 		}
 		else ++len;
 		
@@ -184,39 +195,39 @@ class UnionWrapper : IArrayBinding
 
 class Filter
 {
-	void exec(ExecutionContext ctxt)
+	void exec(IObject ctxt)
 	{
 		assert(false, "TODO not implemented");
 	}
 }
 
-class FilterPredicate : IFunctionBinding
+class FilterPredicate
 {
-	Expression filter;
-	Expression predicate;
+	IExpression filter;
+	IExpression predicate;
 	
-	VariableBinding exec(VariableBinding[] params, ExecutionContext ctxt)
+	Var exec(Var[] params, IObject ctxt)
 	{
-		auto var = filter.exec(ctxt);
+		auto var = filter(ctxt);
 		switch(var.type)
 		{
 		case VarT.Object:
-			auto pred = predicate.exec(ctxt);
+			auto pred = predicate(ctxt);
 			if(pred.type == VarT.String)
-				return var.objBinding[pred.string_];
+				return var.obj_[pred.string_];
 			return Var();
 		case VarT.Array:
-			auto pred = predicate.exec(ctxt);
+			auto pred = predicate(ctxt);
 			switch(pred.type)
 			{
-			case VarT.Long:
-				return var.arrayBinding[pred.long_];
+			case VarT.Number:
+				return var.array_[cast(size_t)pred.number_];
 			default:
 				auto predTest = new PredicateTest(predicate);
 				break;
 			}
 			break;
-		case VarT.Node:
+		case VarT.XmlNode:
 			assert(false, "TODO not implemented");
 		default:
 			return Var();
@@ -242,39 +253,41 @@ enum Axis {
 
 interface IStep
 {
-	XmlNode[] exec(ExecutionContext ctxt);
-	XmlNode[] finish(ExecutionContext ctxt);
+	XmlNode[] exec(IObject ctxt);
+	XmlNode[] finish(IObject ctxt);
 	void setNextStep(IStep);
 }
 
 interface ITest
 {
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType);
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType);
 }
 
 class PredicateTest
 {
-	this(Expression expr)
+	this(IExpression expr)
 	{
 		this.expr = expr;
 	}
 	
-	Expression expr;
+	IExpression expr;
 	
-	bool test(ExecutionContext ctxt)
+	bool test(IObject ctxt)
 	{
-		auto res = expr.exec(ctxt);
+		auto res = expr(ctxt);
 		
 		switch(res.type)
 		{
 		case VarT.Bool:
 			return res.bool_;
-		case VarT.Long:
-			auto pos = ctxt.getVar("@XPathPos");
-			return pos == res.long_;
+		case VarT.Number:
+			auto pos = ctxt["@XPathPos"];
+			if(pos.type != VarT.Number)
+				return false;
+			return cast(size_t)pos.number_ == cast(size_t)res.number_;
 		case VarT.Array:
-			return res.arrayBinding.length > 0;
-		case VarT.Node:
+			return res.array_.length > 0;
+		case VarT.XmlNode:
 			return true;
 		default:
 			return false;
@@ -293,7 +306,7 @@ class QNameTest : ITest
 	char[] prefix;
 	char[] localName;
 	
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return node.prefix == prefix && node.localName == localName;
@@ -304,7 +317,7 @@ class WildcardPrefixTest : ITest
 {
 	this(char[] prefix) {this.prefix = prefix;}
 	char[] prefix;
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return node.prefix == prefix;
@@ -313,7 +326,7 @@ class WildcardPrefixTest : ITest
 
 class WildcardTest : ITest
 {
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return true;
@@ -322,7 +335,7 @@ class WildcardTest : ITest
 
 class NodeKindTest : ITest
 {
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		return true;
 	}
@@ -330,7 +343,7 @@ class NodeKindTest : ITest
 
 class TextKindTest : ITest
 {
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		return node.type == XmlNodeType.Data;
 	}
@@ -339,7 +352,7 @@ class TextKindTest : ITest
 class PIKindTest : ITest
 {
 	char[] literal;
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		if(node.type != XmlNodeType.PI) return false;
 		if(literal.length) {
@@ -353,7 +366,7 @@ class PIKindTest : ITest
 
 class CommentKindTest : ITest
 {
-	bool test(XmlNode node, ExecutionContext ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
 	{
 		return node.type == XmlNodeType.Comment;
 	}
@@ -393,10 +406,12 @@ class XPathStep : IStep
 		nextStep = step;
 	}
 	
-	private XmlNode[] testNode(bool finish = false)(ExecutionContext ctxt)
+	private XmlNode[] testNode(bool finish = false)(IObject ctxt)
 	{
+		Var v;
 		if(nextNode) {
-			ctxt.contextNode = nextNode;
+			set(v, nextNode);
+			ctxt["@XPathCtxtNode"] = v;
 			nextNode = null;
 			
 			foreach(p; predicates)
@@ -411,22 +426,29 @@ class XPathStep : IStep
 					res ~= nextStep.finish(ctxt);
 			}
 			else {
-				res ~= ctxt.contextNode;
+				v = ctxt["@XPathCtxtNode"];
+				if(v.type == VarT.XmlNode)
+					res ~= v.xmlNode_;
 			}
 			return res;
 		}
 		return null;
 	}
 	
-	final XmlNode[] exec(ExecutionContext ctxt)
+	final XmlNode[] exec(IObject ctxt)
 	{
-		if(!ctxt.contextNode) return null;
+		Var v = ctxt["@XPathCtxtNode"];
+		if(v.type != VarT.XmlNode)
+			return null;
 		
-		auto nodesetViewer = nodeSetViewerCtr(ctxt.contextNode);
+		auto ctxtNode = v.xmlNode_;
+		
+		auto nodesetViewer = nodeSetViewerCtr(ctxtNode);
 		
 		XmlNode[] res;
 		
-		ctxt.addVar("@XPathLast", false);
+		set(v, false);
+		ctxt["@XPathLast"] =  v;
 		foreach(n; nodesetViewer)
 		{		
 			static if(is(NodeSetViewer == AttributeAxisViewer))
@@ -436,7 +458,8 @@ class XPathStep : IStep
 			
 			if(!test || test.test(n, ctxt, axisType))
 			{
-				ctxt.addVar("@XPathPos", pos);
+				set(v, pos);
+				ctxt["@XPathPos"] =  v;
 				res ~= testNode(ctxt);
 				nextNode = n;
 				++pos;
@@ -450,12 +473,13 @@ class XPathStep : IStep
 		return res;
 	}
 	
-	final XmlNode[] finish(ExecutionContext ctxt)
+	final XmlNode[] finish(IObject ctxt)
 	{
-		ctxt.addVar("@XPathPos", pos);
-		ctxt.addVar("@XPathLast", true);
-		return testNode!(true)(ctxt);
-		ctxt.addVar("@XPathLast", false);
+		Var v;
+		set(v, pos); ctxt["@XPathPos"] =  v;
+		set(v, true); ctxt["@XPathLast"] =  v;
+		return testNode!(true)(ctxt); //FIXME
+		set(v, false); ctxt["@XPathLast"] =  v;
 		pos = 0;
 	}
 }

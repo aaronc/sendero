@@ -1,8 +1,7 @@
 module sendero.vm.InheritingObject;
 
 import sendero_base.Core;
-
-import sendero.vm.Set;
+import sendero_base.Set;
 
 class SenderoInheritingObject : IObject
 {
@@ -62,7 +61,7 @@ class SenderoInheritingObject : IObject
 		return Var();
 	}
 	
-	void toString(Var[] flags, IObject ctxt, void delegate(char[]) write)
+	void toString(char[] flags, IObject ctxt, void delegate(char[]) write)
 	{
 	}
 	
@@ -74,6 +73,7 @@ class SenderoInheritingObject : IObject
 		return this;
 	}	
 }
+alias SenderoInheritingObject ExecutionContext;
 
 debug(SenderoUnittest)
 {

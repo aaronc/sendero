@@ -2,21 +2,21 @@ module sendero.vm.Expression;
 
 public import sendero_base.Core;
 
-interface Expression
+interface IExpression
 {
 	Var opCall(IObject);
 }
 
-class FunctionCall : Expression
+class FunctionCall : IExpression
 {
-	this(Function func, Expression[] params)
+	this(Function func, IExpression[] params)
 	{
 		this.func = func;
 		this.params = params;
 	}
 	
 	private Function func;
-	private Expression[] params;
+	private IExpression[] params;
 	
 	Var opCall(IObject ctxt)
 	{
@@ -67,7 +67,7 @@ class FunctionCall : Expression
 
 class BinaryOp(char[] op) : BinaryExpression
 {
-	this(Expression lhs, Expression rhs)
+	this(IExpression lhs, IExpression rhs)
 	{
 		super(lhs, rhs);
 	}
@@ -94,7 +94,7 @@ class BinaryOp(char[] op) : BinaryExpression
 
 class EqOp(char[] op) : BinaryExpression
 {
-	this(Expression lhs, Expression rhs)
+	this(IExpression lhs, IExpression rhs)
 	{
 		super(lhs, rhs);
 	}
@@ -143,7 +143,7 @@ class EqOp(char[] op) : BinaryExpression
 
 class CmpOp(char[] op) : BinaryExpression
 {
-	this(Expression lhs, Expression rhs)
+	this(IExpression lhs, IExpression rhs)
 	{
 		super(lhs, rhs);
 	}
@@ -182,31 +182,31 @@ class CmpOp(char[] op) : BinaryExpression
 	}
 }
 
-abstract class BinaryExpression : Expression
+abstract class BinaryExpression : IExpression
 {
-	this(Expression lhs, Expression rhs)
+	this(IExpression lhs, IExpression rhs)
 	{
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
 	
-	Expression lhs;
-	Expression rhs;
+	IExpression lhs;
+	IExpression rhs;
 }
 
-class VarAccess : Expression
+class VarAccess : IExpression
 {
 	this()
 	{
 		
 	}
 	
-	this(Expression[] accessSteps)
+	this(IExpression[] accessSteps)
 	{
 		this.accessSteps = accessSteps;
 	}
 	
-	Expression[] accessSteps;
+	IExpression[] accessSteps;
 	
 	Var opCall(IObject ctxt)
 	{
@@ -269,7 +269,7 @@ class VarAccess : Expression
 }
 
 
-class Literal : Expression
+class Literal : IExpression
 {
 	this(Var v)
 	{
