@@ -3,21 +3,31 @@ module sendero.vm.bind.Bind;
 import sendero_base.Core;
 import sendero_base.Set;
 
+import sendero.util.Reflection;
+
 import tango.core.Traits;
+
+import tango.time.Time;
+import tango.time.Clock;
 
 void bind(T)(ref Var var, T val)
 {
 	static if( is( typeof( set!(T) ) ) )
 		set(var, val);
+	else static if(is(T == DateTime))
+	{
+		var.type = VarT.Time;
+		var.time_ = Clock.fromDate(val);
+	}
 	else static if(isDynamicArrayType!(T)) {
 		var.type = VarT.Array;
-		var.array_ = new ArrayVariableBinding!(T)(val);
+		var.array_ = new ArrayVar!(T)(val);
 	}
 	else static if(isAssocArrayType!(T)) {
 		var.type = VarT.Object;
-		var.obj_ = new AssocArrayVariableBinding!(T)(val);
+		var.obj_ = new AssocArrayVar!(T)(val);
 	}
-	else static if(is(X == class))
+	else static if(is(T == class))
 	{
 		var.type = VarT.Object;
 		var.obj_ = new ClassBinding!(T)(val);
@@ -31,7 +41,7 @@ interface IDynArrayBinding
 	IArray createInstance(void* ptr);
 }
 
-class ArrayVariableBinding(T) : IArray, IDynArrayBinding
+class ArrayVar(T) : IArray, IDynArrayBinding
 {
 	package this() { }
 	package this(void* ptr)
@@ -44,7 +54,7 @@ class ArrayVariableBinding(T) : IArray, IDynArrayBinding
 	
 	IArray createInstance(void* ptr)
 	{
-		return new ArrayVariableBinding!(T)(ptr);
+		return new ArrayVar!(T)(ptr);
 	}
 	
 	int opApply (int delegate (inout Var val) dg)
@@ -75,7 +85,12 @@ class ArrayVariableBinding(T) : IArray, IDynArrayBinding
 	void opCatAssign(Var v) { }
 }
 
-class AssocArrayVariableBinding(T) : IObjectBinding, IClassBinding
+interface IClassBinding
+{
+	IObject createInstance(void* ptr);
+}
+
+class AssocArrayVar(T) : IObject, IClassBinding
 {
 	static this()
 	{
@@ -91,19 +106,19 @@ class AssocArrayVariableBinding(T) : IObjectBinding, IClassBinding
 	this(T t) { this.t = t;}	
 	private T t;
 	
-	IObjectBinding createInstance(void* ptr)
+	IObject createInstance(void* ptr)
 	{
-		return new AssocArrayVariableBinding!(T)(ptr);
+		return new AssocArrayVar!(T)(ptr);
 	}
 	
-	int opApply (int delegate (inout char[] key, inout VariableBinding val) dg)
+	int opApply (int delegate (inout char[] key, inout Var val) dg)
     {
 	    int res;
 	
 	    foreach(k, v; t)
 	    {
-	        VariableBinding var;
-	        var.set(v);
+	        Var var;
+	        bind(var, v);
 	        if ((res = dg(k, var)) != 0)
 	            break;
 	    }
@@ -111,18 +126,18 @@ class AssocArrayVariableBinding(T) : IObjectBinding, IClassBinding
 		return res;
     }
 	
-	VariableBinding opIndex(char[] key)
+	Var opIndex(char[] key)
 	{
 		auto pVal = (key in t);
-		if(!pVal) return VariableBinding();
-		VariableBinding var;
-		var.set(*pVal);
+		if(!pVal) return Var();
+		Var var;
+		bind(var, *pVal);
 		return var;
 	}
 	
 	size_t length() { return t.length;}
 	
-	void opIndexAssign(inout VariableBinding, char[] key)
+	void opIndexAssign(inout Var, char[] key)
 	{
 		debug assert(false);
 	}
@@ -136,7 +151,6 @@ interface IVarFilter
 struct VarInfo
 {
 	ClassVarT type;
-	IPropertyService propertyService;
 	union
 	{
 		IClassBinding clsBinding;
@@ -194,10 +208,6 @@ ClassVarT getClassVarT(X)()
 	{
 		return ClassVarT.DateTime;
 	}
-	else static if(is(X == Date))
-	{
-		return ClassVarT.Date;
-	}
 	else static if(is(X == Time))
 	{
 		return ClassVarT.Time;
@@ -226,18 +236,18 @@ class VarBindingVisitor
 			info.clsBinding = new ClassBinding!(T);
 		}
 		else static if(isDynamicArrayType!(T) && !is(T == char[])) {
-			info.arrayBinding = new ArrayVariableBinding!(T);
+			info.arrayBinding = new ArrayVar!(T);
 		}
 		else static if(isAssocArrayType!(T)) {
-			info.clsBinding = new AssocArrayVariableBinding!(T);
+			info.clsBinding = new AssocArrayVar!(T);
 		}
 		bindings[index] = info;
 	}
 }
 
-enum ClassVarT : ubyte {  Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, String, DateTime, Date, Time, ClassStruct, Array, AssocArray, JSONObject, Null };
+enum ClassVarT : ubyte {  Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, String, DateTime, Time, ClassStruct, Array, AssocArray, Null };
 
-class ClassBinding(T) : IObjectBinding, IClassBinding
+class ClassBinding(T) : IObject, IClassBinding
 {
 	static void init()
 	{
@@ -259,7 +269,7 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 	
 	private static bool initialized; 
 	private static VarInfo[char[]] bindInfo;
-	private static VariableBinding[char[]] validationInfo;
+	private static Var[char[]] validationInfo;
 	
 	private this(void* ptr)
 	{
@@ -272,12 +282,12 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 		this.t = t;
 	}
 	
-	IObjectBinding createInstance(void* ptr)
+	IObject createInstance(void* ptr)
 	{
 		return new ClassBinding!(T)(ptr);
 	}
 	
-	private void getVar(inout VarInfo varInfo, inout VariableBinding var)
+	private void getVar(inout VarInfo varInfo, inout Var var)
 	{
 		if(!t) { var.type = VarT.Null; return;}
 		
@@ -285,85 +295,81 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 		switch(varInfo.type)
 		{
 		case(ClassVarT.Bool):
-			var.set(*cast(bool*)ptr);
+			set(var, *cast(bool*)ptr);
 			break;
 		case(ClassVarT.Byte):
-			var.set(*cast(byte*)ptr);
+			set(var, *cast(byte*)ptr);
 			break;
 		case(ClassVarT.Short):
-			var.set(*cast(short*)ptr);
+			set(var, *cast(short*)ptr);
 			break;
 		case(ClassVarT.Int):
-			var.set(*cast(int*)ptr);
+			set(var, *cast(int*)ptr);
 			break;
 		case(ClassVarT.Long):
-			var.set(*cast(long*)ptr);
+			set(var, *cast(long*)ptr);
 			break;
 		case(ClassVarT.UByte):
-			var.set(*cast(ubyte*)ptr);
+			set(var, *cast(ubyte*)ptr);
 			break;
 		case(ClassVarT.UShort):
-			var.set(*cast(ushort*)ptr);
+			set(var, *cast(ushort*)ptr);
 			break;
 		case(ClassVarT.UInt):
-			var.set(*cast(uint*)ptr);
+			set(var, *cast(uint*)ptr);
 			break;
 		case(ClassVarT.ULong):
-			var.set(*cast(ulong*)ptr);
+			set(var, *cast(ulong*)ptr);
 			break;
 		case(ClassVarT.Float):
-			var.set(*cast(float*)ptr);
+			set(var, *cast(float*)ptr);
 			break;
 		case(ClassVarT.Double):
-			var.set(*cast(double*)ptr);
+			set(var, *cast(double*)ptr);
 			break;
 		case(ClassVarT.String):
-			var.set(*cast(char[]*)ptr);
+			set(var, *cast(char[]*)ptr);
 			break;
 		case(ClassVarT.DateTime):
-			var.set(*cast(DateTime*)ptr);
-			break;
-		case(ClassVarT.Date):
-			var.set(*cast(Date*)ptr);
+			bind(var, *cast(DateTime*)ptr);
 			break;
 		case(ClassVarT.Time):
-			var.set(*cast(Time*)ptr);
+			set(var, *cast(Time*)ptr);
 			break;
 		case(ClassVarT.ClassStruct):
 			var.type = VarT.Object;
-			var.objBinding = varInfo.clsBinding.createInstance(*cast(void**)ptr);
+			var.obj_ = varInfo.clsBinding.createInstance(*cast(void**)ptr);
 			break;
 		case(ClassVarT.Array):
 			var.type = VarT.Array;
-			var.arrayBinding = varInfo.arrayBinding.createInstance(ptr);
+			var.array_ = varInfo.arrayBinding.createInstance(ptr);
 			break;
 		case(ClassVarT.AssocArray):
 			var.type = VarT.Object;
-			var.objBinding = varInfo.clsBinding.createInstance(ptr);
+			var.obj_ = varInfo.clsBinding.createInstance(ptr);
 			break;
 		default:
 			debug assert(false, "Unhandled class bind type");
 			var.type = VarT.Null; 
 			break;
 		}
-		var.propertyService = varInfo.propertyService;
 //		if(varInfo.filter) { var = varInfo.filter(var); }
 	}
 	
-	VariableBinding opIndex(char[] varName)
+	Var opIndex(char[] varName)
 	{
 		if(!initialized) init;
 		
 		auto pInfo = (varName in bindInfo);
 		if(pInfo) {
-			VariableBinding var;
+			Var var;
 			getVar(*pInfo, var);
 			return var;
 		}
-		return VariableBinding();
+		return Var();
 	}
 	
-	int opApply (int delegate (inout char[] key, inout VariableBinding val) dg)
+	int opApply (int delegate (inout char[] key, inout Var val) dg)
 	{
 		if(!initialized) init;
 		
@@ -371,7 +377,7 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 		
 	    foreach(name, varInfo; bindInfo)
 	    {
-	        VariableBinding var;
+	        Var var;
 	        getVar(varInfo, var);
 	        if ((res = dg(name, var)) != 0)
 	            break;
@@ -386,8 +392,11 @@ class ClassBinding(T) : IObjectBinding, IClassBinding
 		return bindInfo.length;
 	}
 	
-	void opIndexAssign(inout VariableBinding, char[] key)
+	void opIndexAssign(Var, char[] key)
 	{
 		debug assert(false);
 	}
+	
+	Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
+	void toString(char[] flags, IExecContext ctxt, void delegate(char[]) write) { }
 }

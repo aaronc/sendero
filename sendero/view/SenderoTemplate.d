@@ -99,8 +99,7 @@ unittest
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
 	
-
-/+	SenderoTemplate.setSearchPath("test/template/");
+	SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
@@ -153,6 +152,6 @@ unittest
 	complex["person"] = n;
 	complex["names"] = names;
 	//Stdout(complex.render).newline;
-	r.regress("complex_output.html", complex.render);+/
+	r.regress("complex_output.html", complex.render);
 }
 }

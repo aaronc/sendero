@@ -125,42 +125,47 @@ class EqOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 	
 	static assert((op == "==") || (op == "!="));
 	
+	static bool compare(Var v1, Var v2)
+	{
+		switch(v1.type)
+		{
+		case VarT.Number:
+			if(v2.type == VarT.Number) {
+				mixin(`return v1.number_ ` ~ op ~ ` v2.number_ ? true : false;`);
+			}
+			else {
+				return false;
+			}
+			break;
+		case VarT.Bool:
+			if(v2.type == VarT.Bool) {
+				mixin(`return v1.bool_ ` ~ op ~ ` v2.bool_ ? true : false;`);
+			}
+			else {
+				return false;
+			}
+			break;
+		case VarT.Time:
+			if(v2.type == VarT.Time) {
+				mixin(`return cast(bool)(v1.time_ ` ~ op ~ ` v2.time_) ? true : false;`);
+			}
+			else {
+				return false;
+			}
+			break;
+		default:
+			return false;
+			break;
+		}
+	}
+	
 	Var opCall(ExecCtxt ctxt)
 	{
 		auto v1 = lhs(ctxt);
 		auto v2 = rhs(ctxt);
 		Var res;
 		res.type = VarT.Bool;
-		switch(v1.type)
-		{
-		case VarT.Number:
-			if(v2.type == VarT.Number) {
-				mixin(`res.bool_ = v1.number_ ` ~ op ~ ` v2.number_;`);
-			}
-			else {
-				res.bool_ = false;
-			}
-			break;
-		case VarT.Bool:
-			if(v2.type == VarT.Bool) {
-				mixin(`res.bool_ = v1.bool_ ` ~ op ~ ` v2.bool_;`);
-			}
-			else {
-				res.bool_ = false;
-			}
-			break;
-		case VarT.Time:
-			if(v2.type == VarT.Time) {
-				mixin(`res.bool_ = cast(bool)(v1.time_ ` ~ op ~ ` v2.time_);`);
-			}
-			else {
-				res.bool_ = false;
-			}
-			break;
-		default:
-			res.bool_ = false;
-			break;
-		}
+		res.bool_ = compare(v1, v2);
 		return res;
 	}
 }
@@ -174,34 +179,37 @@ class CmpOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 	
 	static assert((op == "<") || (op == "<=") || (op == ">=") || (op == ">"));
 	
+	static bool compare(Var v1, Var v2)
+	{
+		switch(v1.type)
+		{
+		case VarT.Number:
+			if(v2.type == VarT.Number) {
+				mixin(`return v1.number_ ` ~ op ~ ` v2.number_ ? true : false;`);
+			}
+			else {
+				return false;
+			}
+			break;
+		case VarT.Time:
+			if(v2.type == VarT.Time) {
+				mixin(`return v1.time_ ` ~ op ~ ` v2.time_ ? true : false;`);
+			}
+			else {
+				return false;
+			}
+		default:
+			return false;
+		}
+	}
+	
 	Var opCall(ExecCtxt ctxt)
 	{
 		auto v1 = lhs(ctxt);
 		auto v2 = rhs(ctxt);
 		Var res;
 		res.type = VarT.Bool;
-		switch(v1.type)
-		{
-		case VarT.Number:
-			if(v2.type == VarT.Number) {
-				mixin(`res.bool_ = v1.number_ ` ~ op ~ ` v2.number_;`);
-			}
-			else {
-				res.bool_ = false;
-			}
-			break;
-		case VarT.Time:
-			if(v2.type == VarT.Time) {
-				mixin(`res.bool_ = v1.time_ ` ~ op ~ ` v2.time_;`);
-			}
-			else {
-				res.bool_ = false;
-			}
-			break;
-		default:
-			res.bool_ = false;
-			break;
-		}
+		res.bool_ = compare(v1, v2);
 		return res;
 	}
 }
