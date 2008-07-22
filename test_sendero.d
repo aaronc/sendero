@@ -1,4 +1,4 @@
-//import sendero.view.SenderoTemplate;
+import sendero.view.SenderoTemplate;
 import sendero.view.LocalText;
 
 import sendero.vm.Expression;

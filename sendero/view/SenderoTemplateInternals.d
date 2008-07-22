@@ -9,6 +9,7 @@ import sendero.view.TemplateEngine;
 import sendero_base.xml.XmlNode;
 import sendero_base.Set;
 import sendero.vm.bind.Bind;
+import sendero.vm.Expression;
 public import sendero.view.LocalText;
 import sendero.xml.XPath;
 import sendero_base.util.StringCharIterator;
@@ -755,7 +756,7 @@ class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		
 		foreach(c; choices)
 		{
-			if(val == c.val)
+			if( isEqual!("==")(val, c.val) )
 			{
 				c.node.render(ctxt, consumer);
 				return;
