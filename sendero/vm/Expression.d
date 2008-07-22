@@ -4,12 +4,12 @@ public import sendero_base.Core;
 
 debug import tango.io.Stdout;
 
-interface IExpression(ExecCtxt = IObject)
+interface IExpression(ExecCtxt)
 {
 	Var opCall(ExecCtxt);
 }
 
-class FunctionCall(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(Function func, IExpression!(ExecCtxt)[] params)
 	{
@@ -67,7 +67,7 @@ class FunctionCall(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 	}
 }
 
-class Negative(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+class Negative(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) expr)
 	{
@@ -89,7 +89,7 @@ class Negative(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 	}
 }
 
-class BinaryOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
+class BinaryOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
@@ -116,7 +116,7 @@ class BinaryOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 	}
 }
 
-class EqOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
+class EqOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
@@ -165,7 +165,7 @@ class EqOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 	}
 }
 
-class CmpOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
+class CmpOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
@@ -206,7 +206,7 @@ class CmpOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 	}
 }
 
-class LogicalOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
+class LogicalOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
@@ -250,7 +250,7 @@ bool varToBool(Var var)
 	}
 }
 
-abstract class BinaryExpression(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+abstract class BinaryExpression(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
@@ -262,7 +262,7 @@ abstract class BinaryExpression(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 	IExpression!(ExecCtxt) rhs;
 }
 
-class VarAccess(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this()
 	{
@@ -340,7 +340,7 @@ class VarAccess(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 	}
 }
 
-class VarPath(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+class VarPath(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(char[][] path)
 	{
@@ -368,7 +368,7 @@ class VarPath(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 	}
 }
 
-class Literal(ExecCtxt = IObject) : IExpression!(ExecCtxt)
+class Literal(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(Var v)
 	{
@@ -400,23 +400,23 @@ debug(SenderoUnittest)
 		auto l3 = new Literal!(IObject)(v3);
 		auto ctxt = new Obj;
 		
-		auto add = new BinaryOp!("+")(l1, l2);
+		auto add = new BinaryOp!("+", IObject)(l1, l2);
 		res = add(ctxt);		
 		assert(res.type == VarT.Number && res.number_ == 15);
 		
-		auto geq = new CmpOp!(">=")(l1, l2);
+		auto geq = new CmpOp!(">=", IObject)(l1, l2);
 		res = geq(ctxt);
 		assert(res.type == VarT.Bool && res.bool_ == false);
 		
-		auto eq = new EqOp!("!=")(l1, l2);
+		auto eq = new EqOp!("!=", IObject)(l1, l2);
 		res = eq(ctxt);
 		assert(res.type == VarT.Bool && res.bool_ == true);
 		
-		auto or = new LogicalOp!("||")(l1, l3);
+		auto or = new LogicalOp!("||", IObject)(l1, l3);
 		res = or(ctxt);
 		assert(res.type == VarT.Bool && res.bool_ == true);
 		
-		auto and = new LogicalOp!("&&")(l1, l3);
+		auto and = new LogicalOp!("&&", IObject)(l1, l3);
 		res = and(ctxt);
 		assert(res.type == VarT.Bool && res.bool_ == false);
 	}	

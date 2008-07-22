@@ -108,8 +108,8 @@ debug(SenderoUnittest) {
 		f = new File("mscorlib.xml");
 		txt = cast(char[])f.read;
 		auto mscorlib = parseXmlTree(txt);
-		res = execXPath10("//member/@name[position() < 10]", mscorlib);
-		regress("7.xml", printRes(res));
+/+		res = execXPath10("//member/@name[position() < 10]", mscorlib);
+		regress("7.xml", printRes(res));+/
 		
 	}
 }

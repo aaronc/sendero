@@ -8,8 +8,14 @@ module sendero.vm.LocalText;
 //import sendero.vm.ExecutionContext;
 import sendero.xml.XPath;
 import sendero.vm.Expression;
+import sendero.view.ExecContext;
 //import sendero.util.FunctionBindingContext;
 import sendero_base.util.StringCharIterator;
+
+alias IExpression!(ExecContext) IViewExpression;
+
+alias char[] Locale;
+alias char[] Timezone;
 
 version(ICU) {
 	public import mango.icu.ULocale;
@@ -26,6 +32,7 @@ else {
 	import sendero.time.Format;
 }
 
+import tango.math.Math;
 import tango.group.time;
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
@@ -88,7 +95,7 @@ package class Param
 {
 	ushort offset;
 	ushort index;
-	IExpression expr;
+	IViewExpression expr;
 	ubyte elementFormat;
 	ubyte secondaryFormat;
 	char[] formatString;
@@ -96,7 +103,7 @@ package class Param
 
 interface IMessage
 {
-	char[] exec(IObject ctxt);
+	char[] exec(ExecContext ctxt);
 }
 
 class Message : IMessage
@@ -105,38 +112,36 @@ class Message : IMessage
 	Param[] params;
 	bool plural() {return false;}
 	
-	static char[] renderParam(IObject ctxt, inout Var var)
+	static char[] renderParam(ExecContext ctxt, inout Var var)
 	{
 		scope p = new Param;
 		return renderParam(ctxt, var, p);
 	}
 	
-	static char[] renderParam(IObject ctxt, inout Var var, Param p)
+	static char[] renderParam(ExecContext ctxt, inout Var var, Param p)
 	{
 		char[] o;
-		auto lcl = ctxt.locale;
+		auto lcl = ctxt.lang;
+		auto reg = ctxt.region;
+		if(reg.length) lcl ~= `-` ~ reg;
 		auto tz = ctxt.timezone;
 		
 		switch(var.type)
 		{
 		case(VarT.Bool):
 			auto x = var.bool_;
-			o ~= renderLong(x, p, lcl);
+			o ~= renderNumber(x, p, lcl);
 			break;
-		case(VarT.Long):
-			auto x = var.long_;
-			o ~= renderLong(x, p, lcl);
-			break;
-		case(VarT.Double):
-			auto x = var.double_;
-			o ~= renderDouble(x, p, lcl);
+		case(VarT.Number):
+			auto x = var.number_;
+			o ~= renderNumber(x, p, lcl);
 			break;
 		case(VarT.String):
 			auto x = var.string_;
 			o ~= x;
 			break;
-		case(VarT.DateTime):
-			auto x = var.dateTime_;
+		case(VarT.Time):
+			auto x = var.time_;
 			o ~= renderDateTime(x, p, lcl, tz);
 			break;
 		default:
@@ -145,7 +150,7 @@ class Message : IMessage
 		return o;
 	}
 	
-	char[] exec(IObject ctxt)
+	char[] exec(ExecContext ctxt)
 	{
 		uint idx = 0;
 		char[] o;
@@ -154,7 +159,7 @@ class Message : IMessage
 			o ~= msg[idx .. p.offset];
 			idx = p.offset;
 			
-			auto var = p.expr.exec(ctxt);
+			auto var = p.expr(ctxt);
 			
 			o ~= renderParam(ctxt, var, p);		
 		}
@@ -162,7 +167,78 @@ class Message : IMessage
 		return o;
 	}
 	
-	static char[] renderLong(long x, inout Param p, Locale lcl)
+	static char[] renderNumber(real x, inout Param p, Locale lcl)
+	{
+		version(ICU) {
+			UNumberFormat fmt;
+			
+			switch(p.elementFormat)
+			{
+			case FORMAT_SPELLOUT:
+				fmt = new USpelloutFormat(lcl);
+				break;
+			case FORMAT_ORDINAL:
+				fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
+				break;
+			case FORMAT_DURATION:
+				fmt = new UDurationFormat(lcl);
+				break;
+			case FORMAT_NUMBER:
+				switch(p.secondaryFormat)
+				{
+				case NUMBER_STYLE_PERCENT:
+					fmt = new UPercentFormat(lcl);
+					break;
+				case NUMBER_STYLE_SCIENTIFIC:
+					fmt = new UScientificFormat(lcl);
+					break;
+				case NUMBER_STYLE_INTEGER:
+					fmt = new UDecimalFormat(lcl);
+					break;
+				}
+				break;
+			default:
+				fmt = new UDecimalFormat(lcl);
+				break;
+			}
+			
+			auto dst = new UString(100);
+			fmt.format(dst, x);
+			return dst.toString;
+		}
+		else {
+			
+			char[] renderDefault()
+			{
+				auto i = trunc(x);
+				if(feq(i, x)) return Integer.toString(rndlong(x));
+				else return Float.toString(x);
+			}
+			
+			switch(p.elementFormat)
+			{
+			case FORMAT_NUMBER:
+				switch(p.secondaryFormat)
+				{
+				case NUMBER_STYLE_SCIENTIFIC:
+					return Float.toString(x);
+					break;
+				case NUMBER_STYLE_INTEGER:
+					return Integer.toString(rndlong(x));
+					break;
+				default:
+					return renderDefault;
+				}
+				break;
+			default:
+				return renderDefault;
+				break;
+			}
+			
+		}
+	}
+	
+/+	static char[] renderLong(long x, inout Param p, Locale lcl)
 	{
 		version(ICU) {
 			UNumberFormat fmt;
@@ -225,7 +301,7 @@ class Message : IMessage
 		else {
 			return Float.toString(x);
 		}
-	}
+	}+/
 	
 	static char[] renderDateTime(inout Time t, inout Param p, Locale lcl, Timezone tz)
 	{
@@ -369,7 +445,7 @@ class Message : IMessage
 	}
 }
 
-package class PluralMessage : IMessage
+/+package class PluralMessage : IMessage
 {
 	Message[] pluralForms;
 	char[] pluralVariable;
@@ -383,7 +459,7 @@ package class PluralMessage : IMessage
 		
 		return null;
 	}
-}
+}+/
 
 class MessageParserException : Exception
 {
@@ -549,7 +625,7 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 	parseExpr(expression);
 }+/
 
-Message parseMessage(char[] msg, FunctionBindingContext ctxt)
+Message parseMessage(char[] msg, ExecContext ctxt)
 {
 	auto itr = new StringCharIterator!(char)(msg);
 	
@@ -568,7 +644,9 @@ Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 		uint j = itr.location;
 		char[] exprTxt = itr.randomAccessSlice(i, j);		
 		j = Text.locate(exprTxt, ';');
-		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
+		
+		compileXPath10(exprTxt[0 .. j], p.expr, ctxt);
+//		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
 		itr.seek(i + j);	
 		
 		if(!itr.good)
@@ -817,26 +895,26 @@ Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 	}
 }*/
 
-version(SenderoUnittest)
+debug(SenderoUnittest)
 {
 	import tango.io.Stdout;
 
 
 unittest
 {
-	auto funcCtxt = new FunctionBindingContext;
-	auto m = parseMessage("Hello _{$word} world, the only _{$num|spellout}!", funcCtxt);
+	auto funcCtxt = new ExecContext;
+	auto m = parseMessage("Hello _{$word} world, the only _{$num; spellout}!", funcCtxt);
 	assert(m.msg == "Hello  world, the only !");
 	assert(m.params.length == 2);
 	assert(m.params[0].elementFormat == FORMAT_STRING);
-	assert(m.params[0].expr.var[0] == "word", m.params[0].expr.var[0]);
+//	assert(m.params[0].expr.var[0] == "word", m.params[0].expr.var[0]);
 	assert(m.params[1].elementFormat == FORMAT_SPELLOUT);
-	assert(m.params[1].expr.var[0] == "num", m.params[1].expr.var[0]);
+//	assert(m.params[1].expr.var[0] == "num", m.params[1].expr.var[0]);
 
-	auto ctxt = new ExecutionContext;
+	auto ctxt = new ExecContext;
 	int x = 1;
-	ctxt.addVar("num", x);
-	ctxt.addVar("word", "beautiful");
+	ctxt.add("num", x);
+	ctxt.add("word", "beautiful");
 	auto res = m.exec(ctxt);
 	//assert(res == "Hello beautiful world, the only one!", res);
 	Stdout(res).newline;

@@ -3,6 +3,7 @@ module sendero.view.ExecContxt;
 import sendero.vm.InheritingObject;
 import sendero_base.Core;
 
+
 class ExecContext : SenderoInheritingObject, IExecContext
 {
 	static this()

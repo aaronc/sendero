@@ -1,4 +1,4 @@
-module sendero.vm.Expression2;
+deprecated module sendero.vm.Expression2;
 
 import sendero_base.Core;
 import sendero_base.util.collection.Stack;
