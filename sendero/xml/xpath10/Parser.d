@@ -41,7 +41,7 @@ version(TestApaged)
             throw new Exception("Usage: arithmetic <expression>");
         SyntaxTree* root;
         if ( parse("", args[1], root, true) ) {
-            IExpression value;
+            IXPathExpression value;
             root.Expr(value);
             debug root.print;
 			auto ctxt = new ExecutionContext;
@@ -148,27 +148,27 @@ struct SyntaxTree
     // augmented semantic code
 // generated code start
     alias _S_Expr Expr;
-void _S_Expr(inout IExpression expr, XPathContext ctxt)
+void _S_Expr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 0:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) OrExpr = &_ST_children[0]._S_OrExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) OrExpr = &_ST_children[0]._S_OrExpr;
 
 #line 52 "Parser.apd"
 
-		OrExpr(expr);
+		OrExpr(expr, ctxt);
         break;
     case 1:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
         void delegate() ExprTerminator = &_ST_children[1]._S_ExprTerminator;
 
 #line 57 "Parser.apd"
 
-		Expr(expr);
+		Expr(expr, ctxt);
         break;
 
     default:
@@ -188,305 +188,305 @@ void _S_ExprTerminator()
         assert(0);
     }
 }
-void _S_OrExpr(inout IExpression expr, XPathContext ctxt)
+void _S_OrExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 3:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) AndExpr = &_ST_children[0]._S_AndExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AndExpr = &_ST_children[0]._S_AndExpr;
 
 #line 70 "Parser.apd"
 
-		AndExpr(expr);
+		AndExpr(expr, ctxt);
         break;
     case 4:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) OrExpr = &_ST_children[0]._S_OrExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) AndExpr = &_ST_children[1]._S_AndExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) OrExpr = &_ST_children[0]._S_OrExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AndExpr = &_ST_children[1]._S_AndExpr;
 
 #line 75 "Parser.apd"
 
-		IExpression x, y;
-		OrExpr(x); AndExpr(y);
-		expr = new LogicalOp!("||")(x, y);
+		IXPathExpression x, y;
+		OrExpr(x, ctxt); AndExpr(y, ctxt);
+		expr = new LogicalOp!("||", XPathContext)(x, y);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_AndExpr(inout IExpression expr, XPathContext ctxt)
+void _S_AndExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 5:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
 
 #line 85 "Parser.apd"
 
-		EqualityExpr(expr);
+		EqualityExpr(expr, ctxt);
         break;
     case 6:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) AndExpr = &_ST_children[0]._S_AndExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[1]._S_EqualityExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AndExpr = &_ST_children[0]._S_AndExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[1]._S_EqualityExpr;
 
 #line 90 "Parser.apd"
 
-		IExpression x, y;
-		AndExpr(x); EqualityExpr(y);
-		expr = new LogicalOp!("&&")(x, y);
+		IXPathExpression x, y;
+		AndExpr(x, ctxt); EqualityExpr(y, ctxt);
+		expr = new LogicalOp!("&&", XPathContext)(x, y);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_EqualityExpr(inout IExpression expr, XPathContext ctxt)
+void _S_EqualityExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 7:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
 
 #line 100 "Parser.apd"
 
-		RelationalExpr(expr);
+		RelationalExpr(expr, ctxt);
         break;
     case 8:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
 
 #line 105 "Parser.apd"
 
-		IExpression x, y;
-		EqualityExpr(x); RelationalExpr(y);
-		expr = new EqOp!("==")(x, y);
+		IXPathExpression x, y;
+		EqualityExpr(x, ctxt); RelationalExpr(y, ctxt);
+		expr = new EqOp!("==", XPathContext)(x, y);
         break;
     case 9:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) EqualityExpr = &_ST_children[0]._S_EqualityExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[1]._S_RelationalExpr;
 
 #line 112 "Parser.apd"
 
-		IExpression x, y;
-		EqualityExpr(x); RelationalExpr(y);
-		expr = new EqOp!("!=")(x, y);
+		IXPathExpression x, y;
+		EqualityExpr(x, ctxt); RelationalExpr(y, ctxt);
+		expr = new EqOp!("!=", XPathContext)(x, y);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_RelationalExpr(inout IExpression expr, XPathContext ctxt)
+void _S_RelationalExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 10:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
 
 #line 122 "Parser.apd"
 
-		AdditiveExpr(expr);
+		AdditiveExpr(expr, ctxt);
         break;
     case 11:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
 #line 127 "Parser.apd"
 
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!("<")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!("<", XPathContext)(x, y);
         break;
     case 12:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
 #line 134 "Parser.apd"
 
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!(">")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!(">", XPathContext)(x, y);
         break;
     case 13:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
 #line 141 "Parser.apd"
 
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!("<=")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!("<=", XPathContext)(x, y);
         break;
     case 14:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) RelationalExpr = &_ST_children[0]._S_RelationalExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[1]._S_AdditiveExpr;
 
 #line 148 "Parser.apd"
 
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!(">=")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!(">=", XPathContext)(x, y);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_AdditiveExpr(inout IExpression expr, XPathContext ctxt)
+void _S_AdditiveExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 15:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[1]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[1]._S_MulExpr;
 
 #line 158 "Parser.apd"
 
-    	IExpression x, y;
-		AdditiveExpr(x); MulExpr(y);
-		expr = new BinaryOp!("+")(x, y);
+    	IXPathExpression x, y;
+		AdditiveExpr(x, ctxt); MulExpr(y, ctxt);
+		expr = new BinaryOp!("+", XPathContext)(x, y);
         break;
     case 16:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[1]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) AdditiveExpr = &_ST_children[0]._S_AdditiveExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[1]._S_MulExpr;
 
 #line 165 "Parser.apd"
 
-    	IExpression x, y;
-		AdditiveExpr(x); MulExpr(y);
-		expr = new BinaryOp!("-")(x, y);
+    	IXPathExpression x, y;
+		AdditiveExpr(x, ctxt); MulExpr(y, ctxt);
+		expr = new BinaryOp!("-", XPathContext)(x, y);
         break;
     case 17:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
 
 #line 172 "Parser.apd"
- MulExpr(expr);
+ MulExpr(expr, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_MulExpr(inout IExpression expr, XPathContext ctxt)
+void _S_MulExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 18:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
 #line 178 "Parser.apd"
 
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("*")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("*", XPathContext)(x, y);
         break;
     case 19:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
 #line 185 "Parser.apd"
 
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("/")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("/", XPathContext)(x, y);
         break;
     case 20:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) MulExpr = &_ST_children[0]._S_MulExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[1]._S_UnaryExpr;
 
 #line 192 "Parser.apd"
 
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("%")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("%", XPathContext)(x, y);
         break;
     case 21:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
 
 #line 199 "Parser.apd"
- UnaryExpr(expr);
+ UnaryExpr(expr, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_UnaryExpr(inout IExpression expr, XPathContext ctxt)
+void _S_UnaryExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 22:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnaryExpr = &_ST_children[0]._S_UnaryExpr;
 
 #line 206 "Parser.apd"
 
-		IExpression e;
-        UnaryExpr(e);
-        expr = new Negative(e);
+		IXPathExpression e;
+        UnaryExpr(e, ctxt);
+        expr = new Negative!(XPathContext)(e);
         break;
     case 23:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) UnionExpr = &_ST_children[0]._S_UnionExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UnionExpr = &_ST_children[0]._S_UnionExpr;
 
 #line 213 "Parser.apd"
- UnionExpr(expr);
+ UnionExpr(expr, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_UnionExpr(inout IExpression expr, XPathContext ctxt)
+void _S_UnionExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 24:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) PathExpr = &_ST_children[0]._S_PathExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) PathExpr = &_ST_children[0]._S_PathExpr;
 
 #line 219 "Parser.apd"
 
-		PathExpr(expr);
+		PathExpr(expr, ctxt);
         break;
     case 25:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) UExpr = &_ST_children[0]._S_UnionExpr;
-        void delegate(inout IExpression expr, XPathContext ctxt) PathExpr = &_ST_children[1]._S_PathExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) UExpr = &_ST_children[0]._S_UnionExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) PathExpr = &_ST_children[1]._S_PathExpr;
 
 #line 224 "Parser.apd"
 
-		IExpression expr1, expr2;
-		UExpr(expr1);
-		PathExpr(expr2);
+		IXPathExpression expr1, expr2;
+		UExpr(expr1, ctxt);
+		PathExpr(expr2, ctxt);
 
 		expr = new UnionExpr(expr1, expr2);
         break;
@@ -495,63 +495,63 @@ void _S_UnionExpr(inout IExpression expr, XPathContext ctxt)
         assert(0);
     }
 }
-void _S_PathExpr(inout IExpression expr, XPathContext ctxt)
+void _S_PathExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 26:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) LocationPath = &_ST_children[0]._S_LocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) LocationPath = &_ST_children[0]._S_LocationPath;
 
 #line 236 "Parser.apd"
 
 		IStep step;
-		LocationPath(step);
+		LocationPath(step, ctxt);
 		expr = new XPathExpr!(false)(step);
         break;
     case 27:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
 
 #line 243 "Parser.apd"
 
-		FilterExpr(expr);
+		FilterExpr(expr, ctxt);
         break;
     case 28:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
 
 #line 248 "Parser.apd"
 
-		IExpression e;
+		IXPathExpression e;
 		IStep step;
 		
-		FilterExpr(e);
-		RelativeLocationPath(step);
+		FilterExpr(e, ctxt);
+		RelativeLocationPath(step, ctxt);
 		
 		expr = new XPathExpr!(true)(step, e);
         break;
     case 29:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[1]._S_RelativeLocationPath;
 
 #line 260 "Parser.apd"
 
-		IExpression e;
+		IXPathExpression e;
 		IStep step, step2;
 		
-		FilterExpr(e);
-		RelativeLocationPath(step2);
+		FilterExpr(e, ctxt);
+		RelativeLocationPath(step2, ctxt);
 		
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		step.setNextStep(step2);
 		expr = new XPathExpr!(true)(step, e);
 		//expr = new FunctionCall( &(new XPathExpressionFn!(true)(step, e)).exec, null );
 	
-		/+IExpression e;
+		/+IXPathExpression e;
 		IStep step, step2;
 		
 		FilterExpr(e);
@@ -568,23 +568,23 @@ void _S_PathExpr(inout IExpression expr, XPathContext ctxt)
         assert(0);
     }
 }
-void _S_FilterExpr(inout IExpression expr, XPathContext ctxt)
+void _S_FilterExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 30:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr) PrimaryExpr = &_ST_children[0]._S_PrimaryExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) PrimaryExpr = &_ST_children[0]._S_PrimaryExpr;
 
 #line 289 "Parser.apd"
 
-		PrimaryExpr(expr);
+		PrimaryExpr(expr, ctxt);
         break;
     case 31:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
-        void delegate(inout IExpression expr) Predicate = &_ST_children[1]._S_Predicate;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) FilterExpr = &_ST_children[0]._S_FilterExpr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Predicate = &_ST_children[1]._S_Predicate;
 
 #line 294 "Parser.apd"
 
@@ -595,52 +595,52 @@ void _S_FilterExpr(inout IExpression expr, XPathContext ctxt)
         assert(0);
     }
 }
-void _S_Predicate(inout IExpression expr)
+void _S_Predicate(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 32:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
 
 #line 303 "Parser.apd"
 
-		Expr(expr);
+		Expr(expr, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_PredicateList(inout PredicateTest[] predicates)
+void _S_PredicateList(inout PredicateTest[] predicates, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 33:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr) Predicate = &_ST_children[0]._S_Predicate;
-        void delegate(inout PredicateTest[] predicates) PredicateList = &_ST_children[1]._S_PredicateList;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Predicate = &_ST_children[0]._S_Predicate;
+        void delegate(inout PredicateTest[] predicates, XPathContext ctxt) PredicateList = &_ST_children[1]._S_PredicateList;
 
 #line 311 "Parser.apd"
 
-		IExpression expr;
-		Predicate(expr);
+		IXPathExpression expr;
+		Predicate(expr, ctxt);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;
 		PredicateTest[] plist;
-		PredicateList(plist);
+		PredicateList(plist, ctxt);
 		predicates ~= plist;
         break;
     case 34:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr) Predicate = &_ST_children[0]._S_Predicate;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Predicate = &_ST_children[0]._S_Predicate;
 
 #line 323 "Parser.apd"
 
-		IExpression expr;
-		Predicate(expr);
+		IXPathExpression expr;
+		Predicate(expr, ctxt);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;
         break;
@@ -652,44 +652,44 @@ void _S_PredicateList(inout PredicateTest[] predicates)
         assert(0);
     }
 }
-void _S_LocationPath(inout IStep step)
+void _S_LocationPath(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 36:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
 #line 336 "Parser.apd"
 
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
         break;
     case 37:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) AbsoluteLocationPath = &_ST_children[0]._S_AbsoluteLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) AbsoluteLocationPath = &_ST_children[0]._S_AbsoluteLocationPath;
 
 #line 341 "Parser.apd"
 
-		AbsoluteLocationPath(step);
+		AbsoluteLocationPath(step, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_AbsoluteLocationPath(inout IStep step)
+void _S_AbsoluteLocationPath(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 38:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
 #line 349 "Parser.apd"
 
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
         break;
     case 39:
         debug assert(_ST_children.length == 0);
@@ -702,31 +702,31 @@ void _S_AbsoluteLocationPath(inout IStep step)
         break;
     case 40:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) AbbreviatedAbsoluteLocationPath = &_ST_children[0]._S_AbbreviatedAbsoluteLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) AbbreviatedAbsoluteLocationPath = &_ST_children[0]._S_AbbreviatedAbsoluteLocationPath;
 
 #line 361 "Parser.apd"
 
-		AbbreviatedAbsoluteLocationPath(step);
+		AbbreviatedAbsoluteLocationPath(step, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_AbbreviatedAbsoluteLocationPath(inout IStep step)
+void _S_AbbreviatedAbsoluteLocationPath(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 41:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
 
 #line 369 "Parser.apd"
 
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		IStep step2;
-		RelativeLocationPath(step2);
+		RelativeLocationPath(step2, ctxt);
 		step.setNextStep = step2;
         break;
 
@@ -734,60 +734,60 @@ void _S_AbbreviatedAbsoluteLocationPath(inout IStep step)
         assert(0);
     }
 }
-void _S_RelativeLocationPath(inout IStep step)
+void _S_RelativeLocationPath(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 42:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) Step = &_ST_children[0]._S_Step;
+        void delegate(inout IStep step, XPathContext ctxt) Step = &_ST_children[0]._S_Step;
 
 #line 380 "Parser.apd"
 
-		Step(step);
+		Step(step, ctxt);
         break;
     case 43:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
-        void delegate(inout IStep step) Step = &_ST_children[1]._S_Step;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) Step = &_ST_children[1]._S_Step;
 
 #line 385 "Parser.apd"
 
 		IStep step2;
-		RelativeLocationPath(step);
-		Step(step2);
+		RelativeLocationPath(step, ctxt);
+		Step(step2, ctxt);
 		step.setNextStep = step2;
         break;
     case 44:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IStep step) AbbreviatedRelativeLocationPath = &_ST_children[0]._S_AbbreviatedRelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) AbbreviatedRelativeLocationPath = &_ST_children[0]._S_AbbreviatedRelativeLocationPath;
 
 #line 393 "Parser.apd"
 
-		AbbreviatedRelativeLocationPath(step);
+		AbbreviatedRelativeLocationPath(step, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_AbbreviatedRelativeLocationPath(inout IStep step)
+void _S_AbbreviatedRelativeLocationPath(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 45:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IStep step) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
-        void delegate(inout IStep step) Step = &_ST_children[1]._S_Step;
+        void delegate(inout IStep step, XPathContext ctxt) RelativeLocationPath = &_ST_children[0]._S_RelativeLocationPath;
+        void delegate(inout IStep step, XPathContext ctxt) Step = &_ST_children[1]._S_Step;
 
 #line 401 "Parser.apd"
 
 		IStep step2, step3;
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
 		step2 = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
-		Step(step3);
+		Step(step3, ctxt);
 		step2.setNextStep = step3;
 		step.setNextStep = step2;
         break;
@@ -796,7 +796,7 @@ void _S_AbbreviatedRelativeLocationPath(inout IStep step)
         assert(0);
     }
 }
-void _S_Step(inout IStep step)
+void _S_Step(inout IStep step, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
@@ -804,8 +804,8 @@ void _S_Step(inout IStep step)
     case 46:
         debug assert(_ST_children.length == 3);
         void delegate(out Axis axis) AxisSpecifier = &_ST_children[0]._S_AxisSpecifier;
-        void delegate(inout ITest test) NodeTest = &_ST_children[1]._S_NodeTest;
-        void delegate(inout PredicateTest[] predicates) PredicateList = &_ST_children[2]._S_PredicateList;
+        void delegate(inout ITest test, XPathContext ctxt) NodeTest = &_ST_children[1]._S_NodeTest;
+        void delegate(inout PredicateTest[] predicates, XPathContext ctxt) PredicateList = &_ST_children[2]._S_PredicateList;
 
 #line 414 "Parser.apd"
 
@@ -813,8 +813,8 @@ void _S_Step(inout IStep step)
 		AxisSpecifier(axis);
 		ITest test;
 		PredicateTest[] predicates;
-		NodeTest(test);
-		PredicateList(predicates);		
+		NodeTest(test, ctxt);
+		PredicateList(predicates, ctxt);		
 		
 		switch(axis)
 		{
@@ -863,12 +863,12 @@ void _S_Step(inout IStep step)
         break;
     case 47:
         debug assert(_ST_children.length == 1);
-        void delegate(out Axis axis) AbbreviatedStep = &_ST_children[0]._S_AbbreviatedStep;
+        void delegate(out Axis axis, XPathContext ctxt) AbbreviatedStep = &_ST_children[0]._S_AbbreviatedStep;
 
 #line 468 "Parser.apd"
 
 		Axis axis;
-		AbbreviatedStep(axis);
+		AbbreviatedStep(axis, ctxt);
 		switch(axis)
 		{
 		case Axis.parent:
@@ -886,7 +886,7 @@ void _S_Step(inout IStep step)
         assert(0);
     }
 }
-void _S_AbbreviatedStep(out Axis axis)
+void _S_AbbreviatedStep(out Axis axis, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
@@ -1051,7 +1051,7 @@ void _S_AbbreviatedAxisSpecifier(out bool attr)
         assert(0);
     }
 }
-void _S_NodeTest(inout ITest test)
+void _S_NodeTest(inout ITest test, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
@@ -1194,7 +1194,7 @@ void _S_NameTest(inout ITest test)
         assert(0);
     }
 }
-void _S_PrimaryExpr(inout IExpression expr)
+void _S_PrimaryExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
@@ -1206,7 +1206,7 @@ void _S_PrimaryExpr(inout IExpression expr)
 
     	long val = Integer.atoi(_ST_match);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
         break;
     case 80:
         debug assert(_ST_children.length == 0);
@@ -1215,7 +1215,7 @@ void _S_PrimaryExpr(inout IExpression expr)
 
     	double val = Float.parse(_ST_match);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
         break;
     case 81:
         debug assert(_ST_children.length == 1);
@@ -1225,50 +1225,50 @@ void _S_PrimaryExpr(inout IExpression expr)
 
 		char[] val;	Lit(val);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
         break;
     case 82:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr) FuncCall = &_ST_children[0]._S_FuncCall;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) FuncCall = &_ST_children[0]._S_FuncCall;
 
 #line 654 "Parser.apd"
 
-		FuncCall(expr);
+		FuncCall(expr, ctxt);
         break;
     case 83:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr) VarRef = &_ST_children[0]._S_VarRef;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) VarRef = &_ST_children[0]._S_VarRef;
 
 #line 659 "Parser.apd"
 
-		VarRef(expr);
+		VarRef(expr, ctxt);
         break;
     case 84:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
 
 #line 664 "Parser.apd"
- Expr(expr);
+ Expr(expr, ctxt);
         break;
 
     default:
         assert(0);
     }
 }
-void _S_VarRef(inout IExpression expr)
+void _S_VarRef(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 85:
         debug assert(_ST_children.length == 1);
-        void delegate(ref IExpression[] path) VarAcc = &_ST_children[0]._S_VarAccess;
+        void delegate(ref IXPathExpression[] path, XPathContext ctxt) VarAcc = &_ST_children[0]._S_VarAccess;
 
 #line 676 "Parser.apd"
 
-		IExpression[] path;
-		VarAcc(path);
-		expr = new VarAccess(path);
+		IXPathExpression[] path;
+		VarAcc(path, ctxt);
+		expr = new VarAccess!(XPathContext)(path);
 		/+expr.type = ExpressionT.Var;
 		Path(expr.var);+/
         break;
@@ -1277,7 +1277,7 @@ void _S_VarRef(inout IExpression expr)
         assert(0);
     }
 }
-void _S_FuncCall(inout IExpression expr)
+void _S_FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
@@ -1302,7 +1302,7 @@ void _S_FuncCall(inout IExpression expr)
 #line 698 "Parser.apd"
 
 		Var v; set(v, true);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
         break;
     case 89:
         debug assert(_ST_children.length == 0);
@@ -1310,12 +1310,12 @@ void _S_FuncCall(inout IExpression expr)
 #line 704 "Parser.apd"
 
 		Var v; set(v, false);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
         break;
     case 90:
         debug assert(_ST_children.length == 2);
         void delegate(inout char[][] path) QName = &_ST_children[0]._S_QName;
-        void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
+        void delegate(inout IXPathExpression[] args, XPathContext ctxt) ExprList = &_ST_children[1]._S_ExprList;
 
 #line 710 "Parser.apd"
 
@@ -1326,32 +1326,32 @@ void _S_FuncCall(inout IExpression expr)
         assert(0);
     }
 }
-void _S_ExprList(inout IExpression[] args)
+void _S_ExprList(inout IXPathExpression[] args, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 91:
         debug assert(_ST_children.length == 2);
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
-        void delegate(inout IExpression[] args) ExprList = &_ST_children[1]._S_ExprList;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
+        void delegate(inout IXPathExpression[] args, XPathContext ctxt) ExprList = &_ST_children[1]._S_ExprList;
 
 #line 720 "Parser.apd"
 
-		IExpression expr;
-		IExpression exprList[];
-		Expr(expr);
-		ExprList(exprList);
+		IXPathExpression expr;
+		IXPathExpression exprList[];
+		Expr(expr, ctxt);
+		ExprList(exprList, ctxt);
 		args ~= expr;
 		args ~= exprList;
         break;
     case 92:
         debug assert(_ST_children.length == 1);
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[0]._S_Expr;
 
 #line 730 "Parser.apd"
 
-		IExpression expr;
+		IXPathExpression expr;
 		args ~= expr;
         break;
     case 93:
@@ -1412,33 +1412,33 @@ void _S_NCName(out char[] value)
         assert(0);
     }
 }
-void _S_VarAccess(ref IExpression[] path)
+void _S_VarAccess(ref IXPathExpression[] path, XPathContext ctxt)
 {
 
     switch ( _ST_rule )
     {
     case 97:
         debug assert(_ST_children.length == 2);
-        void delegate(ref IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
+        void delegate(ref IXPathExpression[] path, XPathContext ctxt) VarAccess = &_ST_children[0]._S_VarAccess;
         void delegate(out char[] value) NCName = &_ST_children[1]._S_NCName;
 
 #line 786 "Parser.apd"
 
-		VarAccess(path);
+		VarAccess(path, ctxt);
 		char[] name; NCName(name);
 		Var v; set(v, name);
-		path ~= new Literal(v);
+		path ~= new Literal!(XPathContext)(v);
         break;
     case 98:
         debug assert(_ST_children.length == 2);
-        void delegate(ref IExpression[] path) VarAccess = &_ST_children[0]._S_VarAccess;
-        void delegate(inout IExpression expr, XPathContext ctxt) Expr = &_ST_children[1]._S_Expr;
+        void delegate(ref IXPathExpression[] path, XPathContext ctxt) VarAccess = &_ST_children[0]._S_VarAccess;
+        void delegate(inout IXPathExpression expr, XPathContext ctxt) Expr = &_ST_children[1]._S_Expr;
 
 #line 794 "Parser.apd"
 
-		VarAccess(path);
-		IExpression expr;
-		Expr(expr);
+		VarAccess(path, ctxt);
+		IXPathExpression expr;
+		Expr(expr, ctxt);
 		path ~= expr;
         break;
     case 99:
@@ -1449,7 +1449,7 @@ void _S_VarAccess(ref IExpression[] path)
 
 		char[] name; NCName(name);
 		Var v; set(v, name);
-		path ~= new Literal(v);
+		path ~= new Literal!(XPathContext)(v);
         break;
 
     default:

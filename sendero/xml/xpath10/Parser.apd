@@ -24,7 +24,7 @@ version(TestApaged)
             throw new Exception("Usage: arithmetic <expression>");
         SyntaxTree* root;
         if ( parse("", args[1], root, true) ) {
-            IExpression value;
+            IXPathExpression value;
             root.Expr(value);
             debug root.print;
 			auto ctxt = new ExecutionContext;
@@ -46,16 +46,16 @@ Whitespace
     regexp("[ \\t\\n\\r]+");
 }
 
-Expr(inout IExpression expr, XPathContext ctxt)
+Expr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	OrExpr
 	{
-		OrExpr(expr);
+		OrExpr(expr, ctxt);
 	}
 	
 	Expr ExprTerminator
 	{
-		Expr(expr);
+		Expr(expr, ctxt);
 	}
 }
 
@@ -64,193 +64,193 @@ ExprTerminator()
 	regexp("[,\}]");
 }
 
-OrExpr(inout IExpression expr, XPathContext ctxt)
+OrExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	AndExpr
 	{
-		AndExpr(expr);
+		AndExpr(expr, ctxt);
 	}
 	
 	OrExpr "or" AndExpr
 	{
-		IExpression x, y;
-		OrExpr(x); AndExpr(y);
-		expr = new LogicalOp!("||")(x, y);
+		IXPathExpression x, y;
+		OrExpr(x, ctxt); AndExpr(y, ctxt);
+		expr = new LogicalOp!("||", XPathContext)(x, y);
 	}
 }
 
-AndExpr(inout IExpression expr, XPathContext ctxt)
+AndExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	EqualityExpr
 	{
-		EqualityExpr(expr);
+		EqualityExpr(expr, ctxt);
 	}
 	
 	AndExpr "and" EqualityExpr
 	{
-		IExpression x, y;
-		AndExpr(x); EqualityExpr(y);
-		expr = new LogicalOp!("&&")(x, y);
+		IXPathExpression x, y;
+		AndExpr(x, ctxt); EqualityExpr(y, ctxt);
+		expr = new LogicalOp!("&&", XPathContext)(x, y);
 	}
 }
 
-EqualityExpr(inout IExpression expr, XPathContext ctxt)
+EqualityExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	RelationalExpr
 	{
-		RelationalExpr(expr);
+		RelationalExpr(expr, ctxt);
 	}
 	
 	EqualityExpr "=" RelationalExpr
 	{
-		IExpression x, y;
-		EqualityExpr(x); RelationalExpr(y);
-		expr = new EqOp!("==")(x, y);
+		IXPathExpression x, y;
+		EqualityExpr(x, ctxt); RelationalExpr(y, ctxt);
+		expr = new EqOp!("==", XPathContext)(x, y);
 	}
 	
 	EqualityExpr "!=" RelationalExpr
 	{
-		IExpression x, y;
-		EqualityExpr(x); RelationalExpr(y);
-		expr = new EqOp!("!=")(x, y);
+		IXPathExpression x, y;
+		EqualityExpr(x, ctxt); RelationalExpr(y, ctxt);
+		expr = new EqOp!("!=", XPathContext)(x, y);
 	}
 }
 
-RelationalExpr(inout IExpression expr, XPathContext ctxt)
+RelationalExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	AdditiveExpr
 	{
-		AdditiveExpr(expr);
+		AdditiveExpr(expr, ctxt);
 	}
 	
 	RelationalExpr "<" AdditiveExpr	
 	{
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!("<")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!("<", XPathContext)(x, y);
 	}
 	
 	RelationalExpr ">" AdditiveExpr	
 	{
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!(">")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!(">", XPathContext)(x, y);
 	}
 	
 	RelationalExpr "<=" AdditiveExpr
 	{
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!("<=")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!("<=", XPathContext)(x, y);
 	}
 	
 	RelationalExpr ">=" AdditiveExpr
 	{
-		IExpression x, y;
-		RelationalExpr(x); AdditiveExpr(y);
-		expr = new CmpOp!(">=")(x, y);
+		IXPathExpression x, y;
+		RelationalExpr(x, ctxt); AdditiveExpr(y, ctxt);
+		expr = new CmpOp!(">=", XPathContext)(x, y);
 	}
 }
 
-AdditiveExpr(inout IExpression expr, XPathContext ctxt)
+AdditiveExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
     AdditiveExpr "+" MulExpr
     {
-    	IExpression x, y;
-		AdditiveExpr(x); MulExpr(y);
-		expr = new BinaryOp!("+")(x, y);
+    	IXPathExpression x, y;
+		AdditiveExpr(x, ctxt); MulExpr(y, ctxt);
+		expr = new BinaryOp!("+", XPathContext)(x, y);
     }
 
     AdditiveExpr "-" MulExpr
     {
-    	IExpression x, y;
-		AdditiveExpr(x); MulExpr(y);
-		expr = new BinaryOp!("-")(x, y);
+    	IXPathExpression x, y;
+		AdditiveExpr(x, ctxt); MulExpr(y, ctxt);
+		expr = new BinaryOp!("-", XPathContext)(x, y);
     }
 
     MulExpr
-    { MulExpr(expr); }
+    { MulExpr(expr, ctxt); }
 }
 
-MulExpr(inout IExpression expr, XPathContext ctxt)
+MulExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
     MulExpr "*" UnaryExpr
     {
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("*")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("*", XPathContext)(x, y);
     }
 	
 	MulExpr "div" UnaryExpr
     {
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("/")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("/", XPathContext)(x, y);
     }
 	
 	MulExpr "mod" UnaryExpr
     {
-    	IExpression x, y;
-		MulExpr(x); UnaryExpr(y);
-		expr = new BinaryOp!("%")(x, y);
+    	IXPathExpression x, y;
+		MulExpr(x, ctxt); UnaryExpr(y, ctxt);
+		expr = new BinaryOp!("%", XPathContext)(x, y);
     }
 
     UnaryExpr
-    { UnaryExpr(expr); }
+    { UnaryExpr(expr, ctxt); }
 }
 
 
-UnaryExpr(inout IExpression expr, XPathContext ctxt)
+UnaryExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	"-" UnaryExpr
 	{
-		IExpression e;
-        UnaryExpr(e);
-        expr = new Negative(e);
+		IXPathExpression e;
+        UnaryExpr(e, ctxt);
+        expr = new Negative!(XPathContext)(e);
 	}
 
 	UnionExpr
-	{ UnionExpr(expr); }
+	{ UnionExpr(expr, ctxt); }
 }
 
-UnionExpr(inout IExpression expr, XPathContext ctxt)
+UnionExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	PathExpr
 	{
-		PathExpr(expr);
+		PathExpr(expr, ctxt);
 	}
 	
 	UnionExpr = UExpr "|" PathExpr
 	{
-		IExpression expr1, expr2;
-		UExpr(expr1);
-		PathExpr(expr2);
+		IXPathExpression expr1, expr2;
+		UExpr(expr1, ctxt);
+		PathExpr(expr2, ctxt);
 
 		expr = new UnionExpr(expr1, expr2);
 	}
 }
 
-PathExpr(inout IExpression expr, XPathContext ctxt)
+PathExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	LocationPath
 	{
 		IStep step;
-		LocationPath(step);
+		LocationPath(step, ctxt);
 		expr = new XPathExpr!(false)(step);
 	}
 	
 	FilterExpr
 	{
-		FilterExpr(expr);
+		FilterExpr(expr, ctxt);
 	}
 	
 	FilterExpr "/" RelativeLocationPath
 	{
-		IExpression e;
+		IXPathExpression e;
 		IStep step;
 		
-		FilterExpr(e);
-		RelativeLocationPath(step);
+		FilterExpr(e, ctxt);
+		RelativeLocationPath(step, ctxt);
 		
 		expr = new XPathExpr!(true)(step, e);
 		//expr = new FunctionCall( &(new XPathExpressionFn!(true)(step, e)).exec, null );
@@ -258,18 +258,18 @@ PathExpr(inout IExpression expr, XPathContext ctxt)
 	
 	FilterExpr "//" RelativeLocationPath
 	{
-		IExpression e;
+		IXPathExpression e;
 		IStep step, step2;
 		
-		FilterExpr(e);
-		RelativeLocationPath(step2);
+		FilterExpr(e, ctxt);
+		RelativeLocationPath(step2, ctxt);
 		
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		step.setNextStep(step2);
 		expr = new XPathExpr!(true)(step, e);
 		//expr = new FunctionCall( &(new XPathExpressionFn!(true)(step, e)).exec, null );
 	
-		/+IExpression e;
+		/+IXPathExpression e;
 		IStep step, step2;
 		
 		FilterExpr(e);
@@ -283,11 +283,11 @@ PathExpr(inout IExpression expr, XPathContext ctxt)
 	}
 }
 
-FilterExpr(inout IExpression expr, XPathContext ctxt)
+FilterExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
 	PrimaryExpr
 	{
-		PrimaryExpr(expr);
+		PrimaryExpr(expr, ctxt);
 	}
 	
 	FilterExpr Predicate
@@ -297,32 +297,32 @@ FilterExpr(inout IExpression expr, XPathContext ctxt)
 }
 
 
-Predicate(inout IExpression expr)
+Predicate(inout IXPathExpression expr, XPathContext ctxt)
 {
 	"[" Expr "]"
 	{
-		Expr(expr);
+		Expr(expr, ctxt);
 	}
 }
 
-PredicateList(inout PredicateTest[] predicates)
+PredicateList(inout PredicateTest[] predicates, XPathContext ctxt)
 {
 	Predicate PredicateList
 	{
-		IExpression expr;
-		Predicate(expr);
+		IXPathExpression expr;
+		Predicate(expr, ctxt);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;
 		PredicateTest[] plist;
-		PredicateList(plist);
+		PredicateList(plist, ctxt);
 		predicates ~= plist;
 		
 	}
 	
 	Predicate
 	{
-		IExpression expr;
-		Predicate(expr);
+		IXPathExpression expr;
+		Predicate(expr, ctxt);
 		auto pred = new PredicateTest(expr);
 		predicates ~= pred;
 	}
@@ -330,24 +330,24 @@ PredicateList(inout PredicateTest[] predicates)
 	epsilon;
 }
 
-LocationPath(inout IStep step)
+LocationPath(inout IStep step, XPathContext ctxt)
 {
 	RelativeLocationPath
 	{
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
 	}
 	
 	AbsoluteLocationPath
 	{
-		AbsoluteLocationPath(step);
+		AbsoluteLocationPath(step, ctxt);
 	}
 }
 
-AbsoluteLocationPath(inout IStep step)
+AbsoluteLocationPath(inout IStep step, XPathContext ctxt)
 {
 	"/" RelativeLocationPath
 	{
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
 	}
 	
 	"/"
@@ -359,56 +359,56 @@ AbsoluteLocationPath(inout IStep step)
 	
 	AbbreviatedAbsoluteLocationPath
 	{
-		AbbreviatedAbsoluteLocationPath(step);
+		AbbreviatedAbsoluteLocationPath(step, ctxt);
 	}
 }
 
-AbbreviatedAbsoluteLocationPath(inout IStep step)
+AbbreviatedAbsoluteLocationPath(inout IStep step, XPathContext ctxt)
 {
 	"//" RelativeLocationPath
 	{
 		step = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
 		IStep step2;
-		RelativeLocationPath(step2);
+		RelativeLocationPath(step2, ctxt);
 		step.setNextStep = step2;
 	}
 }
 
-RelativeLocationPath(inout IStep step)
+RelativeLocationPath(inout IStep step, XPathContext ctxt)
 {
 	Step
 	{
-		Step(step);
+		Step(step, ctxt);
 	}
 	
 	RelativeLocationPath "/" Step
 	{
 		IStep step2;
-		RelativeLocationPath(step);
-		Step(step2);
+		RelativeLocationPath(step, ctxt);
+		Step(step2, ctxt);
 		step.setNextStep = step2;
 	}
 	
 	AbbreviatedRelativeLocationPath
 	{
-		AbbreviatedRelativeLocationPath(step);
+		AbbreviatedRelativeLocationPath(step, ctxt);
 	}
 }
 
-AbbreviatedRelativeLocationPath(inout IStep step)
+AbbreviatedRelativeLocationPath(inout IStep step, XPathContext ctxt)
 {
 	RelativeLocationPath "//" Step
 	{
 		IStep step2, step3;
-		RelativeLocationPath(step);
+		RelativeLocationPath(step, ctxt);
 		step2 = new XPathStep(&constructNodeSetViewer!(DescendantOrSelfAxisViewer));
-		Step(step3);
+		Step(step3, ctxt);
 		step2.setNextStep = step3;
 		step.setNextStep = step2;
 	}
 }
 
-Step(inout IStep step)
+Step(inout IStep step, XPathContext ctxt)
 {
 	AxisSpecifier NodeTest PredicateList
 	{
@@ -416,8 +416,8 @@ Step(inout IStep step)
 		AxisSpecifier(axis);
 		ITest test;
 		PredicateTest[] predicates;
-		NodeTest(test);
-		PredicateList(predicates);		
+		NodeTest(test, ctxt);
+		PredicateList(predicates, ctxt);		
 		
 		switch(axis)
 		{
@@ -467,7 +467,7 @@ Step(inout IStep step)
 	AbbreviatedStep
 	{
 		Axis axis;
-		AbbreviatedStep(axis);
+		AbbreviatedStep(axis, ctxt);
 		switch(axis)
 		{
 		case Axis.parent:
@@ -482,7 +482,7 @@ Step(inout IStep step)
 	}
 }
 
-AbbreviatedStep(out Axis axis)
+AbbreviatedStep(out Axis axis, XPathContext ctxt)
 {
 	"."
 	{
@@ -540,7 +540,7 @@ AbbreviatedAxisSpecifier(out bool attr)
 	}
 }
 
-NodeTest(inout ITest test)
+NodeTest(inout ITest test, XPathContext ctxt)
 {
 	NameTest
 	{
@@ -627,44 +627,44 @@ NameTest(inout ITest test)
 	}
 }
 
-PrimaryExpr(inout IExpression expr)
+PrimaryExpr(inout IXPathExpression expr, XPathContext ctxt)
 {
     regexp("[0-9]+")
     {
     	long val = Integer.atoi(_ST_match);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
     }
 	
 	regexp("[0-9]+\\.[0-9]+")
     {
     	double val = Float.parse(_ST_match);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
     }
 	
 	Literal = Lit
 	{
 		char[] val;	Lit(val);
 		Var v; set(v, val);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
 	}
 	
 	FuncCall
 	{
-		FuncCall(expr);
+		FuncCall(expr, ctxt);
 	}
 	
 	VarRef
 	{
-		VarRef(expr);
+		VarRef(expr, ctxt);
 	}
 
     "(" Expr ")"
-    { Expr(expr); }
+    { Expr(expr, ctxt); }
 }
 
-VarRef(inout IExpression expr)
+VarRef(inout IXPathExpression expr, XPathContext ctxt)
 {
 	/*"$" QName
 	{
@@ -674,15 +674,15 @@ VarRef(inout IExpression expr)
 	
 	"$" VarAccess = VarAcc
 	{
-		IExpression[] path;
-		VarAcc(path);
-		expr = new VarAccess(path);
+		IXPathExpression[] path;
+		VarAcc(path, ctxt);
+		expr = new VarAccess!(XPathContext)(path);
 		/+expr.type = ExpressionT.Var;
 		Path(expr.var);+/
 	}
 }
 
-FuncCall(inout IExpression expr)
+FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 {
 	"last" "(" ")"
 	{
@@ -697,13 +697,13 @@ FuncCall(inout IExpression expr)
 	"true" "(" ")"
 	{
 		Var v; set(v, true);
-		expr = new Literal(v); 
+		expr = new Literal!(XPathContext)(v); 
 	}
 	
 	"false" "(" ")"
 	{
 		Var v; set(v, false);
-		expr = new Literal(v);
+		expr = new Literal!(XPathContext)(v);
 	}
 
 	QName "(" ExprList ")"
@@ -714,21 +714,21 @@ FuncCall(inout IExpression expr)
 	}
 }
 
-ExprList(inout IExpression[] args)
+ExprList(inout IXPathExpression[] args, XPathContext ctxt)
 {
 	Expr "," ExprList
 	{
-		IExpression expr;
-		IExpression exprList[];
-		Expr(expr);
-		ExprList(exprList);
+		IXPathExpression expr;
+		IXPathExpression exprList[];
+		Expr(expr, ctxt);
+		ExprList(exprList, ctxt);
 		args ~= expr;
 		args ~= exprList;
 	}
 	
 	Expr
 	{
-		IExpression expr;
+		IXPathExpression expr;
 		args ~= expr;
 	}
 	
@@ -779,22 +779,22 @@ NCName(out char[] value)
 	}
 }
 
-VarAccess(ref IExpression[] path)
+VarAccess(ref IXPathExpression[] path, XPathContext ctxt)
 {
 
 	VarAccess "." NCName
 	{
-		VarAccess(path);
+		VarAccess(path, ctxt);
 		char[] name; NCName(name);
 		Var v; set(v, name);
-		path ~= new Literal(v);
+		path ~= new Literal!(XPathContext)(v);
 	}
 	
 	VarAccess "[" Expr "]"
 	{
-		VarAccess(path);
-		IExpression expr;
-		Expr(expr);
+		VarAccess(path, ctxt);
+		IXPathExpression expr;
+		Expr(expr, ctxt);
 		path ~= expr;
 	}
 	
@@ -802,6 +802,6 @@ VarAccess(ref IExpression[] path)
 	{
 		char[] name; NCName(name);
 		Var v; set(v, name);
-		path ~= new Literal(v);
+		path ~= new Literal!(XPathContext)(v);
 	}
 }

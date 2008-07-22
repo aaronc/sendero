@@ -14,7 +14,7 @@ import sendero.vm.InheritingObject;
 import sendero.vm.Expression;
 //public import sendero.vm.ExecutionContext;
 
-bool compileXPath10(char[] xpath, inout IExpression expr, XPathContext ctxt = null)
+bool compileXPath10(char[] xpath, inout IXPathExpression expr, XPathContext ctxt = null)
 {
 	SyntaxTree* root;
 	if ( parse("", xpath, root, true) ) {
@@ -28,14 +28,14 @@ bool compileXPath10(char[] xpath, inout IExpression expr, XPathContext ctxt = nu
 	
 XPathContext createXPathContext(XmlNode node)
 {
-	auto ctxt = new ExecutionContext;
+	auto ctxt = new XPathContext;
 	Var v; set(v, node); ctxt["@XPathCtxtNode"] = v;
 	return ctxt;
 }
 
 Var execXPath10(char[] xpath, XmlNode node)
 {
-	IExpression expr;
+	IXPathExpression expr;
 	if(!compileXPath10(xpath, expr)) return Var();
 	auto ctxt = createXPathContext(node);
 	return expr(ctxt);
@@ -48,7 +48,7 @@ debug(SenderoUnittest) {
 	import tango.io.File;
 	import sendero_base.xml.XmlNode;
 	import qcf.Regression;
-	/+	
+
 	unittest
 	{
 		char[] printRes(Var var)
@@ -79,7 +79,7 @@ debug(SenderoUnittest) {
 		regress("1.xml", printRes(res));
 		
 		auto speech1 = execXPath10("//SPEECH[1]", root);
-		auto ctxt = new ExecutionContext;
+		auto ctxt = new XPathContext;
 		ctxt["speech1"] = speech1;
 		regress("2.xml", printRes(speech1));
 		
@@ -90,7 +90,7 @@ debug(SenderoUnittest) {
 		foreach(k, v; ctxt)
 			Stdout.formatln("Key:{}",k);
 		
-		IExpression expr;
+		IXPathExpression expr;
 		assert(compileXPath10("$speech1/LINE", expr));
 		auto res2 = expr(ctxt);
 		regress("4.xml", printRes(res2));
@@ -111,5 +111,5 @@ debug(SenderoUnittest) {
 		res = execXPath10("//member/@name[position() < 10]", mscorlib);
 		regress("7.xml", printRes(res));
 		
-	}+/
+	}
 }

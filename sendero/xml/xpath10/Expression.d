@@ -16,6 +16,8 @@ import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
+alias IExpression!(XPathContext) IXPathExpression;
+
 class XPathContext : SenderoInheritingObject
 {
 	static this()

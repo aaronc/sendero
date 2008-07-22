@@ -321,20 +321,20 @@ class VarAccess(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 		ctxt.add("arr", a);
 		
 		Var res, s1, s2_0, s2_1, s3_0, s3_1;
-		VarAccess varAcc;
+		VarAccess!(IObject) varAcc;
 		
 		set(s1, "x");
-		varAcc = new VarAccess([new Literal(s1)]);
+		varAcc = new VarAccess!(IObject)([new Literal!(IObject)(s1)]);
 		res = varAcc(ctxt);
 		assert(res.type == VarT.Number && res.number_ == 5);
 		
 		set(s2_0, "obj"); set(s2_1, "y");
-		varAcc = new VarAccess([new Literal(s2_0), new Literal(s2_1)]);
+		varAcc = new VarAccess!(IObject)([new Literal!(IObject)(s2_0), new Literal!(IObject)(s2_1)]);
 		res = varAcc(ctxt);
 		assert(res.type == VarT.Number && res.number_ == 7);
 		
 		set(s3_0, "arr"); set(s3_1, 0);
-		varAcc = new VarAccess([new Literal(s3_0), new Literal(s3_1)]);
+		varAcc = new VarAccess!(IObject)([new Literal!(IObject)(s3_0), new Literal!(IObject)(s3_1)]);
 		res = varAcc(ctxt);
 		assert(res.type == VarT.Number && res.number_ == 175);
 	}
