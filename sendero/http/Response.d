@@ -9,7 +9,7 @@ import tango.io.model.IConduit;
 
 struct Response
 {
-	const char[] TextHtml = "text/html";
+	const char[] TextHtml = "text/html; charset=utf-8";
 	const char[] TextXml = "text/xml";
 	const char[] TextJSON = "test/json";
 	const char[] AppJS = "application/javascript";

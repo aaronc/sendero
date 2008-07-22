@@ -67,6 +67,35 @@ class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 	}
 }
 
+class LateBindingFunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
+{
+	this(char[] funcName, IExpression!(ExecCtxt)[] params)
+	{
+		this.funcName = funcName;
+		this.params = params;
+	}
+	
+	private char[] funcName;
+	private IExpression!(ExecCtxt)[] params;
+	
+	Var opCall(ExecCtxt ctxt)
+	{
+		Var[] funcParams;
+		
+		auto n = params.length;
+		funcParams.length = n;
+			
+		for(size_t i = 0; i < n; ++i)
+		{
+			funcParams[i] = params[i](ctxt);
+		}
+		
+		auto func = ctxt.getFunction(funcName);
+		
+		return func(funcParams, ctxt);
+	}
+}
+
 class Negative(ExecCtxt) : IExpression!(ExecCtxt)
 {
 	this(IExpression!(ExecCtxt) expr)

@@ -684,7 +684,7 @@ VarRef(inout IXPathExpression expr, XPathContext ctxt)
 
 FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 {
-	"last" "(" ")"
+	/*"last" "(" ")"
 	{
 		expr = new LastExpr;
 	}
@@ -700,17 +700,27 @@ FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 		expr = new Literal!(XPathContext)(v); 
 	}
 	
-	"false" "(" ")"
+	"false" "(" ")" 
 	{
 		Var v; set(v, false);
 		expr = new Literal!(XPathContext)(v);
-	}
+	}*/
 
-	QName "(" ExprList ")"
+	//QName "(" ExprList ")"
+	NCName "(" ExprList ")"
 	{
-		debug assert(false);
-		//expr.type = ExpressionT.FuncCall;
-		//ExprList(expr.func.params);
+		//char[][] path;
+		//QName(path);
+		char[] name;
+		NCName(name);
+		IXPathExpression[] args;
+		ExprList(args, ctxt);
+		
+		/+assert(path.length);
+		auto name = path[0];
+		if(path.length > 1) name ~= ':' ~ path[1];+/
+		
+		expr = new LateBindingFunctionCall!(XPathContext)(name, args);
 	}
 }
 

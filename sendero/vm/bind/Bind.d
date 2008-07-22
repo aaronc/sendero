@@ -398,5 +398,5 @@ class ClassBinding(T) : IObject, IClassBinding
 	}
 	
 	Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
-	void toString(char[] flags, IExecContext ctxt, void delegate(char[]) write) { }
+	void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) { }
 }

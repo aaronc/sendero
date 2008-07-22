@@ -80,4 +80,8 @@ class ExecContext : SenderoInheritingObject, IExecContext
 	char[] timezone() { mixin(GetProp!("timezone")); }
 	void timezone(char[] val) { timezone_ = val; }
 	private char[] timezone_;
+	
+	char[] mimeType() { mixin(GetProp!("mimeType")); }
+	void mimeType(char[] val) { mimeType_ = val; }
+	private char[] mimeType_;
 }
