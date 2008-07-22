@@ -12,69 +12,14 @@ import sendero.vm.Object;
 import sendero.vm.Array;
 import sendero.vm.InheritingObject;
 import sendero.vm.Expression;
+import sendero.view.ExecContext;
 import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
-alias IExpression!(XPathContext) IXPathExpression;
+alias ExecContext XPathContext;
+alias IExpression!(ExecContext) IXPathExpression;
 
-class XPathContext : SenderoInheritingObject
-{
-	static this()
-	{
-		global = new XPathContext;
-		global.parentCtxt = null;
-		//global.addFunction("now", new Now);
-		//global.addFunction("getVar", new GetVar);
-		//global.addFunction("strcat", new StringCat);
-	}
-	static XPathContext global;
-	
-	Function[char[]] fns;
-	XPathContext parentCtxt;
-	XPathContext[] imports;
-
-	this(IObject parent = null)
-	{
-		super(parent);
-		this.parentCtxt = global;
-	}
-	
-	this(XPathContext parent)
-	{
-		this.parentCtxt = parent;
-	}
-	
-	this(IObject parentObj, XPathContext parentCtxt)
-	{
-		super(parentObj);
-		this.parentCtxt = parentCtxt;
-	}
-	
-	void addFunction(char[] name, Function func)
-	{
-		fns[name] = func;
-	}
-	
-	Function getFunction(char[] name)
-	{
-		auto pFn = (name in fns);
-		if(pFn) return *pFn;
-	
-		if(parentCtxt) {
-			auto fn = parentCtxt.getFunction(name);
-			if(fn) return fn;
-		}
-		
-		foreach(i; imports)
-		{
-			auto fn = i.getFunction(name);
-			if(fn) return fn;
-		}
-		
-		return null;
-	}
-}
 
 class XPathExpr(bool filter = false) : IExpression!(XPathContext)
 {

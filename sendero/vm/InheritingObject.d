@@ -55,12 +55,12 @@ class SenderoInheritingObject : IObject
 		return res;
 	}
 	
-	Var opCall(Var[] params, IObject ctxt)
+	Var opCall(Var[] params, IExecContext ctxt)
 	{
 		return Var();
 	}
 	
-	void toString(char[] flags, IObject ctxt, void delegate(char[]) write)
+	void toString(char[] flags, IExecContext ctxt, void delegate(char[]) write)
 	{
 	}
 	
