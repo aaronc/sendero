@@ -281,21 +281,18 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 		Var val;
 		val.type = VarT.Object;
 		val.obj_ = ctxt;
-		debug Stdout.formatln("VarAccess about to execute {} steps", accessSteps.length);
 		foreach(step; accessSteps)
 		{
 			auto stepVal = step(ctxt);
 			switch(stepVal.type)
 			{
 			case VarT.Number:
-				debug Stdout.formatln("AccessStep Number:{}", stepVal.number_);
 				if(val.type == VarT.Array) {
 					val = val.array_[cast(size_t)stepVal.number_];
 				}
 				else return Var();
 				break;
 			case VarT.String:
-				debug Stdout.formatln("AccessStep String:{}", stepVal.string_);
 				if(val.type == VarT.Object) {
 					val = val.obj_[stepVal.string_];
 				}
@@ -306,7 +303,6 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 				break;
 			}
 		}
-		debug Stdout.formatln("VarAccess returning type:{}", val.type);
 		return val;
 	}
 	

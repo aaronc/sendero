@@ -1,8 +1,7 @@
 module sendero.view.ExecContxt;
 
 import sendero.vm.InheritingObject;
-import sendero_base.Core;
-
+public import sendero_base.Core;
 
 class ExecContext : SenderoInheritingObject, IExecContext
 {
@@ -20,6 +19,11 @@ class ExecContext : SenderoInheritingObject, IExecContext
 	ExecContext parentCtxt;
 	ExecContext[] imports;
 
+	this(char[] locale)
+	{
+		this.locale_ = locale;
+	}
+	
 	this(IObject parent = null)
 	{
 		super(parent);
@@ -69,13 +73,9 @@ class ExecContext : SenderoInheritingObject, IExecContext
 			`else return null;`;
 	}
 	
-	char[] lang() { mixin(GetProp!("lang")); }
-	void lang(char[] val) { lang_ = val; }
-	private char[] lang_;
-	
-	char[] region() { mixin(GetProp!("region")); }
-	void region(char[] val) { region_ = val; }
-	private char[] region_;
+	char[] locale() { mixin(GetProp!("locale")); }
+	void locale(char[] val) { locale_ = val; }
+	private char[] locale_;
 	
 	char[] timezone() { mixin(GetProp!("timezone")); }
 	void timezone(char[] val) { timezone_ = val; }

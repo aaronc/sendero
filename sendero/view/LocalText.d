@@ -8,7 +8,7 @@ module sendero.vm.LocalText;
 //import sendero.vm.ExecutionContext;
 import sendero.xml.XPath;
 import sendero.vm.Expression;
-import sendero.view.ExecContext;
+public import sendero.view.ExecContext;
 //import sendero.util.FunctionBindingContext;
 import sendero_base.util.StringCharIterator;
 
@@ -121,9 +121,7 @@ class Message : IMessage
 	static char[] renderParam(ExecContext ctxt, inout Var var, Param p)
 	{
 		char[] o;
-		auto lcl = ctxt.lang;
-		auto reg = ctxt.region;
-		if(reg.length) lcl ~= `-` ~ reg;
+		auto lcl = ctxt.locale;
 		auto tz = ctxt.timezone;
 		
 		switch(var.type)

@@ -6,13 +6,12 @@
 module sendero.view.SenderoTemplate;
 
 import sendero.view.SenderoTemplateInternals;
-import sendero.vm.ExecutionContext;
 
 import sendero_base.util.ArrayWriter;
-//alias AbstractSenderoTemplateContext!(ExecutionContext, AbstractSenderoTemplateContext) SenderoTemplateContext;
-//alias AbstractSenderoTemplate!(ExecutionContext, SenderoTemplateContext) SenderoTemplate;
+//alias AbstractSenderoTemplateContext!(ExecContext, AbstractSenderoTemplateContext) SenderoTemplateContext;
+//alias AbstractSenderoTemplate!(ExecContext, SenderoTemplateContext) SenderoTemplate;
 
-class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecutionContext, SenderoTemplateContext, SenderoTemplate)
+class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecContext, SenderoTemplateContext, SenderoTemplate)
 {
 	this(SenderoTemplate tmpl, Locale locale)
 	{
@@ -101,7 +100,7 @@ unittest
 	Stdout.formatln("btTime:{}", btTime);
 	
 
-	SenderoTemplate.setSearchPath("test/template/");
+/+	SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
@@ -154,6 +153,6 @@ unittest
 	complex["person"] = n;
 	complex["names"] = names;
 	//Stdout(complex.render).newline;
-	r.regress("complex_output.html", complex.render);
+	r.regress("complex_output.html", complex.render);+/
 }
 }

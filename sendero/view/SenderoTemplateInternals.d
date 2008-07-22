@@ -6,9 +6,11 @@
 module sendero.view.SenderoTemplateInternals;
 
 import sendero.view.TemplateEngine;
-import sendero_base.xml.XmlNode;;
-import sendero.vm.ExecutionContext;
-import sendero.vm.LocalText;
+import sendero_base.xml.XmlNode;
+import sendero_base.Set;
+import sendero.vm.bind.Bind;
+public import sendero.view.LocalText;
+import sendero.xml.XPath;
 import sendero_base.util.StringCharIterator;
 import sendero_base.util.ArrayWriter;
 import sendero.util.collection.NestedMap;
@@ -50,13 +52,14 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	
 	void inherit(Template tmpl)
 	{
-		execCtxt.runtimeImports ~= tmpl.functionCtxt;
+		execCtxt.imports ~= tmpl.functionCtxt;
 		parentTemplates ~= tmpl;
 	}
 	
 	void opIndexAssign(T)(T t, char[] name)
 	{
-		execCtxt.addVar(name, t);
+		Var v;	bind(v, t);
+		execCtxt[name] = v;
 	}
 	
 	void use(T)(T t)
@@ -165,10 +168,10 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	
 	this()
 	{
-		functionCtxt = new FunctionBindingContext;
+		functionCtxt = new ExecContext;
 	}
 	
-	FunctionBindingContext functionCtxt;	
+	ExecContext functionCtxt;	
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
@@ -319,7 +322,7 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 		}
 		
 		char[] localVarName1, localVarName2;
-		VarPath varName;
+		//VarPath varName;
 		
 		auto p = new StringCharIterator!(char)(each);
 		
@@ -353,8 +356,9 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 		auto loc = p.location;
 		auto e = p.randomAccessSlice(loc, p.length);
 		
-		Expression expr;
-		parseExpression(e, expr, tmpl.functionCtxt);
+		IViewExpression expr;
+		//parseExpression(e, expr, tmpl.functionCtxt);
+		compileXPath10(e, expr, tmpl.functionCtxt);
 		
 		char[] sep;
 		//debug if(getAttr(node, "sep", sep)) assert(false, "List For not implemented yet");
@@ -373,32 +377,32 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 
 class SenderoForNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {
-	this(Expression expr, char[] localVarName)
+	this(IViewExpression expr, char[] localVarName)
 	{
 		this.expr = expr;
 		this.localVarName = localVarName;
 	}
 	
-	protected Expression expr;
+	protected IViewExpression expr;
 	protected char[] localVarName;
 	ITemplateNode!(TemplateCtxt)[] children;
 	
 	void render(TemplateCtxt ctxt, Consumer res)
 	{
-		auto var = expr.exec(ctxt.execCtxt);
+		auto var = expr(ctxt.execCtxt);
 		if(var.type != VarT.Array) return;
 		
-		uint i = 0; uint last = var.arrayBinding.length - 1;
+		uint i = 0; uint last = var.array_.length - 1;
 	
-		scope localCtxt = new ExecutionContext(ctxt.execCtxt);
+		scope localCtxt = new ExecContext(ctxt.execCtxt);
 		auto curCtxt = ctxt.execCtxt;
 		ctxt.execCtxt = localCtxt;
 		
-		foreach(v; var.arrayBinding)
+		foreach(v; var.array_)
 		{
-			localCtxt.addVar(localVarName, v);
-			localCtxt.addVar("__loopN__", i);
-			if(i == last) localCtxt.addVar("__loopLast__", true);
+			localCtxt[localVarName] = v;
+			localCtxt.add("__loopN__", i);
+			if(i == last) localCtxt.add("__loopLast__", true);
 			
 			foreach(child; children)
 				child.render(ctxt, res);
@@ -445,7 +449,7 @@ class XIIncludeExprNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		auto templ = ctxt.tmpl.getTemplate(path, locale);
 		if(!templ) return;
 		
-		ctxt.execCtxt.runtimeImports ~= templ.functionCtxt;
+		ctxt.execCtxt.imports ~= templ.functionCtxt;
 		templ.render(ctxt, res);
 	}
 }
@@ -670,8 +674,9 @@ class SenderoChooseNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Templ
 		{
 			return new TemplateDataNode!(TemplateCtxt)(null);
 		}
-		Expression expr;
-		parseExpression(e, expr, tmpl.functionCtxt);
+		IViewExpression expr;
+		//parseExpression(e, expr, tmpl.functionCtxt);
+		compileXPath10(e, expr, tmpl.functionCtxt);
 		
 		auto choose = new SenderoChooseNode!(TemplateCtxt)(expr);
 		
@@ -708,8 +713,8 @@ Var parseChoiceLiteral(char[] txt)
 	Var res;
 	switch(txt)
 	{
-	case "true": res.set(true); break;
-	case "false": res.set(false); break;
+	case "true": set(res, true); break;
+	case "false": set(res, false); break;
 	default:
 		bool num = true;
 		foreach(c; txt)
@@ -720,8 +725,8 @@ Var parseChoiceLiteral(char[] txt)
 			}
 		}
 		
-		if(num) res.set(Integer.parse(txt));
-		else res.set(txt);
+		if(num) set(res, Integer.parse(txt));
+		else set(res, txt);
 		return res;
 	}
 }
@@ -734,19 +739,19 @@ struct Choice(TemplateCtxt)
 
 class SenderoChooseNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 {
-	this(Expression expr)
+	this(IViewExpression expr)
 	{
 		this.expr = expr;
 	}
 	
-	Expression expr;
+	IViewExpression expr;
 	
 	Choice!(TemplateCtxt)[] choices;
 	ITemplateNode!(TemplateCtxt) otherwise;
 	
 	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
-		auto val = expr.exec(ctxt.execCtxt);
+		auto val = expr(ctxt.execCtxt);
 		
 		foreach(c; choices)
 		{
@@ -777,8 +782,8 @@ class SenderoIfNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateC
 		{
 			return new TemplateDataNode!(TemplateCtxt)(null);
 		}
-		Expression expr;
-		parseExpression(e, expr, tmpl.functionCtxt);
+		IViewExpression expr;
+		compileXPath10(e, expr, tmpl.functionCtxt);
 		
 		auto ifNode = new SenderoIfNode!(TemplateCtxt)(expr);
 		
@@ -793,7 +798,7 @@ class SenderoIfNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateC
 			if(getAttr(node, "test", e))
 			{
 				Elif!(TemplateCtxt) elif;
-				parseExpression(e, elif.expr, tmpl.functionCtxt);
+				compileXPath10(e, elif.expr, tmpl.functionCtxt);
 				elif.node = TemplateContainerNode!(TemplateCtxt).createFromChildren(node, tmpl, childProcessor);
 				ifNode.elifs ~= elif;
 			}
@@ -818,16 +823,14 @@ bool templateBool(Var var)
 		return false;
 	case VarT.Bool:
 		return var.bool_;
-	case VarT.Long:
-		return var.long_ >= 1 ? true : false;
-	case VarT.Double:
-		return var.double_ >= 1 ? true : false;
+	case VarT.Number:
+		return var.number_ >= 1 ? true : false;
 	case VarT.Object:
-		return var.objBinding.length >= 1 ? true : false;
+		return true;
 	case VarT.String:
 		return var.string_.length >= 1 ? true : false;
 	case VarT.Array:
-		return var.arrayBinding.length >= 1 ? true : false;
+		return var.array_.length >= 1 ? true : false;
 	default:
 		return false;
 	}
@@ -836,16 +839,16 @@ bool templateBool(Var var)
 private struct Elif(TemplateCtxt)
 {
 	ITemplateNode!(TemplateCtxt) node;
-	Expression expr;
+	IViewExpression expr;
 }
 
 class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 {
-	this(Expression expr)
+	this(IViewExpression expr)
 	{
 		this.expr = expr;
 	}
-	Expression expr;
+	IViewExpression expr;
 	
 	
 	Elif!(TemplateCtxt)[] elifs;
@@ -853,7 +856,7 @@ class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 	
 	void render(TemplateCtxt ctxt, Consumer consumer)
 	{
-		auto var = expr.exec(ctxt.execCtxt);
+		auto var = expr(ctxt.execCtxt);
 		if(templateBool(var))
 		{
 			return super.render(ctxt, consumer);
@@ -861,7 +864,7 @@ class SenderoIfNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt)
 		
 		foreach(elif; elifs)
 		{
-			var = elif.expr.exec(ctxt.execCtxt);
+			var = elif.expr(ctxt.execCtxt);
 			if(templateBool(var))
 			{
 				return elif.node.render(ctxt, consumer);
@@ -900,13 +903,13 @@ class SenderoDefNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 		auto fnTmpl = new Template;
 		auto funcNode = TemplateContainerNode!(TemplateCtxt).createFromChildren(node, fnTmpl, childProcessor);
 		auto fn = new SenderoTemplateFunction!(Template, TemplateCtxt)(funcNode, fnTmpl, params);
-		tmpl.functionCtxt.addFunction(name, fn);
+		tmpl.functionCtxt.addFunction(name, &fn.exec);
 		
 		return new TemplateDataNode!(TemplateCtxt)(null);
 	}
 }
 
-class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
+class SenderoTemplateFunction(Template, TemplateCtxt)
 {
 	this(ITemplateNode!(TemplateCtxt) funcNode, Template tmpl, char[][] paramNames)
 	{
@@ -919,13 +922,13 @@ class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
 	Template tmpl;
 	char[][] paramNames;
 	
-	VariableBinding exec(VariableBinding[] params, ExecutionContext parentCtxt)
+	Var exec(Var[] params, IExecContext parentCtxt)
 	{
 		scope ctxt = new TemplateCtxt(tmpl, null);
-		ctxt.execCtxt = new ExecutionContext(parentCtxt);
+		ctxt.execCtxt = new ExecContext(parentCtxt);
 		for(int i = 0; i < paramNames.length && i < params.length; ++i)
 		{
-			ctxt.execCtxt.addVar(paramNames[i], params[i]);
+			ctxt.execCtxt[paramNames[i]] = params[i];
 		}
 		
 		auto res = new ArrayWriter!(char);
@@ -933,8 +936,8 @@ class SenderoTemplateFunction(Template, TemplateCtxt) : IFunctionBinding
 		
 		char[] str = res.get;	
 		
-		VariableBinding var;
-		var.set(str);
+		Var var;
+		set(var, str);
 		return var;
 	}
 }
