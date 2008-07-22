@@ -16,16 +16,74 @@ import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
-class XPathExpr(bool filter = false) : IExpression
+class XPathContext : SenderoInheritingObject
+{
+	static this()
+	{
+		global = new XPathContext;
+		global.parentCtxt = null;
+		//global.addFunction("now", new Now);
+		//global.addFunction("getVar", new GetVar);
+		//global.addFunction("strcat", new StringCat);
+	}
+	static XPathContext global;
+	
+	Function[char[]] fns;
+	XPathContext parentCtxt;
+	XPathContext[] imports;
+
+	this(IObject parent = null)
+	{
+		super(parent);
+		this.parentCtxt = global;
+	}
+	
+	this(XPathContext parent)
+	{
+		this.parentCtxt = parent;
+	}
+	
+	this(IObject parentObj, XPathContext parentCtxt)
+	{
+		super(parentObj);
+		this.parentCtxt = parentCtxt;
+	}
+	
+	void addFunction(char[] name, Function func)
+	{
+		fns[name] = func;
+	}
+	
+	Function getFunction(char[] name)
+	{
+		auto pFn = (name in fns);
+		if(pFn) return *pFn;
+	
+		if(parentCtxt) {
+			auto fn = parentCtxt.getFunction(name);
+			if(fn) return fn;
+		}
+		
+		foreach(i; imports)
+		{
+			auto fn = i.getFunction(name);
+			if(fn) return fn;
+		}
+		
+		return null;
+	}
+}
+
+class XPathExpr(bool filter = false) : IExpression!(XPathContext)
 {
 	static if(filter)
 	{
-		this(IStep rootStep, IExpression filterExpr)
+		this(IStep rootStep, IExpression!(XPathContext) filterExpr)
 		{
 			this.rootStep = rootStep;
 			this.filterExpr = filterExpr;
 		}
-		IExpression filterExpr;
+		IExpression!(XPathContext) filterExpr;
 	}
 	else
 	{
@@ -37,11 +95,11 @@ class XPathExpr(bool filter = false) : IExpression
 	
 	IStep rootStep;
 	
-	Var opCall(IObject parentCtxt)
+	Var opCall(XPathContext parentCtxt)
 	{
 		if(!rootStep) return Var();
 
-		scope ctxt = new ExecutionContext(parentCtxt);
+		scope ctxt = new XPathContext(parentCtxt);
 		static if(filter) {
 			/+if(!params.length || params[0].type != VarT.XmlNode) {
 				debug Stdout.formatln("Can't find context node");
@@ -120,17 +178,17 @@ class XmlNodeSet : IArray
 	}
 }
 
-class PositionExpr : IExpression
+class PositionExpr : IExpression!(XPathContext)
 {
-	Var opCall(IObject ctxt)
+	Var opCall(XPathContext ctxt)
 	{
 		return ctxt["@XPathPos"];
 	}
 }
 
-class LastExpr : IExpression
+class LastExpr : IExpression!(XPathContext)
 {
-	Var opCall(IObject ctxt)
+	Var opCall(XPathContext ctxt)
 	{
 		//auto var = ctxt["@XPathLast"];
 		return ctxt["@XPathLast"];
@@ -149,16 +207,16 @@ class CountFn
 	}
 }
 
-class UnionExpr : IExpression
+class UnionExpr : IExpression!(XPathContext)
 {
-	this(IExpression expr1, IExpression expr2)
+	this(IExpression!(XPathContext) expr1, IExpression!(XPathContext) expr2)
 	{	
 		this.expr1 = expr1;
 		this.expr2 = expr2;
 	}
-	private IExpression expr1, expr2;
+	private IExpression!(XPathContext) expr1, expr2;
 
-	Var opCall(IObject ctxt)
+	Var opCall(XPathContext ctxt)
 	{
 		auto v1 = expr1(ctxt);
 		auto v2 = expr2(ctxt); 
@@ -269,12 +327,12 @@ class Filter
 	}
 }
 
-class FilterPredicate : IExpression
+class FilterPredicate : IExpression!(XPathContext)
 {
-	IExpression filter;
-	IExpression predicate;
+	IExpression!(XPathContext) filter;
+	IExpression!(XPathContext) predicate;
 	
-	Var opCall(IObject ctxt)
+	Var opCall(XPathContext ctxt)
 	{
 		auto var = filter(ctxt);
 		switch(var.type)
@@ -321,26 +379,26 @@ enum Axis {
 
 interface IStep
 {
-	XmlNode[] exec(IObject ctxt);
-	XmlNode[] finish(IObject ctxt);
+	XmlNode[] exec(XPathContext ctxt);
+	XmlNode[] finish(XPathContext ctxt);
 	void setNextStep(IStep);
 }
 
 interface ITest
 {
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType);
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType);
 }
 
 class PredicateTest
 {
-	this(IExpression expr)
+	this(IExpression!(XPathContext) expr)
 	{
 		this.expr = expr;
 	}
 	
-	IExpression expr;
+	IExpression!(XPathContext) expr;
 	
-	bool test(IObject ctxt)
+	bool test(XPathContext ctxt)
 	{
 		auto res = expr(ctxt);
 		
@@ -377,7 +435,7 @@ class QNameTest : ITest
 	char[] prefix;
 	char[] localName;
 	
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return node.prefix == prefix && node.localName == localName;
@@ -388,7 +446,7 @@ class WildcardPrefixTest : ITest
 {
 	this(char[] prefix) {this.prefix = prefix;}
 	char[] prefix;
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return node.prefix == prefix;
@@ -397,7 +455,7 @@ class WildcardPrefixTest : ITest
 
 class WildcardTest : ITest
 {
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		if(node.type != axisType) return false;
 		return true;
@@ -406,7 +464,7 @@ class WildcardTest : ITest
 
 class NodeKindTest : ITest
 {
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		return true;
 	}
@@ -414,7 +472,7 @@ class NodeKindTest : ITest
 
 class TextKindTest : ITest
 {
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		return node.type == XmlNodeType.Data;
 	}
@@ -423,7 +481,7 @@ class TextKindTest : ITest
 class PIKindTest : ITest
 {
 	char[] literal;
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		if(node.type != XmlNodeType.PI) return false;
 		if(literal.length) {
@@ -437,7 +495,7 @@ class PIKindTest : ITest
 
 class CommentKindTest : ITest
 {
-	bool test(XmlNode node, IObject ctxt, XmlNodeType axisType)
+	bool test(XmlNode node, XPathContext ctxt, XmlNodeType axisType)
 	{
 		return node.type == XmlNodeType.Comment;
 	}
@@ -477,7 +535,7 @@ class XPathStep : IStep
 		nextStep = step;
 	}
 	
-	private XmlNode[] testNode(bool finish = false)(IObject ctxt)
+	private XmlNode[] testNode(bool finish = false)(XPathContext ctxt)
 	{
 		Var v;
 		if(nextNode) {
@@ -507,7 +565,7 @@ class XPathStep : IStep
 		return null;
 	}
 	
-	final XmlNode[] exec(IObject ctxt)
+	final XmlNode[] exec(XPathContext ctxt)
 	{
 		Var v = ctxt["@XPathCtxtNode"];
 		if(v.type != VarT.XmlNode && v.type != VarT.Array) {
@@ -558,7 +616,7 @@ class XPathStep : IStep
 		return res;
 	}
 	
-	final XmlNode[] finish(IObject ctxt)
+	final XmlNode[] finish(XPathContext ctxt)
 	{
 		Var v;
 		set(v, pos); ctxt["@XPathPos"] =  v;

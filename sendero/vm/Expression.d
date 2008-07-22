@@ -4,23 +4,23 @@ public import sendero_base.Core;
 
 debug import tango.io.Stdout;
 
-interface IExpression
+interface IExpression(ExecCtxt = IObject)
 {
-	Var opCall(IObject);
+	Var opCall(ExecCtxt);
 }
 
-class FunctionCall : IExpression
+class FunctionCall(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
-	this(Function func, IExpression[] params)
+	this(Function func, IExpression!(ExecCtxt)[] params)
 	{
 		this.func = func;
 		this.params = params;
 	}
 	
 	private Function func;
-	private IExpression[] params;
+	private IExpression!(ExecCtxt)[] params;
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		Var[] funcParams;
 		
@@ -67,16 +67,16 @@ class FunctionCall : IExpression
 	}
 }
 
-class Negative : IExpression
+class Negative(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
-	this(IExpression expr)
+	this(IExpression!(ExecCtxt) expr)
 	{
 		this.expr = expr;
 	}
 	
-	IExpression expr;
+	IExpression!(ExecCtxt) expr;
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		auto var = expr(ctxt);
 		if(var.type != VarT.Number)
@@ -89,16 +89,16 @@ class Negative : IExpression
 	}
 }
 
-class BinaryOp(char[] op) : BinaryExpression
+class BinaryOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 {
-	this(IExpression lhs, IExpression rhs)
+	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
 		super(lhs, rhs);
 	}
 	
 	static assert((op == "+") || (op == "-") || (op == "/") || (op == "*") || (op == "%"));
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		auto v1 = lhs(ctxt);
 		auto v2 = rhs(ctxt);
@@ -116,16 +116,16 @@ class BinaryOp(char[] op) : BinaryExpression
 	}
 }
 
-class EqOp(char[] op) : BinaryExpression
+class EqOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 {
-	this(IExpression lhs, IExpression rhs)
+	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
 		super(lhs, rhs);
 	}
 	
 	static assert((op == "==") || (op == "!="));
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		auto v1 = lhs(ctxt);
 		auto v2 = rhs(ctxt);
@@ -165,16 +165,16 @@ class EqOp(char[] op) : BinaryExpression
 	}
 }
 
-class CmpOp(char[] op) : BinaryExpression
+class CmpOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 {
-	this(IExpression lhs, IExpression rhs)
+	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
 		super(lhs, rhs);
 	}
 	
 	static assert((op == "<") || (op == "<=") || (op == ">=") || (op == ">"));
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		auto v1 = lhs(ctxt);
 		auto v2 = rhs(ctxt);
@@ -206,14 +206,14 @@ class CmpOp(char[] op) : BinaryExpression
 	}
 }
 
-class LogicalOp(char[] op) : BinaryExpression
+class LogicalOp(char[] op, ExecCtxt = IObject) : BinaryExpression!(ExecCtxt)
 {
-	this(IExpression lhs, IExpression rhs)
+	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
 		super(lhs, rhs);
 	}
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		static assert((op == "||") || (op == "&&"));
 		
@@ -250,33 +250,33 @@ bool varToBool(Var var)
 	}
 }
 
-abstract class BinaryExpression : IExpression
+abstract class BinaryExpression(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
-	this(IExpression lhs, IExpression rhs)
+	this(IExpression!(ExecCtxt) lhs, IExpression!(ExecCtxt) rhs)
 	{
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
 	
-	IExpression lhs;
-	IExpression rhs;
+	IExpression!(ExecCtxt) lhs;
+	IExpression!(ExecCtxt) rhs;
 }
 
-class VarAccess : IExpression
+class VarAccess(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
 	this()
 	{
 		
 	}
 	
-	this(IExpression[] accessSteps)
+	this(IExpression!(ExecCtxt)[] accessSteps)
 	{
 		this.accessSteps = accessSteps;
 	}
 	
-	IExpression[] accessSteps;
+	IExpression!(ExecCtxt)[] accessSteps;
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		Var val;
 		val.type = VarT.Object;
@@ -340,7 +340,7 @@ class VarAccess : IExpression
 	}
 }
 
-class VarPath : IExpression
+class VarPath(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
 	this(char[][] path)
 	{
@@ -349,7 +349,7 @@ class VarPath : IExpression
 	
 	char[][] path;
 	
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		auto obj = ctxt;
 		Var var;
@@ -368,7 +368,7 @@ class VarPath : IExpression
 	}
 }
 
-class Literal : IExpression
+class Literal(ExecCtxt = IObject) : IExpression!(ExecCtxt)
 {
 	this(Var v)
 	{
@@ -376,7 +376,7 @@ class Literal : IExpression
 	}
 	
 	Var literal;
-	Var opCall(IObject ctxt)
+	Var opCall(ExecCtxt ctxt)
 	{
 		return literal;
 	}
@@ -395,9 +395,9 @@ debug(SenderoUnittest)
 		set(v1, 5);
 		set(v2, 10);
 		set(v3, 0);
-		auto l1 = new Literal(v1);
-		auto l2 = new Literal(v2);
-		auto l3 = new Literal(v3);
+		auto l1 = new Literal!(IObject)(v1);
+		auto l2 = new Literal!(IObject)(v2);
+		auto l3 = new Literal!(IObject)(v3);
 		auto ctxt = new Obj;
 		
 		auto add = new BinaryOp!("+")(l1, l2);

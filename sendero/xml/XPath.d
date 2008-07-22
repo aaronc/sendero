@@ -14,17 +14,19 @@ import sendero.vm.InheritingObject;
 import sendero.vm.Expression;
 //public import sendero.vm.ExecutionContext;
 
-bool compileXPath10(char[] xpath, inout IExpression expr)
+bool compileXPath10(char[] xpath, inout IExpression expr, XPathContext ctxt = null)
 {
 	SyntaxTree* root;
 	if ( parse("", xpath, root, true) ) {
-            root.Expr(expr);
+			if(ctxt is null)
+				ctxt = new XPathContext;
+            root.Expr(expr, ctxt);
 			return true;
 		}
 		else return false;
 }
 	
-ExecutionContext createXPathContext(XmlNode node)
+XPathContext createXPathContext(XmlNode node)
 {
 	auto ctxt = new ExecutionContext;
 	Var v; set(v, node); ctxt["@XPathCtxtNode"] = v;
@@ -46,7 +48,7 @@ debug(SenderoUnittest) {
 	import tango.io.File;
 	import sendero_base.xml.XmlNode;
 	import qcf.Regression;
-		
+	/+	
 	unittest
 	{
 		char[] printRes(Var var)
@@ -109,5 +111,5 @@ debug(SenderoUnittest) {
 		res = execXPath10("//member/@name[position() < 10]", mscorlib);
 		regress("7.xml", printRes(res));
 		
-	}
+	}+/
 }

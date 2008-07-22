@@ -5,7 +5,9 @@
 
 module sendero.vm.LocalText;
 
-import sendero.vm.ExecutionContext;
+//import sendero.vm.ExecutionContext;
+import sendero.xml.XPath;
+import sendero.vm.Expression;
 //import sendero.util.FunctionBindingContext;
 import sendero_base.util.StringCharIterator;
 
@@ -86,7 +88,7 @@ package class Param
 {
 	ushort offset;
 	ushort index;
-	Expression expr;
+	IExpression expr;
 	ubyte elementFormat;
 	ubyte secondaryFormat;
 	char[] formatString;
@@ -94,7 +96,7 @@ package class Param
 
 interface IMessage
 {
-	char[] exec(ExecutionContext ctxt);
+	char[] exec(IObject ctxt);
 }
 
 class Message : IMessage
@@ -103,13 +105,13 @@ class Message : IMessage
 	Param[] params;
 	bool plural() {return false;}
 	
-	static char[] renderParam(ExecutionContext ctxt, inout VariableBinding var)
+	static char[] renderParam(IObject ctxt, inout Var var)
 	{
 		scope p = new Param;
 		return renderParam(ctxt, var, p);
 	}
 	
-	static char[] renderParam(ExecutionContext ctxt, inout VariableBinding var, Param p)
+	static char[] renderParam(IObject ctxt, inout Var var, Param p)
 	{
 		char[] o;
 		auto lcl = ctxt.locale;
@@ -143,7 +145,7 @@ class Message : IMessage
 		return o;
 	}
 	
-	char[] exec(ExecutionContext ctxt)
+	char[] exec(IObject ctxt)
 	{
 		uint idx = 0;
 		char[] o;
@@ -373,7 +375,7 @@ package class PluralMessage : IMessage
 	char[] pluralVariable;
 	bool plural() {return true;}
 	
-	char[] exec(ExecutionContext ctxt)
+	char[] exec(IObject ctxt)
 	{
 		auto v = ctxt.getVar(pluralVariable);
 		
@@ -429,7 +431,7 @@ const ubyte lookupT[256] =
          0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // E
          0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   // F
     ];
-
+/+
 public void parseExpression(char[] msg, inout Expression expression, FunctionBindingContext ctxt)
 {
 	scope itr = new StringCharIterator!(char)(msg);
@@ -545,7 +547,7 @@ public void parseExpression(char[] msg, inout Expression expression, FunctionBin
 	}
 	
 	parseExpr(expression);
-}
+}+/
 
 Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 {
@@ -815,7 +817,7 @@ Message parseMessage(char[] msg, FunctionBindingContext ctxt)
 	}
 }*/
 
-version(Unittest)
+version(SenderoUnittest)
 {
 	import tango.io.Stdout;
 
@@ -838,7 +840,7 @@ unittest
 	auto res = m.exec(ctxt);
 	//assert(res == "Hello beautiful world, the only one!", res);
 	Stdout(res).newline;
-	
+/+	
 	Expression expr;
 	parseExpression("\"hello\"", expr, FunctionBindingContext.global);
 	assert(expr.type == ExpressionT.Value);
@@ -855,6 +857,6 @@ unittest
 	parseExpression("now()", expr, FunctionBindingContext.global);
 	assert(expr.type == ExpressionT.FuncCall);
 	var = expr.exec(ExecutionContext.global);
-	assert(var.type == VarT.DateTime);	
+	assert(var.type == VarT.DateTime);+/	
 }
 }

@@ -46,7 +46,7 @@ Whitespace
     regexp("[ \\t\\n\\r]+");
 }
 
-Expr(inout IExpression expr)
+Expr(inout IExpression expr, XPathContext ctxt)
 {
 	OrExpr
 	{
@@ -64,7 +64,7 @@ ExprTerminator()
 	regexp("[,\}]");
 }
 
-OrExpr(inout IExpression expr)
+OrExpr(inout IExpression expr, XPathContext ctxt)
 {
 	AndExpr
 	{
@@ -79,7 +79,7 @@ OrExpr(inout IExpression expr)
 	}
 }
 
-AndExpr(inout IExpression expr)
+AndExpr(inout IExpression expr, XPathContext ctxt)
 {
 	EqualityExpr
 	{
@@ -94,7 +94,7 @@ AndExpr(inout IExpression expr)
 	}
 }
 
-EqualityExpr(inout IExpression expr)
+EqualityExpr(inout IExpression expr, XPathContext ctxt)
 {
 	RelationalExpr
 	{
@@ -116,7 +116,7 @@ EqualityExpr(inout IExpression expr)
 	}
 }
 
-RelationalExpr(inout IExpression expr)
+RelationalExpr(inout IExpression expr, XPathContext ctxt)
 {
 	AdditiveExpr
 	{
@@ -152,7 +152,7 @@ RelationalExpr(inout IExpression expr)
 	}
 }
 
-AdditiveExpr(inout IExpression expr)
+AdditiveExpr(inout IExpression expr, XPathContext ctxt)
 {
     AdditiveExpr "+" MulExpr
     {
@@ -172,7 +172,7 @@ AdditiveExpr(inout IExpression expr)
     { MulExpr(expr); }
 }
 
-MulExpr(inout IExpression expr)
+MulExpr(inout IExpression expr, XPathContext ctxt)
 {
     MulExpr "*" UnaryExpr
     {
@@ -200,7 +200,7 @@ MulExpr(inout IExpression expr)
 }
 
 
-UnaryExpr(inout IExpression expr)
+UnaryExpr(inout IExpression expr, XPathContext ctxt)
 {
 	"-" UnaryExpr
 	{
@@ -213,7 +213,7 @@ UnaryExpr(inout IExpression expr)
 	{ UnionExpr(expr); }
 }
 
-UnionExpr(inout IExpression expr)
+UnionExpr(inout IExpression expr, XPathContext ctxt)
 {
 	PathExpr
 	{
@@ -230,7 +230,7 @@ UnionExpr(inout IExpression expr)
 	}
 }
 
-PathExpr(inout IExpression expr)
+PathExpr(inout IExpression expr, XPathContext ctxt)
 {
 	LocationPath
 	{
@@ -283,7 +283,7 @@ PathExpr(inout IExpression expr)
 	}
 }
 
-FilterExpr(inout IExpression expr)
+FilterExpr(inout IExpression expr, XPathContext ctxt)
 {
 	PrimaryExpr
 	{

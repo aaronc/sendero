@@ -1,4 +1,6 @@
-import sendero.view.SenderoTemplate;
+//import sendero.view.SenderoTemplate;
+import sendero.vm.FunctionBindingContext;
+//import sendero.vm.LocalText;
 
 import sendero.vm.Expression;
 //import sendero.vm.Expression2;
@@ -7,7 +9,7 @@ import sendero.vm.Array;
 //import sendero.view.expression.Compile;
 
 import sendero.xml.xpath10.Expression;
-import sendero.xml.XPath;
+//import sendero.xml.XPath;
 
 
 import qcf.TestRunner;
