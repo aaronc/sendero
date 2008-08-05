@@ -12,12 +12,13 @@ class SenderoInheritingObject : IObject
 	this(IObject parent = null)
 	{
 		this.parent = parent;
+		this.members = new typeof(members);
 	}
 	
 	IObject parent;
 	
 	//Var[char[]] members;
-	HashMap!(char[], Var, modHash, Container.reap, Heap) members;
+	HashMap!(char[], Var, modHash, Container.reap) members;
 	
 	Var opIndex(char[] key)
 	{

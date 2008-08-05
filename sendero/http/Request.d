@@ -71,3 +71,5 @@ class Request
 	char[][char[]] cookies;
 	char[] ip;
 }
+
+alias Request Req;

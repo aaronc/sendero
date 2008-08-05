@@ -1,7 +1,9 @@
 module senderoxc.data.Data;
 
 import senderoxc.data.IObjectReflector;
-import decorated_d.Decoration;
+import decorated_d.core.Decoration;
+
+import senderoxc.data.Validations;
 
 class DataContext : IDecoratorContext
 {
@@ -12,11 +14,22 @@ class DataContext : IDecoratorContext
 	
 	IObjectContext iobj;
 	
+	private bool touched = false;
+	
+	void writeImports(IDeclarationWriter wr)
+	{
+		if(touched)
+			wr.prepend("import sendero_base.Core, sendero.data.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
+	}
+	
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
 	{
+		touched = true;
+		
 		auto res = new DataResponder(decl);
-		res.iobj = iobj.init(decl, binder, params);
-		//binder.bindDecorator(DeclType.Field, "required");
+		res.iobj = cast(IObjectResponder)iobj.init(decl, binder, params);
+		debug assert(res.iobj);
+		binder.bindDecorator(DeclType.Field, "required", new RequiredCtxt(res));
 		//binder.bindDecorator(DeclType.Field, "regex"); // value = a string literal, class = an identifier
 		//binder.bindDecorator(DeclType.Field, "minLength");
 		//binder.bindDecorator(DeclType.Field, "maxLength");
@@ -40,7 +53,7 @@ class DataContext : IDecoratorContext
 	}
 }
 
-class DataResponder : IDecoratorResponder
+class DataResponder : IDecoratorResponder, IDataResponder
 {
 	this(DeclarationInfo decl)
 	{
@@ -49,10 +62,55 @@ class DataResponder : IDecoratorResponder
 	
 	DeclarationInfo decl;
 	IObjectResponder iobj;
+	IValidationResponder[] validations;
 	
-	void finish(IDeclarationWriter writer)
+	void addValidation(IValidationResponder v)
 	{
-		iobj.finish(writer);
-		//writer.addBaseType("IBindable");
+		validations ~= v;
+	}
+	
+	void finish(IDeclarationWriter wr)
+	{
+		iobj.finish(wr);
+		wr.addBaseType("IBindable");
+		
+		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
+		wr ~= "{\n";
+		foreach(cd; decl.declarations)
+		{
+			
+		}
+		wr ~= "}\n";
+		
+		wr ~= "static FieldInfo[] reflect()\n";
+		wr ~= "{\n";
+		
+		wr ~= 	"char[] classname = T.stringof;\n"
+				"FieldInfo[] info;\n"
+		
+				"uint n = 0;"
+		
+				"static if(is(T == class)) {"
+					"alias BaseTypeTupleOf!(T) BTT;"
+			
+					"static if(BTT.length) {"
+						"static if(!is(BTT[0] == Object)) {"
+							"info ~= ReflectionOf!(BTT[0]).doReflect;"
+							"n += info.length;"
+						"}"
+					"}"
+				"}";
+				
+		
+				
+		wr ~= "}\n\n";
+		
+		wr ~= "bool validate()\n";
+		wr ~= "{\n";
+		foreach(v; validations)
+		{
+			v.atOnValidate(wr);
+		}
+		wr ~= "}\n\n";
 	}
 }

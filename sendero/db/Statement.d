@@ -5,7 +5,7 @@
 
 module sendero.db.Statement;
 
-import dbi.PreparedStatement;
+import dbi.Statement;
 
 import tango.core.Traits;
 
@@ -17,14 +17,14 @@ debug import tango.io.Stdout;
 
 class StatementContainer
 {
-	static StatementContainer opCall(IPreparedStatement stmt)
+	static StatementContainer opCall(IStatement stmt)
 	{
 		auto cntr = new StatementContainer;
 		cntr.stmt = stmt;
 		return cntr;
 	}
 	
-	private IPreparedStatement stmt;
+	private IStatement stmt;
 	private ubyte[] lastResSignature;
 	private ubyte[] lastParamSignature;
 }
@@ -55,7 +55,7 @@ class Statement
 	/**
 	 * Returns the underlying DBI IPreparedStatement instance.
 	 */
-	IPreparedStatement statement()
+	IStatement statement()
 	{
 		inst.lastResSignature = null;
 		inst.lastParamSignature = null;
@@ -255,11 +255,6 @@ class Statement
 	ulong getLastInsertID()
 	{
 		return inst.stmt.getLastInsertID;
-	}
-	
-	char[] getLastErrorMsg()
-	{
-		return inst.stmt.getLastErrorMsg;
 	}
 	
 	~this()

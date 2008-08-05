@@ -1,5 +1,7 @@
 module sendero.db.Bind;
 
+import dbi.Statement;
+
 struct BindInfo
 {
 	BindType[] types;
@@ -13,7 +15,9 @@ interface IBindable {
 	 *     fieldNames = the list of fieldNames to bind, binds all fields if fieldNames is null or 0-length 
 	 * Returns: A BindInfo array containing BindTypes and pointers to the bound fields.
 	 */
-	BindInfo[] bind(char[][] fieldNames = null);
+	//BindInfo[] bind(char[][] fieldNames = null);
+	
+	Binder createBinder(char[][] fieldNames = null);
 }
 
 // Ideas:
@@ -28,10 +32,12 @@ struct Binder
 	{
 		
 	}
+	
+	alias bind opCall;
 }
 
 interface IBinder
 {
-	BindType[] types;
+	BindType[] types();
 	void*[] bind(void* ptr);
 }

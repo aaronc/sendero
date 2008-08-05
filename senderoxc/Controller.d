@@ -15,8 +15,19 @@ static this()
 
 class ControllerContext : IDecoratorContext
 {
+	private bool touched = false;
+	
+	void writeImports(IDeclarationWriter wr)
+	{
+		if(touched) {
+			wr.prepend("import sendero.routing.TypeSafeRouter, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute;\n");
+		}
+	}
+	
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
 	{
+		touched = true;
+		
 		log.info("ControllerContext.init");
 		
 		auto res = new ControllerResponder(decl);
@@ -99,20 +110,20 @@ class ControllerResponder : IDecoratorResponder
 			if(!action.func.isStatic) i = "i";
 			
 			auto fname = decl.name ~ "." ~ action.func.name; 
-			writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", ` ~ fname ~ ", []);\n";
+			writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", []);\n";
 		}
 		
 		writer ~= "}\n\n";
 		
 		
 		writer ~= "static Res route(Req req)\n";
-		writer ~= "{\n";
-		writer ~= "\treturn r.route(req);\n";
-		writer ~= "}\n";
+		writer ~= "{ ";
+		writer ~= "return r.route(req);";
+		writer ~= " }\n";
 		
 		writer ~= "Res iroute(Req req)\n";
-		writer ~= "{\n";
-		writer ~= "\treturn r.route(req);\n";
-		writer ~= "}\n";
+		writer ~= "{ ";
+		writer ~= "return r.route(req);";
+		writer ~= " }\n";
 	}
 }

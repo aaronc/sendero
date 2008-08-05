@@ -132,7 +132,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		auto pt = (searchPath ~ path in cache);
 		if(!pt) {
 			auto fp = new FilePath(searchPath ~ path);
-			scope f = new File(fp);
+			scope f = new File(fp.toString);
 			if(!f) throw new Exception("Template not found");
 			auto txt = cast(char[])f.read;
 			auto templ = Template.compile(txt, locale);
@@ -148,7 +148,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		
 		with(*pt) {
 			if(lastModified != path.modified) {
-				scope f = new File(path);
+				scope f = new File(path.toString);
 				auto txt = cast(char[])f.read;
 				templ = Template.compile(txt, locale);
 				lastModified = path.modified;

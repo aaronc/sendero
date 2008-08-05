@@ -5,7 +5,8 @@
 
 module sendero.db.DBProvider;
 
-import dbi.PreparedStatement;
+import dbi.Database;
+import dbi.Statement;
 import dbi.Registry;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
@@ -14,16 +15,18 @@ public import sendero.db.Statement;
 
 class DBConnectionProvider(char[] dbUrl)
 {
-	Database createNewConnection()
+	static Database createNewConnection()
 	{
-		getDatabaseForURL(dbUrl);
+		return getDatabaseForURL(dbUrl);
 	}
 }
 
 interface IProvider(StatementT)
 {
 	bool prepare(char[] statement, inout StatementT stmt, char[] key = null);
-	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null);
+	bool prepareRaw(char[] statement, inout IStatement stmt, char[] key = null);
+	bool virtualPrepare(char[] statement, inout StatementT stmt);
+	bool virtualPrepareRaw(char[] statement, inout IStatement stmt);
 	void beginTransact();
 	void rollback();
 	void commit();
@@ -68,9 +71,9 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		return true;
 	}
 	
-	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null)
+	bool prepareRaw(char[] statement, inout IStatement stmt, char[] key = null)
 	{
-		IPreparedStatement* pStmt = null;
+		IStatement* pStmt = null;
 		if(key.length) pStmt = key in cachedRawStatements;
 		else pStmt = statement in cachedRawStatements;
 		if(pStmt) {
@@ -88,9 +91,9 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		return true;
 	}
 	
-	bool virtualPrepareRaw(char[] statement, inout IPreparedStatement stmt)
+	bool virtualPrepareRaw(char[] statement, inout IStatement stmt)
 	{
-		auto stmt = inst.virtualPrepare(statement);
+		stmt = inst.virtualPrepare(statement);
 		if(!stmt) return false;
 		else return true;
 	}
@@ -112,7 +115,7 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 	
 	private ConnectionT inst;
 	private StatementT[char[]] cachedStatements;
-	private IPreparedStatement[char[]] cachedRawStatements;
+	private IStatement[char[]] cachedRawStatements;
 	
 	~this()
 	{
@@ -126,12 +129,12 @@ class DBProvider(DBConnectionProvider)
 {
 	private static this()
 	{
-		pool = new ConnectionPool!(IPreparedStatementProvider, DBConnectionProvider);
-		providers_ = new ThreadLocal!(ProviderContainer!(IPreparedStatementProvider, DBProvider!(DBConnectionProvider), StatementContainer))(null);
+		pool = new ConnectionPool!(Database, DBConnectionProvider);
+		providers_ = new ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer))(null);
 	}
 	
-	private static ConnectionPool!(IPreparedStatementProvider, DBConnectionProvider) pool;
-	private static ThreadLocal!(ProviderContainer!(IPreparedStatementProvider, DBProvider!(DBConnectionProvider), StatementContainer)) providers_;
+	private static ConnectionPool!(Database, DBConnectionProvider) pool;
+	private static ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)) providers_;
 	
 	private static IProvider!(StatementContainer) getProvider()
 	{
@@ -141,14 +144,14 @@ class DBProvider(DBConnectionProvider)
 			auto conn = pool.getConnection;
 			debug assert(conn);
 			if(!conn) return null;
-			provider = new ProviderContainer!(IPreparedStatementProvider, DBProvider!(DBConnectionProvider), StatementContainer)(conn);
+			provider = new ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)(conn);
 			debug assert(provider);
 			providers_.val = provider;
 		}
 		return provider;
 	}
 	
-	static void releaseConnection(IPreparedStatementProvider conn)
+	static void releaseConnection(Database conn)
 	{
 		pool.releaseConnection(conn);
 	}
@@ -177,10 +180,10 @@ class DBProvider(DBConnectionProvider)
 		return new Statement(cntr);
 	}
 	
-	static IPreparedStatement prepareRaw(char[] sql, char[] key = null)
+	static IStatement prepareRaw(char[] sql, char[] key = null)
 	{
 		auto provider = getProvider;
-		IPreparedStatement stmt;
+		IStatement stmt;
 		if(!provider.prepareRaw(sql, stmt, key)) {
 			debug throw new Exception("Unable to create statement:" ~ sql);
 			else throw new Exception("Unable to create statement");
@@ -189,10 +192,10 @@ class DBProvider(DBConnectionProvider)
 		return stmt;
 	}
 	
-	static IPreparedStatement virtualPrepareRaw(char[] sql, char[] key = null)
+	static IStatement virtualPrepareRaw(char[] sql, char[] key = null)
 	{
 		auto provider = getProvider;
-		IPreparedStatement stmt;
+		IStatement stmt;
 		if(!provider.virtualPrepareRaw(sql, stmt)) {
 			debug throw new Exception("Unable to create statement:" ~ sql);
 			else throw new Exception("Unable to create statement");

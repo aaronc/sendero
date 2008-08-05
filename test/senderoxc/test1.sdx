@@ -62,3 +62,11 @@ module test1;
 	
 	}
 }
+
+
+@data class User
+{
+	@required char[] email;
+	char[] firstname;
+	char[] lastname;
+}

@@ -1,6 +1,10 @@
 module sendero.routing.IRoute;
 
-interface IRoute(ResT, ReqT)
+import sendero.http.Request, sendero.http.Response;
+
+interface IIRoute(ResT, ReqT)
 {
-	ResT route(ReqT);
+	ResT iroute(ReqT);
 }
+
+alias IIRoute!(Res, Req) IIController;

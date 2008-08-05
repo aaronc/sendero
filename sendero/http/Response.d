@@ -25,3 +25,4 @@ struct Response
 		contentDelegate(consumer);
 	}
 }
+alias Response Res;

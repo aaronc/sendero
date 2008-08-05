@@ -3,7 +3,7 @@ module senderoxc.SenderoExt;
 import decorated_d.core.Decoration;
 
 import senderoxc.Controller;
-//import senderoxc.data.Data;
+import senderoxc.data.Data;
 
 import tango.util.log.Log;
 
@@ -22,9 +22,28 @@ class SenderoExtContext : IDecoratorContext
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
 	{
 		log.info("SenderoExtContext.init");
-		binder.bindDecorator(DeclType.Class, "controller", new ControllerContext);
-		//binder.bindDecorator(DeclType.Class, "data", new DataContext);
+		auto cCtxt = new ControllerContext;
+		binder.bindDecorator(DeclType.Class, "controller", cCtxt);
+		auto dCtxt = new DataContext;
+		binder.bindDecorator(DeclType.Class, "data", dCtxt);
 		
-		return null;
+		return new SenderoExtResponder(cCtxt, dCtxt);
+	}
+}
+
+class SenderoExtResponder : IDecoratorResponder
+{
+	this(ControllerContext cCtxt, DataContext dCtxt)
+	{
+		this.cCtxt = cCtxt;
+		this.dCtxt = dCtxt;
+	}
+	ControllerContext cCtxt; DataContext dCtxt;
+	
+	void finish(IDeclarationWriter wr)
+	{
+		wr.prepend("\n\n");
+		cCtxt.writeImports(wr);
+		dCtxt.writeImports(wr);
 	}
 }

@@ -32,7 +32,7 @@ else {
 	import sendero.time.Format;
 }
 
-import tango.math.Math;
+import tango.math.Math, tango.math.IEEE;
 import tango.group.time;
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
@@ -209,7 +209,7 @@ class Message : IMessage
 			char[] renderDefault()
 			{
 				auto i = trunc(x);
-				if(feq(i, x)) return Integer.toString(rndlong(x));
+				if(feqrel(i, x) >= real.mant_dig/2) return Integer.toString(rndlong(x));
 				else return Float.toString(x);
 			}
 			
