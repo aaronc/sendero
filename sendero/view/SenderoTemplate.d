@@ -147,6 +147,10 @@ unittest
 	n.date.date.day = 3;
 	names ~= n;
 	
+	auto complex = SenderoTemplate.get("complex2.xml", null);
+	complex["person"] = n;
+	complex["names"] = names;
+	r.regress("complex2_output.html", complex.render);
 
 	/+auto complex = SenderoTemplate.get("complex.xml", null);
 	complex["person"] = n;

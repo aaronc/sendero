@@ -8,7 +8,7 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 
-enum HttpMethod { Get, Post };
+enum HttpMethod { Get, Post, Put, Delete };
 
 class Request
 {

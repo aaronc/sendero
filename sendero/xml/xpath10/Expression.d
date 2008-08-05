@@ -20,6 +20,8 @@ debug import tango.io.Stdout;
 alias ExecContext XPathContext;
 alias IExpression!(ExecContext) IXPathExpression;
 
+debug(SenderoViewDebug) debug = SenderoXPathDebug;
+debug(SenderoXPathDebug) debug = SenderoVMDebug;
 
 class XPathExpr(bool filter = false) : IExpression!(XPathContext)
 {
@@ -78,6 +80,11 @@ class XPathExpr(bool filter = false) : IExpression!(XPathContext)
 		
 		return Var();
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class XmlNodeSet : IArray
@@ -131,6 +138,11 @@ class PositionExpr : IExpression!(XPathContext)
 	{
 		return ctxt["@XPathPos"];
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class LastExpr : IExpression!(XPathContext)
@@ -139,6 +151,11 @@ class LastExpr : IExpression!(XPathContext)
 	{
 		//auto var = ctxt["@XPathLast"];
 		return ctxt["@XPathLast"];
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -171,6 +188,11 @@ class UnionExpr : IExpression!(XPathContext)
 		res.type = VarT.Array;
 		res.array_ = new UnionWrapper(v1, v2);
 		return res;
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -305,6 +327,11 @@ class FilterPredicate : IExpression!(XPathContext)
 		default:
 			return Var();
 		}
+	}
+
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 

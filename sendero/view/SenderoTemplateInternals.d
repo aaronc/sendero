@@ -22,6 +22,16 @@ import tango.text.Util;
 import Integer = tango.text.convert.Integer;
 debug import tango.io.Stdout;
 
+debug(SenderoViewDebug) {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoView");
+	}
+}
+
 version(SenderoTemplateMsgs)
 {
 	public import sendero.msg.Msg;
@@ -315,7 +325,9 @@ class SenderoForNodeProc(TemplateCtxt, Template) : DefaultElemProcessor!(Templat
 	}
 	
 	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
-	{		
+	{
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoForNodeProc.process"));
+		
 		char[] each;
 		if(!getAttr(node, "each", each))
 		{
@@ -390,6 +402,8 @@ class SenderoForNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 	
 	void render(TemplateCtxt ctxt, Consumer res)
 	{
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoForNode.render"));
+		
 		auto var = expr(ctxt.execCtxt);
 		if(var.type != VarT.Array) return;
 		
@@ -401,6 +415,9 @@ class SenderoForNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		
 		foreach(v; var.array_)
 		{
+			debug(SenderoViewDebug)
+				log.trace("SenderoForNode.render i = {}, last = {}", i, last);
+			
 			localCtxt[localVarName] = v;
 			localCtxt.add("__loopN__", i);
 			if(i == last) localCtxt.add("__loopLast__", true);
@@ -882,6 +899,8 @@ class SenderoDefNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 	
 	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
 	{
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoDefNodeProcessor.process"));
+		
 		debug assert(node.type == XmlNodeType.Element);
 		
 		if(node.type != XmlNodeType.Element)
@@ -905,6 +924,7 @@ class SenderoDefNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 		auto funcNode = TemplateContainerNode!(TemplateCtxt).createFromChildren(node, fnTmpl, childProcessor);
 		auto fn = new SenderoTemplateFunction!(Template, TemplateCtxt)(funcNode, fnTmpl, params);
 		tmpl.functionCtxt.addFunction(name, &fn.exec);
+		debug(SenderoViewDebug)	log.trace("SenderoDefNodeProcessor.process added Function {}", name);
 		
 		return new TemplateDataNode!(TemplateCtxt)(null);
 	}
@@ -925,6 +945,8 @@ class SenderoTemplateFunction(Template, TemplateCtxt)
 	
 	Var exec(Var[] params, IExecContext parentCtxt)
 	{
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoTemplateFunction.exec"));
+		
 		scope ctxt = new TemplateCtxt(tmpl, null);
 		ctxt.execCtxt = new ExecContext(parentCtxt);
 		for(int i = 0; i < paramNames.length && i < params.length; ++i)

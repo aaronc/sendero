@@ -12,7 +12,19 @@ import Float = tango.text.convert.Float;
 public import sendero_base.Core;
 import sendero_base.Set;
 import sendero.vm.Expression;
+
+debug(SenderoViewDebug) debug = SenderoXPathDebug;
+debug(SenderoXPathDebug) {
+	debug = SenderoVMDebug;
 	
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoXPath");
+	}
+}
 
 version(TestApaged)
 {
@@ -736,7 +748,23 @@ FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 			auto name = path[0];
 			if(path.length > 1) name ~= ':' ~ path[1];+/
 			
-			expr = new LateBindingFunctionCall!(XPathContext)(name, args);
+			debug(SenderoXPathDebug) {
+				log.trace("NCName '(' ExprList ')' : name = {}, args.length = ", name, args.length);
+				foreach(arg; args)
+				{
+					log.trace("NCName '(' ExprList ')' arg : {}", arg.toString);
+				}
+			}
+			
+			auto fn = ctxt.getFunction(name);
+			if(fn !is null)	{
+				debug(SenderoXPathDebug) log.trace("FunctionCall:{}", name);
+				expr = new FunctionCall!(XPathContext)(fn, args);
+			}
+			else {
+				debug(SenderoXPathDebug) log.trace("LateBindingFunctionCall:{}", name);
+				expr = new LateBindingFunctionCall!(XPathContext)(name, args);
+			}
 			break;
 		}
 		
@@ -759,6 +787,7 @@ ExprList(inout IXPathExpression[] args, XPathContext ctxt)
 	Expr
 	{
 		IXPathExpression expr;
+		Expr(expr, ctxt);
 		args ~= expr;
 	}
 	

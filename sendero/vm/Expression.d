@@ -4,9 +4,21 @@ public import sendero_base.Core;
 
 debug import tango.io.Stdout;
 
+debug(SenderoViewDebug) debug = SenderoVMDebug;
+debug(SenderoVMDebug) {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoVM");
+	}
+}
+
 interface IExpression(ExecCtxt)
 {
 	Var opCall(ExecCtxt);
+	debug(SenderoVMDebug) char[] toString();
 }
 
 class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
@@ -22,14 +34,18 @@ class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 	
 	Var opCall(ExecCtxt ctxt)
 	{
+		debug(SenderoVMDebug) mixin(FailTrace!("FunctionCall!(" ~ ExecCtxt.stringof ~ ").opCall"));
 		Var[] funcParams;
 		
 		auto n = params.length;
 		funcParams.length = n;
+		debug(SenderoVMDebug) log.trace(MName ~ " funcParams.length = {}", n);
 			
 		for(size_t i = 0; i < n; ++i)
 		{
+			debug(SenderoVMDebug) log.trace(MName ~ " params[{}].toString = {}", i, params[i].toString);
 			funcParams[i] = params[i](ctxt);
+			debug(SenderoVMDebug) log.trace(MName ~ " funcParams[{}].type = {}", i, funcParams[i].type);
 		}
 		
 		return func(funcParams, ctxt);
@@ -39,7 +55,7 @@ class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 	{
 		static class Func
 		{
-			Var opCall(Var[] params, IObject ctxt)
+			Var opCall(Var[] params, IExecContext ctxt)
 			{
 				if(params.length) {
 					return params[0];
@@ -52,7 +68,7 @@ class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 		{
 			FunctionCall call;
 			Var p, res;
-			auto ctxt = new Obj;
+			auto ctxt = new ExecCtxt;
 			set(p, 37);
 			auto func = &(new Func).opCall;
 			
@@ -60,10 +76,15 @@ class FunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 			res = call(ctxt);
 			assert(res.type == VarT.Null);
 			
-			call = new FunctionCall(func, [new Literal(p)]);
+			call = new FunctionCall(func, [new Literal!(ExecCtxt)(p)]);
 			res = call(ctxt);
 			assert(res.type == VarT.Number && res.number_ == 37);
 		}
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -80,6 +101,7 @@ class LateBindingFunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 	
 	Var opCall(ExecCtxt ctxt)
 	{
+		debug(SenderoVMDebug) mixin(FailTrace!("LateBindingFunctionCall!(" ~ ExecCtxt.stringof ~ ").opCall"));
 		Var[] funcParams;
 		
 		auto n = params.length;
@@ -93,6 +115,11 @@ class LateBindingFunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 		auto func = ctxt.getFunction(funcName);
 		
 		return func(funcParams, ctxt);
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -115,6 +142,11 @@ class Negative(ExecCtxt) : IExpression!(ExecCtxt)
 		res.type = VarT.Number;
 		res.number_ = - var.number_;
 		return res;
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -142,6 +174,11 @@ class BinaryOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 		
 		return res;
 		
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -204,6 +241,11 @@ class EqOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 		res.bool_ = isEqual!(op)(v1, v2);
 		return res;
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class CmpOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
@@ -248,6 +290,11 @@ class CmpOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 		res.bool_ = compare(v1, v2);
 		return res;
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class LogicalOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
@@ -267,6 +314,11 @@ class LogicalOp(char[] op, ExecCtxt) : BinaryExpression!(ExecCtxt)
 		Var res; res.type = VarT.Bool;
 		mixin(`res.bool_ = b1 ` ~ op ~ ` b2;`);
 		return res;
+	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
 	}
 }
 
@@ -304,6 +356,11 @@ abstract class BinaryExpression(ExecCtxt) : IExpression!(ExecCtxt)
 	
 	IExpression!(ExecCtxt) lhs;
 	IExpression!(ExecCtxt) rhs;
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
@@ -322,6 +379,9 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 	
 	Var opCall(ExecCtxt ctxt)
 	{
+		//debug(SenderoVMDebug) const char[] MName = "VarAccess!(" ~ ExecCtxt.stringof ~ ").opCall";
+		debug(SenderoVMDebug) mixin(FailTrace!("VarAccess!(" ~ ExecCtxt.stringof ~ ").opCall"));
+		
 		Var val;
 		val.type = VarT.Object;
 		val.obj_ = ctxt;
@@ -331,12 +391,14 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 			switch(stepVal.type)
 			{
 			case VarT.Number:
+				debug(SenderoVMDebug) log.trace(MName ~ " VarT.Number step = {}", stepVal.number_);
 				if(val.type == VarT.Array) {
 					val = val.array_[cast(size_t)stepVal.number_];
 				}
 				else return Var();
 				break;
 			case VarT.String:
+				debug(SenderoVMDebug) log.trace(MName ~ " VarT.String step = {}", stepVal.string_);
 				if(val.type == VarT.Object) {
 					val = val.obj_[stepVal.string_];
 				}
@@ -378,6 +440,11 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 		res = varAcc(ctxt);
 		assert(res.type == VarT.Number && res.number_ == 175);
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class VarPath(ExecCtxt) : IExpression!(ExecCtxt)
@@ -406,6 +473,11 @@ class VarPath(ExecCtxt) : IExpression!(ExecCtxt)
 		
 		return var;
 	}
+	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 class Literal(ExecCtxt) : IExpression!(ExecCtxt)
@@ -421,6 +493,10 @@ class Literal(ExecCtxt) : IExpression!(ExecCtxt)
 		return literal;
 	}
 	
+	debug(SenderoVMDebug) char[] toString()
+	{
+		return typeof(this).stringof;
+	}
 }
 
 debug(SenderoUnittest)
