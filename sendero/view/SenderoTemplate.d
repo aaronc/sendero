@@ -148,10 +148,10 @@ unittest
 	names ~= n;
 	
 
-	auto complex = SenderoTemplate.get("complex.xml", null);
+	/+auto complex = SenderoTemplate.get("complex.xml", null);
 	complex["person"] = n;
 	complex["names"] = names;
 	//Stdout(complex.render).newline;
-	r.regress("complex_output.html", complex.render);
+	r.regress("complex_output.html", complex.render);+/
 }
 }

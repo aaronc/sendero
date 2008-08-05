@@ -1,15 +1,30 @@
 module senderoxc.Controller;
 
-import decorated_d.Decoration;
+import decorated_d.core.Decoration;
 
-class ControllerContext : DecoratorContext
+import sendero.routing.TypeSafeRouter;
+
+import tango.util.log.Log;
+
+Logger log;
+
+static this()
 {
-	DecoratorResponder init(DeclarationInfo decl, ContextBinder binder, Var[] Params = null)
+	log = Log.lookup("senderoxc.SenderoExt");
+}
+
+class ControllerContext : IDecoratorContext
+{
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
 	{
-		//binder.bindDecorator(DeclType.Class, "GET");
-		//binder.bindDecorator(DeclType.Class, "POST");
-		//binder.bindDecorator(DeclType.Class, "PUT");
-		//binder.bindDecorator(DeclType.Class, "DELETE");
+		log.info("ControllerContext.init");
+		
+		auto res = new ControllerResponder(decl);
+		
+		binder.bindDecorator(DeclType.Function, "GET", new HTTPMethodContext!(GET)(res));
+		binder.bindDecorator(DeclType.Function, "POST", new HTTPMethodContext!(POST)(res));
+		//binder.bindDecorator(DeclType.Function, "PUT");
+		//binder.bindDecorator(DeclType.Function, "DELETE");
 		
 		//binder.bindStandalone("GET");
 		//binder.bindStandalone("POST");
@@ -17,11 +32,11 @@ class ControllerContext : DecoratorContext
 		//binder.bindStandalone("DELETE");
 		//binder.bindStandalone("pass");
 		
-		return new ControllerResponder(decl);
+		return res;
 	}
 }
 
-class HTTPMethodContext(Method) : DecoratorContext
+class HTTPMethodContext(ubyte Method) : IDecoratorContext
 {
 	this(ControllerResponder resp)
 	{
@@ -30,13 +45,14 @@ class HTTPMethodContext(Method) : DecoratorContext
 	
 	ControllerResponder resp;
 	
-	DecoratorResponder init(DeclarationInfo decl, ContextBinder binder, Var[] Params = null)
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
 	{
+		resp.addAction(Method, decl);
 		return null;
 	}
 }
 
-class ControllerResponder : DecoratorResponder
+class ControllerResponder : IDecoratorResponder
 {
 	this(DeclarationInfo decl)
 	{
@@ -45,7 +61,58 @@ class ControllerResponder : DecoratorResponder
 	
 	DeclarationInfo decl;
 	
-	void finish(DeclarationWriter writer)
+	void addAction(ubyte method, DeclarationInfo func)
 	{
+		log.info("ControllerResponder.addAction({},{})", method, func.name);
+		actions ~= Action(method, func);
+	}
+	
+	struct Action
+	{
+		ubyte method;
+		DeclarationInfo func;
+	}
+	
+	Action[] actions;
+	
+	void finish(IDeclarationWriter writer)
+	{
+		writer ~= "static const TypeSafeRouter!(Res,Req) r, ir;\n";
+		writer ~= "static this()\n";
+		writer ~= "{\n";
+		writer ~= "\tr = TypeSafeRouter!(Response,Request)();\n";
+		writer ~= "\tir = TypeSafeRouter!(Response,Request)();\n";
+		
+		foreach(action; actions)
+		{
+			char[] method;
+			switch(action.method)
+			{
+			case POST: method = "POST"; break;
+			case GET: method = "GET"; break;
+			default:
+				debug assert(false, "Unknown HTTP Method");
+				continue;
+			}
+			
+			char[] i;
+			if(!action.func.isStatic) i = "i";
+			
+			auto fname = decl.name ~ "." ~ action.func.name; 
+			writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", ` ~ fname ~ ", []);\n";
+		}
+		
+		writer ~= "}\n\n";
+		
+		
+		writer ~= "static Res route(Req req)\n";
+		writer ~= "{\n";
+		writer ~= "\treturn r.route(req);\n";
+		writer ~= "}\n";
+		
+		writer ~= "Res iroute(Req req)\n";
+		writer ~= "{\n";
+		writer ~= "\treturn r.route(req);\n";
+		writer ~= "}\n";
 	}
 }

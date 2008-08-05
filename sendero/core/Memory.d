@@ -35,6 +35,40 @@ struct SessionAllocator
 	}
 }
 
+struct ContainerSessionAllocator(T)
+{
+	T* allocate()
+	{
+		return SessionAllocator.allocate(T.sizeof);
+	}
+	
+	T*[] allocate(uint count)
+	{
+		auto sz = T.sizeof * count;
+		auto ptr = SessionAllocator.allocate(sz);
+		auto res = (cast(T**)(SessionAllocator.allocate(ptrdiff_t.sizeof * count)))[0 .. count];
+		auto end = ptr + sz;
+		uint i = 0;
+		while(ptr < end)
+		{
+			res[i] = ptr;
+			ptr += T.sizeof;
+			++i;
+		}
+		debug assert(i == count);
+		return res;
+	}
+	
+	void collect(T* p)
+	{ }
+	
+	void collect(T*[] t)
+	{ }
+	
+	bool collect(bool all = true)
+	{ }
+}
+
 template SessionAllocate()
 {
 	new(size_t sz)

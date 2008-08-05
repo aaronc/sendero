@@ -1,0 +1,64 @@
+module test1;
+
+@controller class MainCtlr
+{
+	@GET
+	static Res index()
+	{
+	
+	}
+
+	@POST
+	static Res login(char[] username, char[] password)
+	{
+
+	}
+	
+	@GET
+	static Res logout()
+	{
+	
+	}
+	
+	@POST
+	static Res signup(char[] firstname, char[] lastname, char[] email,
+						char[] pswd, char[] pswdConfirm)
+	{
+		
+	}
+	
+	@POST
+	static Res resetPswd(char[] email)
+	{
+	
+	}
+	
+	static IIController getInstance(Req req)
+	{
+		
+	}
+}
+
+@controller class UserCtlr
+{
+	@POST
+	Res changePswd(char[] curPswd, char[] newPswd, char[] newPswdConfirm)
+	{
+	
+	}
+}
+
+@controller class GroupCtlr
+{
+	@GET
+	static Res create()
+	{
+	
+	}
+	
+	@POST
+	static Res create()
+	{
+	
+	}
+}

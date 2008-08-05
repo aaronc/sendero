@@ -618,11 +618,9 @@ NameTest(inout ITest test)
 		debug assert(path.length);
 		if(path.length == 1) {
 			test = new QNameTest(null, path[0]);
-			debug Stdout.formatln("Creating QNameTest for {}", path[0]);
 		}
 		else if(path.length == 2) {
 			test = new QNameTest(path[0], path[1]);
-			debug Stdout.formatln("Creating QNameTest for {}:{}", path[0], path[1]);
 		}
 	}
 }
@@ -713,14 +711,36 @@ FuncCall(inout IXPathExpression expr, XPathContext ctxt)
 		//QName(path);
 		char[] name;
 		NCName(name);
-		IXPathExpression[] args;
-		ExprList(args, ctxt);
 		
-		/+assert(path.length);
-		auto name = path[0];
-		if(path.length > 1) name ~= ':' ~ path[1];+/
+		switch(name)
+		{
+		case "last":
+			expr = new LastExpr;
+			break;
+		case "position":
+			expr = new PositionExpr;
+			break;
+		case "true":
+			Var v; set(v, true);
+			expr = new Literal!(XPathContext)(v);
+			break;
+		case "false":
+			Var v; set(v, false);
+			expr = new Literal!(XPathContext)(v);
+			break;
+		default:
+			IXPathExpression[] args;
+			ExprList(args, ctxt);
+			
+			/+assert(path.length);
+			auto name = path[0];
+			if(path.length > 1) name ~= ':' ~ path[1];+/
+			
+			expr = new LateBindingFunctionCall!(XPathContext)(name, args);
+			break;
+		}
 		
-		expr = new LateBindingFunctionCall!(XPathContext)(name, args);
+		
 	}
 }
 

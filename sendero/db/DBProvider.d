@@ -58,6 +58,16 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		return true;
 	}
 	
+	bool virtualPrepare(char[] statement, inout StatementT stmt)
+	{
+		auto rawStmt = inst.virtualPrepare(statement);
+		if(!rawStmt)
+			return false;
+		
+		stmt = StatementT(rawStmt);
+		return true;
+	}
+	
 	bool prepareRaw(char[] statement, inout IPreparedStatement stmt, char[] key = null)
 	{
 		IPreparedStatement* pStmt = null;
@@ -76,6 +86,13 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		if(key.length) cachedRawStatements[key] = stmt;
 		else cachedRawStatements[statement] = stmt;
 		return true;
+	}
+	
+	bool virtualPrepareRaw(char[] statement, inout IPreparedStatement stmt)
+	{
+		auto stmt = inst.virtualPrepare(statement);
+		if(!stmt) return false;
+		else return true;
 	}
 	
 	void beginTransact()
@@ -148,11 +165,35 @@ class DBProvider(DBConnectionProvider)
 		return new Statement(cntr);
 	}
 	
+	static Statement virtualPrepare(char[] sql, char[] key = null)
+	{
+		auto provider = getProvider;
+		StatementContainer cntr;
+		if(!provider.virtualPrepare(sql, cntr)) {
+			debug throw new Exception("Unable to create statement:" ~ sql);
+			else throw new Exception("Unable to create statement");
+		}
+		
+		return new Statement(cntr);
+	}
+	
 	static IPreparedStatement prepareRaw(char[] sql, char[] key = null)
 	{
 		auto provider = getProvider;
 		IPreparedStatement stmt;
 		if(!provider.prepareRaw(sql, stmt, key)) {
+			debug throw new Exception("Unable to create statement:" ~ sql);
+			else throw new Exception("Unable to create statement");
+		}
+		
+		return stmt;
+	}
+	
+	static IPreparedStatement virtualPrepareRaw(char[] sql, char[] key = null)
+	{
+		auto provider = getProvider;
+		IPreparedStatement stmt;
+		if(!provider.virtualPrepareRaw(sql, stmt)) {
 			debug throw new Exception("Unable to create statement:" ~ sql);
 			else throw new Exception("Unable to create statement");
 		}

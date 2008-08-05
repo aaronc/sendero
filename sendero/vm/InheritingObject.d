@@ -3,6 +3,10 @@ module sendero.vm.InheritingObject;
 import sendero_base.Core;
 import sendero_base.Set;
 
+import tango.util.container.HashMap;
+import tango.util.container.Container;
+import sendero_base.util.Hash;
+
 class SenderoInheritingObject : IObject
 {
 	this(IObject parent = null)
@@ -12,7 +16,8 @@ class SenderoInheritingObject : IObject
 	
 	IObject parent;
 	
-	Var[char[]] members;
+	//Var[char[]] members;
+	HashMap!(char[], Var, modHash, Container.reap, Heap) members;
 	
 	Var opIndex(char[] key)
 	{
