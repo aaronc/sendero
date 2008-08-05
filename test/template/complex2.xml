@@ -1,0 +1,10 @@
+<div>
+	<d:def function="printName(name)">
+		_{$name.first} _{$name.last}
+	</d:def>
+	<ul>
+		<d:for each="$n in $names">
+			<li>_{$__loopN__}:_{printName($n)}</li>
+		</d:for>
+	</ul>
+</div>
