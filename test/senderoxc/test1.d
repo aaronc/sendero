@@ -49,11 +49,11 @@ static this()
 {
 	r = TypeSafeRouter!(Response,Request)();
 	ir = TypeSafeRouter!(Response,Request)();
-	r.map!(typeof(&MainCtlr.index))(GET,"index", &MainCtlr.index, []);
-	r.map!(typeof(&MainCtlr.login))(POST,"login", &MainCtlr.login, []);
-	r.map!(typeof(&MainCtlr.logout))(GET,"logout", &MainCtlr.logout, []);
-	r.map!(typeof(&MainCtlr.signup))(POST,"signup", &MainCtlr.signup, []);
-	r.map!(typeof(&MainCtlr.resetPswd))(POST,"resetPswd", &MainCtlr.resetPswd, []);
+	r.map!(Res function())(GET,"index", &MainCtlr.index, []);
+	r.map!(Res function(char[],char[]))(POST,"login", &MainCtlr.login, ["username", "password"]);
+	r.map!(Res function())(GET,"logout", &MainCtlr.logout, []);
+	r.map!(Res function(char[],char[],char[],char[],char[]))(POST,"signup", &MainCtlr.signup, ["firstname", "lastname", "email", "pswd", "pswdConfirm"]);
+	r.map!(Res function(char[]))(POST,"resetPswd", &MainCtlr.resetPswd, ["email"]);
 }
 
 static Res route(Req req)
@@ -76,7 +76,7 @@ static this()
 {
 	r = TypeSafeRouter!(Response,Request)();
 	ir = TypeSafeRouter!(Response,Request)();
-	ir.map!(typeof(&UserCtlr.changePswd))(POST,"changePswd", &UserCtlr.changePswd, []);
+	ir.map!(Res function(char[],char[],char[]))(POST,"changePswd", &UserCtlr.changePswd, ["curPswd", "newPswd", "newPswdConfirm"]);
 }
 
 static Res route(Req req)
@@ -105,8 +105,8 @@ static this()
 {
 	r = TypeSafeRouter!(Response,Request)();
 	ir = TypeSafeRouter!(Response,Request)();
-	r.map!(typeof(&GroupCtlr.create))(GET,"create", &GroupCtlr.create, []);
-	r.map!(typeof(&GroupCtlr.create))(POST,"create", &GroupCtlr.create, []);
+	r.map!(Res function())(GET,"create", &GroupCtlr.create, []);
+	r.map!(Res function())(POST,"create", &GroupCtlr.create, []);
 }
 
 static Res route(Req req)

@@ -10,7 +10,9 @@ import sendero.routing.TypeSafeHttpFunctionWrapper;
 
 const ubyte GET = 0;
 const ubyte POST = 1;
-const ubyte ALL = 2;
+const ubyte PUT = 2;
+const ubyte DELETE = 3;
+const ubyte ALL = 4;
 
 template Route(ResT, ReqT, bool UseDelegates = false)
 {

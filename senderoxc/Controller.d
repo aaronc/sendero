@@ -72,8 +72,11 @@ class ControllerResponder : IDecoratorResponder
 	
 	DeclarationInfo decl;
 	
-	void addAction(ubyte method, DeclarationInfo func)
+	void addAction(ubyte method, DeclarationInfo fDecl)
 	{
+		auto func = cast(FunctionDeclaration)fDecl;
+		if(!func)
+			return;
 		log.info("ControllerResponder.addAction({},{})", method, func.name);
 		actions ~= Action(method, func);
 	}
@@ -81,7 +84,7 @@ class ControllerResponder : IDecoratorResponder
 	struct Action
 	{
 		ubyte method;
-		DeclarationInfo func;
+		FunctionDeclaration func;
 	}
 	
 	Action[] actions;
@@ -109,8 +112,27 @@ class ControllerResponder : IDecoratorResponder
 			char[] i;
 			if(!action.func.isStatic) i = "i";
 			
-			auto fname = decl.name ~ "." ~ action.func.name; 
-			writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", []);\n";
+			auto sig = action.func.retType ~ " function(";
+			bool first = true;
+			foreach(p; action.func.params)
+			{
+				if(!first) sig ~= ",";
+				sig ~= p.type;
+				first = false;
+			}
+			sig ~= ")";
+			
+			auto fname = decl.name ~ "." ~ action.func.name;
+			//writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", [";
+			writer ~= "\t" ~ i ~ "r.map!(" ~ sig ~ `)(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", [";
+			first = true;
+			foreach(p; action.func.params)
+			{
+				if(!first) writer ~= ", ";
+				writer ~= '"' ~ p.name ~ '"';
+				first = false;
+			}
+			writer ~= "]);\n";
 		}
 		
 		writer ~= "}\n\n";
