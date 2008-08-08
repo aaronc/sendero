@@ -22,12 +22,22 @@ version(SenderoBenchmark)
 	
 }
 
+debug(SenderoRuntime) {
+	import sendero.Debug;
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoRuntime");
+	}
+}
+
 import tango.net.Uri;
 import tango.text.Util;
 import tango.net.http.HttpCookies;
 import tango.sys.Process;
 import tango.core.Thread;
 import tango.io.model.IConduit;
+import tango.io.Console;
 import tango.core.Exception;
 
 import fcgi.Request;
@@ -37,6 +47,20 @@ import fcgi.Protocol;
 
 import sendero.backends.Base;
 import sendero.routing.Common;
+
+static this()
+{
+	Cout.output = new ConsoleRedirect;
+}
+
+class ConsoleRedirect : OutputStream
+{
+	IConduit conduit () { return null; }
+	void close() {}
+	uint write(void[] src) { return src.length; }
+	OutputStream copy (InputStream src) { return this; }
+	OutputStream flush () { return this; }
+}
 
 /**
  * Sendero backend for FCGI (uses <a href="http://www.dsource.org/projects/fastcgi4d">FastCGI4D</a> 
@@ -85,6 +109,7 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 
 				char[] rawGet;
 				auto q = ("QUERY_STRING" in fcgiRequest.args);
+				if(q) rawGet = *q;
 				
 				char[] url;
 				auto r = ("REQUEST_URI" in fcgiRequest.args);
@@ -147,7 +172,27 @@ class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractB
 				void defaultErrorMsg(Exception ex)
 				{
 					stdout.write("Content-type: text/html\r\n\r\n");		
-					debug stdout.write("Sendero error: " ~ ex.toString);
+					//debug stdout.write("Sendero error: " ~ ex.toString ~ "\n" ~ ex.info.toString);
+					debug {
+						stdout.write("Sendero error: " ~ ex.toString);
+						try
+						{
+							if(ex.info !is null) stdout.write("\nTrace: " ~ ex.info.toString);
+							//TODO use cn.kuehne.flectioned
+							auto next = ex.next;
+							while(next) {
+								stdout.write(" Exception:" ~ next.toString);
+								next = next.next; 
+							}
+							
+							debug(SenderoRuntime) stdout.write(dumpAddresses);
+						}
+						catch(Exception ex2)
+						{
+							stdout.write(" Error tracing exception:" ~ ex2.toString); 
+						}
+					}
+					
 					else stdout.write("Error");
 					debug(SenderoDebugFCGIVars) {
 						stdout.write("<br /><br /><h1>FCGI Variables:</h1>");

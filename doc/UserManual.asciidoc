@@ -6,16 +6,31 @@
 This document describes the API Sendero's pre-alpha development version.  No releases have been made yet and the API even for the alpha version will be significantly different.  A number of those changes are already described in the document - Sendero Design.  This document is simply here to describe the code that is actually in the repository.
 =============================================================================
 
-== The Sendero Contoller Compiler - _senderocc_
-Sendero controllers are written in a modified version of D that is converted into standard D source code using a command line program called _senderocc_.
+== The Sendero Extension Compiler - _senderoxc_
+
+Sendero controller and model objects are compiled using the _senderoxc_, the Sendero Extension Compiler which is itself based on DecoratedD.
 
 === Installation ===
-The source for _senderocc_ can be found in the `sendero_controller` directory.
+The source for _senderoxc_ can be found in the `senderoxc` directory.
 
 === Usage ===
-_senderocc_ accepts source code files with the `.dc` extension.
+_senderoxc_ accepts source code files with the `.sdx` extension.
 
 === Syntax ===
+
+The Sendero Extension Compiler accepts files written using the DecoratedD extensions to D.
+
+==== Decorators ====
+
+===== Class =====
+
+* @controller
+
+====== Function
+
+* @GET, @POST, @PUT, @DELETE
+
+* @data
 
 [WARNING]
 .Syntax will change
@@ -119,41 +134,17 @@ source~~~~~~~~~~~~~~~~~~~~~~~~
 
 === Expression Syntax ===
 
-[WARNING]
-.Expression synax will change
-==========================
-The expression syntax described here will change soon.  In particular, the `$` character will no longer be necessary for prefixing variable references.  This seems like a cleaner syntax more consistent with D.  The `$` prefix was intially chosen for XPath compatibilty, but the current thinking is that there are better ways to do this.
-==========================
+Sendero templates use a subset of the XPath 1.0 expression language.
 
-The value of all attribute and data nodes is parsed for expressions.  If no expressions are found, the node is appended to the syntax tree as literal data.  Within data nodes, expressions are enclosed between the `${` and `}` delimiters.
+The value of all attribute and data nodes is parsed for expressions.  If no expressions are found, the node is appended to the syntax tree as literal data.  Within data nodes, expressions are enclosed between the `_{` and `}` delimiters.
 
 -------
 	<p>The value of the expression "$expr": _{$expr}</p>
 ------- 
 
-*Expression syntax grammar*
-
------------------
-Expression
-	VarRef
-	FunctionCall
-	Number
-	String
-
-VarRef
-	VarRef "." Identifier;
-	"$" Identifier
-
-FunctionCall
-	Identifier "(" ParamList? ")"
-
-ParamList
-	ParamList "," Expression
-	Expression
-
 EmbeddedExpression
-	"_{" Expression "}"
-	"_{" Expression ";" FormmatingFlags "}"
+	"_{" XPathExpression "}"
+	"_{" XPathExpression ";" FormmatingFlags "}"
 
 FormattingFlags
 	FormattingFlags "," Identifier

@@ -3,12 +3,22 @@
  * Authors:   Aaron Craelius
  */
 
-module sendero.routing.TypeSafeHttpFunctionWrapper;
+module sendero.routing.FunctionWrapper;
 
 import tango.core.Traits;
 
 import sendero.routing.Common;
 import sendero.routing.Convert;
+
+debug(SenderoRouting) {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoRouting");
+	}
+}
 
 class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 {
@@ -30,7 +40,12 @@ class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!
 	private char[][] paramNames;
 	
 	Ret exec(Req routeParams, void* ptr)
-	{		
+	{
+		debug(SenderoRouting) {
+			mixin(FailTrace!(typeof(this).stringof ~ ".exec"));
+			log.trace(MName ~ " paramNames: {}", paramNames);
+		}
+		
 		debug assert(routeParams);
 		
 		P p;
@@ -47,7 +62,7 @@ class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!
 	}
 }
 
-version(Unittest)
+debug(SenderoUnittest)
 {
 
 import Integer = tango.text.convert.Integer;

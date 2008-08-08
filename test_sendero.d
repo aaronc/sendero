@@ -10,6 +10,8 @@ import sendero.vm.Array;
 import sendero.xml.xpath10.Expression;
 import sendero.xml.XPath;
 
+import sendero.routing.Router;
+
 import qcf.TestRunner;
 
 int main(char[][] args)

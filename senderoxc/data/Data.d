@@ -5,6 +5,18 @@ import decorated_d.core.Decoration;
 
 import senderoxc.data.Validations;
 
+/*
+ * TODO:
+ * 
+ * IObject
+ * IHttpSet, (IHttpGet)
+ * IBindable
+ * validate(), (reflection)
+ * errors(), (other error message handling, reflection...)
+ * save (update & create), destroy, static byId (read) (if has id & type == integral)
+ * SessionObject
+ */
+
 class DataContext : IDecoratorContext
 {
 	this()
@@ -72,7 +84,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	void finish(IDeclarationWriter wr)
 	{
 		iobj.finish(wr);
-		wr.addBaseType("IBindable");
+		/+wr.addBaseType("IBindable");
 		
 		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
 		wr ~= "{\n";
@@ -111,6 +123,55 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		{
 			v.atOnValidate(wr);
 		}
-		wr ~= "}\n\n";
+		wr ~= "\n}\n\n";+/
+		
+		//writeIHttpSet(wr);
+	}
+	
+	void writeIHttpSet(IDeclarationWriter wr)
+	{
+		wr.addBaseType("IHttpSet");
+		
+		wr ~= "void httpSet(IObject obj, Request req)\n";
+		wr ~= "{\n";
+		wr ~= "\tforeach(key, val; obj)\n";
+		wr ~= "\t{\n";
+		wr ~= "\t\tswitch(key)\n";
+		wr ~= "\t\t{\n";
+		foreach(cd; decl.declarations)
+		{
+			if(cd.type == DeclType.Field)
+			{
+				wr ~= "\t\t\tcase \"" ~ cd.name ~ "\":\n";
+				
+				wr ~= "\t\t\t\tbreak;\n";
+			}
+		}
+		wr ~= "\t\t}\n";
+		wr ~= "\t}\n";
+		wr ~= "}\n";
+	}
+	
+	void writeSessionObject(IDeclarationWriter wr)
+	{
+		
+	}
+	
+	void writeCRUD(IDeclarationWriter wr)
+	{
+		void writeSave()
+		{
+			
+		}
+		
+		void writeByID()
+		{
+			
+		}
+		
+		void writeDestroy()
+		{
+			
+		}
 	}
 }

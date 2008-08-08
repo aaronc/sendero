@@ -3,10 +3,17 @@
  * Authors:   Aaron Craelius
  */
 
-module sendero.routing.TypeSafeRouter;
+module sendero.routing.Router;
 
 public import sendero.routing.Common;
-import sendero.routing.TypeSafeHttpFunctionWrapper;
+import sendero.routing.FunctionWrapper;
+import sendero.routing.IRoute;
+
+debug(SenderoRuntime) {
+	import sendero.Debug;
+	static this() { log = Log.lookup("debug.SenderoRuntime"); }
+	Logger log;
+}
 
 const ubyte GET = 0;
 const ubyte POST = 1;
@@ -28,6 +35,8 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 	}
 	body
 	{	
+		debug(SenderoRuntime) mixin(FailTrace!("Route.route"));
+		
 		ResT error(char[] msg = "")
 		{
 			if(errHandler) return errHandler.exec(routeParams, ptr);
@@ -36,8 +45,11 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 		
 		try
 		{
-		
+			debug(SenderoRuntime) log.trace(MName ~ " BEGIN TRY");
+			
 			auto token = routeParams.url.top;
+			
+			debug(SenderoRuntime) log.trace(MName ~ " token = {}", token);
 			
 			Routes* pRoutes;
 			switch(routeParams.method)
@@ -75,7 +87,8 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 		}
 		catch(Exception ex)
 		{
-			return error(ex.toString);
+			//return error("Exception: " ~ ex.toString);
+			throw ex;
 		}
 	}
 }
@@ -126,8 +139,23 @@ template TypeSafeRouterDef(ResT, ReqT)
 			getRoutes.setRoute(route, routing);
 			postRoutes.setRoute(route, routing);
 			break;
+		case PUT:
+		case DELETE:
 		default: throw new Exception("Unknown routing method");
 		}
+	}
+	
+	void mapContinue(char[] route, ResT function(ReqT) routeFn)
+	{
+		
+	}
+	
+	void mapWildcardContinue(IIRoute!(ResT, ReqT) function(ReqT) getInstance)
+	{
+		/+auto fn = function ResT(ReqT req) {
+			auto i = getInstance(req);
+			return i.iroute(req);
+		};+/
 	}
 	
 	void setErrorHandler(T)(T t, char[][] paramNames)
@@ -149,7 +177,7 @@ struct TypeSafeInstanceRouter(ResT, ReqT)
 }
 
 
-version(Unittest)
+debug(SenderoUnittest)
 {
 
 import sendero.http.Request;

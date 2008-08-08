@@ -7,7 +7,12 @@ module sendero.routing.Common;
 
 public import sendero.http.Request;
 
-interface IFunctionWrapper(Ret, Req)
+interface IFunctionWrapper(RetT, ReqT)
 {
-	Ret exec(Req routeParams, void* ptr = null);
+	RetT exec(ReqT routeParams, void* ptr = null);
+}
+
+interface IDelegateWrapper(RetT, ReqT)
+{
+	RetT exec(void* ptr, ReqT routeParams);
 }

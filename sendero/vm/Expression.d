@@ -106,15 +106,24 @@ class LateBindingFunctionCall(ExecCtxt) : IExpression!(ExecCtxt)
 		
 		auto n = params.length;
 		funcParams.length = n;
+		debug(SenderoVMDebug) log.trace(MName ~ " funcName = {}, funcParams.length = {}", funcName, n);
 			
 		for(size_t i = 0; i < n; ++i)
 		{
+			debug(SenderoVMDebug) log.trace(MName ~ " params[{}].toString = {}", i, params[i].toString);
 			funcParams[i] = params[i](ctxt);
+			debug(SenderoVMDebug) log.trace(MName ~ " funcParams[{}].type = {}", i, funcParams[i].type);
 		}
 		
 		auto func = ctxt.getFunction(funcName);
-		
-		return func(funcParams, ctxt);
+		if(func is null) {
+			debug(SenderoVMDebug) log.trace(MName ~ " unable to find funcName = {}", funcName);
+			return Var();		
+		}
+		else{
+			debug(SenderoVMDebug) log.trace(MName ~ " found funcName = {}", funcName);
+			return func(funcParams, ctxt);
+		}
 	}
 	
 	debug(SenderoVMDebug) char[] toString()
@@ -387,6 +396,7 @@ class VarAccess(ExecCtxt) : IExpression!(ExecCtxt)
 		val.obj_ = ctxt;
 		foreach(step; accessSteps)
 		{
+			debug(SenderoVMDebug) log.trace(MName ~ " step = {}", step.toString);
 			auto stepVal = step(ctxt);
 			switch(stepVal.type)
 			{

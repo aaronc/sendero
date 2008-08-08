@@ -8,6 +8,16 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 
+debug(SenderoRouting) {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoRouting");
+	}
+}
+
 enum HttpMethod { Get, Post, Put, Delete };
 
 class Request
@@ -41,11 +51,13 @@ class Request
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
 	{
 		if(method == HttpMethod.Get) {
+			debug(SenderoRouting) log.trace("Req.parse url:{}, getParams:{}", url, getParams);
 			this.method = method;
 			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(getParams);
 		}
 		else if(method == HttpMethod.Post) {
+			debug(SenderoRouting) log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
 			this.method = method;
 			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(postParams);
@@ -65,11 +77,17 @@ class Request
 	}
 	
 	Param[char[]] params;
+	IObject params2;
 	HttpMethod method;
 	UrlStack url;
 	char[] lastToken;
 	char[][char[]] cookies;
 	char[] ip;
+}
+
+interface IHttpSet
+{
+	void httpSet(IObject param, Request req);
 }
 
 alias Request Req;

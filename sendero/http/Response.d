@@ -11,7 +11,7 @@ struct Response
 {
 	const char[] TextHtml = "text/html; charset=utf-8";
 	const char[] TextXml = "text/xml";
-	const char[] TextJSON = "test/json";
+	const char[] TextJSON = "text/json";
 	const char[] AppJS = "application/javascript";
 	
 	char[] contentType = TextHtml;

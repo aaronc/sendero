@@ -2,7 +2,7 @@ module senderoxc.Controller;
 
 import decorated_d.core.Decoration;
 
-import sendero.routing.TypeSafeRouter;
+import sendero.routing.Router;
 
 import tango.util.log.Log;
 
@@ -20,7 +20,7 @@ class ControllerContext : IDecoratorContext
 	void writeImports(IDeclarationWriter wr)
 	{
 		if(touched) {
-			wr.prepend("import sendero.routing.TypeSafeRouter, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute;\n");
+			wr.prepend("import sendero.routing.Router, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute, sendero.view.View;\n");
 		}
 	}
 	
@@ -123,8 +123,17 @@ class ControllerResponder : IDecoratorResponder
 			sig ~= ")";
 			
 			auto fname = decl.name ~ "." ~ action.func.name;
+			
+			auto rname = action.func.name;
+			switch(rname)
+			{
+			case "index": rname = ""; break;
+			case "__wildcard__": rname = "*"; break;
+			default: break;
+			}
+			
 			//writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", [";
-			writer ~= "\t" ~ i ~ "r.map!(" ~ sig ~ `)(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", [";
+			writer ~= "\t" ~ i ~ "r.map!(" ~ sig ~ `)(` ~ method ~ `,"` ~ rname ~ `", &` ~ fname ~ ", [";
 			first = true;
 			foreach(p; action.func.params)
 			{

@@ -1,4 +1,4 @@
-/** 
+/**
  * Copyright: Copyright (C) 2007-2008 Aaron Craelius.  All rights reserved.
  * Authors:   Aaron Craelius
  */
@@ -7,6 +7,8 @@ module sendero.http.Params;
 
 import tango.net.Uri;
 import tango.text.Util;
+public import sendero_base.Core;
+import sendero.vm.Object;
 
 enum ParamT : ubyte { None, Value, Array };
 struct Param
@@ -18,6 +20,11 @@ struct Param
 		char[][] arr;
 	}
 	Param[char[]] obj;
+}
+
+void addParam2(Obj params, char[][] key, char[] val, uint index = 0)
+{
+	
 }
 
 void addParam(inout Param[char[]] params, char[][] key, char[] val, uint index = 0)
@@ -106,6 +113,11 @@ Param[char[]] parseParams(char[] str)
 	return resParams;
 }
 
+IObject parseParams2(char[] str)
+{
+	return null;
+}
+
 /**
  * Parses a set of cookies sent by the client to the server into an associative array.
  */
@@ -123,7 +135,7 @@ char[][char[]] parseCookies(char[] str)
 	return params;
 }
 
-version(Unittest)
+debug(SenderoUnittest)
 {
 
 import tango.io.Stdout;

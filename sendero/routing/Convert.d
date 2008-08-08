@@ -23,6 +23,16 @@ debug import tango.io.Stdout;
 	char[] getFormatString();
 }+/
 
+debug(SenderoRouting) {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("debug.SenderoRouting");
+	}
+}
+
 void fromString(T, Char)(Char[] str, inout T t)
 {
 	if(str is null) {
@@ -182,6 +192,7 @@ template ConvertParam(char[] n) {
 		"pParam = paramNames[" ~ n ~ "- offset] in params;"
 		"debug Stdout(paramNames[" ~ n ~ "- offset]).newline;"
 		"if(pParam) {"
+			`debug(SenderoRouting) log.trace(MName ~ " found param {}", paramNames[` ~ n ~ `]);`
 			"static if((is(P[" ~ n ~ "] == class) || is(P[" ~ n ~ "] == struct)) && is(typeof(P[" ~ n ~ "].convert))) {"
 					"doClassConvert!(P[" ~ n ~ "])(pParam.obj, p[" ~ n ~ "], paramNames[" ~ n ~ "- offset]);"
 				"}"
@@ -189,7 +200,10 @@ template ConvertParam(char[] n) {
 				"convertParam!(P[" ~ n ~ "], Req)(p[" ~ n ~ "], *pParam);"
 			"}"
 		"}"
-		"else p[" ~ n ~ "] = P[" ~ n ~ "].init;"
+		"else {"
+				`debug(SenderoRouting) log.trace(MName ~ " {} not found", paramNames[` ~ n ~ `]);`
+				"p[" ~ n ~ "] = P[" ~ n ~ "].init;"
+		"}"
 	"}";
 }
 
@@ -203,6 +217,10 @@ void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
 	
 void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 {
+	debug(SenderoRouting) {
+		mixin(FailTrace!("convertParams"));
+	}
+	
 	debug Stdout("Start conversion:")(paramNames)(" ")(P.stringof).newline;
 	
 	auto params = req.params;
@@ -221,6 +239,7 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 		{
 			pParam = paramNames[0] in params;
 			if(pParam) {
+				debug(SenderoRouting) log.trace(MName ~ " found param {}", paramNames[0]);
 				static if((is(P[0] == class) || is(P[0] == struct)) && is(typeof(P[0].convert))) {
 					doClassConvert!(P[0])(pParam.obj, p[0], paramNames[0]);
 				}
@@ -228,7 +247,10 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 					convertParam!(P[0], Req)(p[0], *pParam);
 				}
 			}
-			else p[0] = P[0].init;
+			else {
+				debug(SenderoRouting) log.trace(MName ~ " param {} not found", paramNames[0]);
+				p[0] = P[0].init;
+			}
 		}
 	}
 	

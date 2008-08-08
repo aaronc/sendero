@@ -75,6 +75,7 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	
 	void use(T)(T t)
 	{
+		//TODO
 		execCtxt.addVarAsRoot(t);
 	}
 	
@@ -120,6 +121,9 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	
 	static Template compile(char[] src, Locale locale)
 	{
+		debug(SenderoViewDebug) {
+			mixin(FailTrace!("AbstractSenderoTemplate.compile"));
+		}
 		auto tmpl = new Template;
 		tmpl.staticCtxt = new TemplateCtxt(tmpl, locale);
 		engine.compile(src, tmpl);
@@ -139,13 +143,20 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	private static TemplateCache[char[]] cache;
 	static Template getTemplate(char[] path, Locale locale)
 	{
+		debug(SenderoViewDebug) {
+			mixin(FailTrace!("AbstractSenderoTemplate.getTemplate"));
+			log.trace(MName ~ " " ~ searchPath ~ path);
+		}
+		
 		auto pt = (searchPath ~ path in cache);
 		if(!pt) {
 			auto fp = new FilePath(searchPath ~ path);
 			scope f = new File(fp.toString);
 			if(!f) throw new Exception("Template not found");
 			auto txt = cast(char[])f.read;
+			if(!txt.length) throw new Exception("Empty template:" ~ fp.toString);
 			auto templ = Template.compile(txt, locale);
+			debug(SenderoViewDebug) log.trace(MName ~ path ~ " template compiled");
 			
 			TemplateCache templCache;
 			templCache.templ = templ;

@@ -35,7 +35,7 @@ task :senderoxc => SENDEROXC_SRC do
   sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -ofc:/tools/dmd/bin/senderoxc -debug"
 end
 
-task :build => ["test_sendero.exe", :senderoxc]
+task :build => ["test_sendero.exe"]
 
 task :test_files => TEST_FILES
 
