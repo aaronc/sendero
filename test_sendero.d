@@ -11,7 +11,7 @@ import sendero.xml.xpath10.Expression;
 import sendero.xml.XPath;
 
 import sendero.routing.Router;
-//import sendero.http.Request;
+import sendero.http.Request;
 
 import qcf.TestRunner;
 

@@ -55,6 +55,7 @@ class Request
 			this.method = method;
 			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(getParams);
+			this.params2 = parseParams2(getParams);
 		}
 		else if(method == HttpMethod.Post) {
 			debug(SenderoRouting) log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
@@ -64,6 +65,11 @@ class Request
 			auto _get_ = parseParams(getParams);
 			this.params["_get_"] = Param();
 			this.params["_get_"].obj = _get_;
+
+			this.params2 = parseParams2(postParams);
+			auto _get2_ = parseParams2(getParams);
+			Var _get2_Var; set(_get2_Var, _get2_);
+			this.params2["@get"] = _get2_Var;
 		}
 	}
 	

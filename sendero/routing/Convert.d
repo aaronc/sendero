@@ -207,6 +207,94 @@ template ConvertParam(char[] n) {
 	"}";
 }
 
+void convertParam2(T, Req)(inout T val, Var param)
+{
+	static if(is(T == char[]))
+	{
+		switch(param.type)
+		{
+		case VarT.String: val = param.string_; break;
+		case VarT.Number: val = Float.toString(param.number_); break;
+		case VarT.Bool: if(param.bool_) val = "true"; else val = "false"; break;
+		default: val = T.init; break;
+		}
+	}
+	else static if(is(T == bool))
+	{
+		switch(param.type)
+		{
+		case VarT.String:
+			switch(param.string_)
+			{
+			case "true":
+			case "True":
+			case "1":
+				val = true; break;
+			default:
+				val = false; break;
+			}
+			break;
+		case VarT.Number: param.number_ > 0 ? val = true : val = false;
+		case VarT.Bool: val = param.bool_; break;
+		case VarT.Array: param.array_.length > 0 ? val = true : val = false; break;
+		case VarT.Object: val = true; break;
+		default: val = false; break;
+		}  
+	}
+	else static if(isIntegerType!(T))
+	{
+		switch(param.type)
+		{
+		case VarT.String: val = Integer.parse(param.string_);
+		case VarT.Number: val = cast(T)param.number_;
+		case VarT.Bool: if(param.bool_) val = 1; else val = 0; break;
+		default: val = T.init; break;
+		}
+	}
+	else static if(isRealType!(T))
+	{
+		switch(param.type)
+		{
+		case VarT.String: val = Float.parse(param.string_);
+		case VarT.Number: val = cast(T)param.number_;
+		case VarT.Bool: if(param.bool_) val = 1; else val = 0; break;
+		default: val = t.init; break;
+		}
+	}
+	else static if(is(typeof(val.convert)))
+	{
+		val.convert(param);
+	}
+	else static if(is(T : IHttpSet))
+	{
+		if(param.type == VarT.Object) {
+			val.httpSet(param.obj_);
+		}
+	}
+	else static if(is(T == char[][]))
+	{
+		char[] str;
+		switch(param.type)
+		{
+		case VarT.Array:
+			val = null;
+			foreach(v; param.array_)
+			{
+				convertParam2!(char[], Req)(str, v);
+				val ~= str;
+			}
+			break;
+		default:
+			convertParam2!(char[], Req)(str, param);
+			val ~= str;
+			break;
+		}		
+	}
+	else static assert(false, "Unhandled conversion type " ~ T.stringof);
+	
+	return true;
+}
+
 void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
 {
 	static if(is(T == class))
@@ -281,4 +369,27 @@ void convertParams(Req, P...)(Req req, char[][] paramNames, inout P p)
 	mixin(ConvertParam!("13"));
 	mixin(ConvertParam!("14"));
 	mixin(ConvertParam!("15"));
+}
+
+void convertParams2(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
+{
+	debug(SenderoRouting) {
+		mixin(FailTrace!("convertParams2"));
+	}
+	
+	debug Stdout("Start conversion:")(paramNames)(" ")(ParamT.stringof).newline;
+	
+	auto params = req.params2;
+	
+	foreach(Index, Type; ParamT)
+	{
+		static if(is(Type == Req))
+			p[Index] = req;
+		else {
+			if(Index < paramNames.length) {
+				auto param = params[paramNames[Index]];
+				convertParam2!(Type, Req)(p[Index], param);
+			}
+		}
+	}
 }

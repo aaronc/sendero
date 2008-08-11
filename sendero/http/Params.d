@@ -8,6 +8,7 @@ module sendero.http.Params;
 import tango.net.Uri;
 import tango.text.Util;
 public import sendero_base.Core;
+public import sendero_base.Set;
 import sendero.vm.Object, sendero.vm.Array;
 
 enum ParamT : ubyte { None, Value, Array };
@@ -35,8 +36,7 @@ void addParam2(IObject params, char[][] key, char[] val, uint index = 0)
 			auto newObj = new Obj;
 			if(pVal.type != VarT.Null)
 				newObj[""] = pVal;
-			pVal.type = VarT.Object;
-			pVal.obj_ = newObj;
+			set(pVal, newObj);
 			params[key[index]] = pVal;
 		}
 		addParam2(pVal.obj_, key, val, index + 1);
@@ -60,8 +60,7 @@ void addParam2(IObject params, char[][] key, char[] val, uint index = 0)
 			auto arr = new Array;
 			arr ~= pVal;
 			arr ~= newVal;
-			pVal.type = VarT.Array;
-			pVal.array_ = arr;
+			set(pVal, arr);
 			params[key[index]] = pVal;
 			break;
 		}
