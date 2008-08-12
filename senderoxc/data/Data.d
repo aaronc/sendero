@@ -42,6 +42,7 @@ class DataContext : IDecoratorContext
 		res.iobj = cast(IObjectResponder)iobj.init(decl, binder, params);
 		debug assert(res.iobj);
 		binder.bindDecorator(DeclType.Field, "required", new RequiredCtxt(res));
+		binder.bindDecorator(DeclType.Field, "minLength", new MinLengthCtxt(res));
 		//binder.bindDecorator(DeclType.Field, "regex"); // value = a string literal, class = an identifier
 		//binder.bindDecorator(DeclType.Field, "minLength");
 		//binder.bindDecorator(DeclType.Field, "maxLength");
@@ -84,6 +85,8 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	void finish(IDeclarationWriter wr)
 	{
 		iobj.finish(wr);
+		writeIHttpSet(wr);
+		writeCRUD(wr);
 		/+wr.addBaseType("IBindable");
 		
 		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
@@ -115,7 +118,21 @@ class DataResponder : IDecoratorResponder, IDataResponder
 				
 		
 				
+		wr ~= "}\n\n";+/
+		
+		wr ~= "static this()\n";
+		wr ~= "{\n";
+		foreach(v; validations)
+		{
+			v.atStaticThis(wr);
+		}
 		wr ~= "}\n\n";
+		
+		foreach(v; validations)
+		{
+			v.atBody(wr);
+		}
+		wr ~= "\n";
 		
 		wr ~= "bool validate()\n";
 		wr ~= "{\n";
@@ -123,7 +140,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		{
 			v.atOnValidate(wr);
 		}
-		wr ~= "\n}\n\n";+/
+		wr ~= "\n}\n\n";
 		
 		//writeIHttpSet(wr);
 	}
@@ -142,11 +159,12 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		{
 			if(cd.type == DeclType.Field)
 			{
-				wr ~= "\t\t\tcase \"" ~ cd.name ~ "\":\n";
-				
-				wr ~= "\t\t\t\tbreak;\n";
+				wr ~= "\t\t\tcase \"" ~ cd.name ~ "\": ";
+				wr ~= "convertParam2!(typeof(" ~ cd.name ~ "), Req)(" ~ cd.name ~ ", val); ";
+				wr ~= "break;\n";
 			}
 		}
+		wr ~= "\t\t\tdefault: break;\n";
 		wr ~= "\t\t}\n";
 		wr ~= "\t}\n";
 		wr ~= "}\n";
@@ -159,19 +177,69 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	
 	void writeCRUD(IDeclarationWriter wr)
 	{
-		void writeSave()
-		{
-			
-		}
+		wr ~= "\n";
 		
-		void writeByID()
-		{
-			
-		}
+		wr ~= "public uint id() { return id_; }\n";
+		wr ~= "private uint id_;\n";
+		wr ~= "\n";
 		
-		void writeDestroy()
+		wr ~= "static this()\n";
+		wr ~= "{\n";
+		wr ~= "\tauto sqlGen = db.getSqlGenerator;\n";
+		
+		
+		char[] insertFields = "[";
+ 		foreach(cd; decl.declarations)
 		{
+			if(cd.name == "id")
+				continue;
 			
+			insertFields ~= `"` ~ cd.name ~ `",`;
 		}
+ 		insertFields ~= "\"id\"];";
+ 		
+ 		wr ~= "\tinsertBinder = createBinder(" ~ insertFields ~ ");\n";		
+		wr ~= "\tinsertSql = sqlGen.makeInsertSql(\"" ~ decl.name ~ "\"," ~ insertFields ~ ");\n";
+		
+		wr ~= "}\n";
+		wr ~= "\n";
+		
+		// Write Save;
+		wr ~= "static Binder insertBinder, updateBinder, fetchBinder;\n";
+		wr ~= "static char[] insertSql, updateSql, selectByIDSql, deleteSql;\n";
+		wr ~= "\n";
+		
+		wr ~= "public bool save()\n";
+		wr ~= "{\n";
+		wr ~= "\tif(id_) {\n";
+		wr ~= "\t\tscope st = db.prepare(updateSql);\n";
+		wr ~= "\t\tst.execute(updateBinder(this));\n";
+		wr ~= "\t}\n";
+		wr ~= "\telse {\n";
+		wr ~= "\t\tscope st = db.prepare(insertSql);\n";
+		wr ~= "\t\tst.execute(insertBinder(this));\n";
+		wr ~= "\t\tid_ = st.getLastInsertID;\n";
+		wr ~= "\t}\n";
+		wr ~= "\treturn true;";
+		wr ~= "}\n";
+		wr ~= "\n";
+		
+		wr ~= "public static " ~ decl.name ~ " getByID(uint id)\n";
+		wr ~= "{\n";
+		wr ~= "\tscope st = db.prepare(selectByIDSql);\n";
+		wr ~= "\tst.execute(id);\n";
+		wr ~= "\tauto res = new " ~ decl.name ~ ";\n";
+		wr ~= "\tif(st.fetch(fetchBinder(res))) return res;\n";
+		wr ~= "\telse return null;\n";
+		wr ~= "}\n";
+		wr ~= "\n";
+		
+		wr ~= "public bool destroy()\n";
+		wr ~= "{\n";
+		wr ~= "\tscope st = db.prepare(deleteSql);\n";
+		wr ~= "\tst.execute(id_);\n";
+		wr ~= "\treturn true;\n";
+		wr ~= "}\n";
+		wr ~= "\n";
 	}
 }

@@ -103,7 +103,7 @@ class Statement
 				"static if (is(typeof(t[" ~ n ~ "]) == BindInfo))"
 					"ptrs ~= info.ptrs;"
 				"static if(is(typeof(t[" ~ n ~ "]) == class) || is(typeof(t[" ~ n ~ "]) == struct)) {"
-					"t[0] = new typeof(t[" ~ n ~ "]);"
+					"t[" ~ n ~ "] = new typeof(t[" ~ n ~ "]);"
 					"ptrs ~= bindClassStruct(t[" ~ n ~ "]);"
 				"}"
 				"else "
@@ -124,7 +124,18 @@ class Statement
 			ptrs ~= &t[0];
 		}+/
 		
-		mixin(SetPtrs!("0"));
+		foreach(Index, Type; T)
+		{
+			static if (is(Type) == BindInfo))
+				ptrs ~= info.ptrs;
+			static if(is(Type == class) || is(Type == struct)) {
+				t[Index] = new Type;
+				ptrs ~= bindClassStruct(t[Index]);
+			}
+			else ptrs ~= &t[Index];
+		}
+		
+		/+mixin(SetPtrs!("0"));
 		mixin(SetPtrs!("1"));
 		mixin(SetPtrs!("2"));
 		mixin(SetPtrs!("3"));
@@ -139,9 +150,7 @@ class Statement
 		mixin(SetPtrs!("12"));
 		mixin(SetPtrs!("13"));
 		mixin(SetPtrs!("14"));
-		mixin(SetPtrs!("15"));
-		
-		static if(T.length > 15) static assert(false);
+		mixin(SetPtrs!("15"));+/
 		
 		return ptrs;
 	}
@@ -176,7 +185,30 @@ class Statement
 		static if(T.length) {
 			void*[] ptrs = setPtrs(t);
 			
-			ubyte[] signature = cast(ubyte[])T.stringof;
+			bool changed = false; 
+			
+			if(inst.lastParamSignature.length < T.stringof.length ||
+				inst.lastParamSignature[0 .. T.stringof.length] != cast(ubyte[])T.stringof)
+				changed = true;
+			
+			if(!changed) {
+				size_t i = T.stringof.length;
+				
+				foreach(Index, Type; T)
+				{
+					static if(is(Type == BindInfo)) {
+						if(inst.lastParamSignature.length < t[Index].types.length + i ||				
+							inst.lastParamSignature[i .. i + t[Index].types.length] != t[Index].types)
+						{
+							changed = true;
+							break;
+						}
+						i += t[Index].types.length;
+					}
+				}
+			}
+			
+			/+
 			mixin(CheckBindInfo!("0"));
 			mixin(CheckBindInfo!("1"));
 			mixin(CheckBindInfo!("2"));
@@ -192,13 +224,20 @@ class Statement
 			mixin(CheckBindInfo!("12"));
 			mixin(CheckBindInfo!("13"));
 			mixin(CheckBindInfo!("14"));
-			mixin(CheckBindInfo!("15"));
+			mixin(CheckBindInfo!("15"));+/
 			
-			if(inst.lastParamSignature != signature)
+			if(changed)
 			{
 				BindType[] types = setBindTypes(t);
-				
 				inst.stmt.setParamTypes(types);
+				
+				ubyte[] signature = cast(ubyte[])T.stringof;
+				foreach(Index, Type; T)
+				{
+					static if(T.length > Index && is(Type == BindInfo)) {
+						signature ~= t[Index].types;
+					}
+				}
 				inst.lastParamSignature = signature;
 			}
 			
@@ -219,7 +258,15 @@ class Statement
 		void*[] ptrs = setPtrs(t);
 		
 		ubyte[] signature = cast(ubyte[])T.stringof;
-		mixin(CheckBindInfo!("0"));
+		
+		foreach(Index, Type; T)
+		{
+			static if(T.length > Index && is(Type == BindInfo)) {
+				signature ~= t[Index].types;
+			}
+		}
+		
+		/+mixin(CheckBindInfo!("0"));
 		mixin(CheckBindInfo!("1"));
 		mixin(CheckBindInfo!("2"));
 		mixin(CheckBindInfo!("3"));
@@ -234,7 +281,7 @@ class Statement
 		mixin(CheckBindInfo!("12"));
 		mixin(CheckBindInfo!("13"));
 		mixin(CheckBindInfo!("14"));
-		mixin(CheckBindInfo!("15"));
+		mixin(CheckBindInfo!("15"));+/
 		
 		if(inst.lastResSignature != signature)
 		{

@@ -2,6 +2,8 @@ module senderoxc.data.Validations;
 
 import decorated_d.core.Decoration;
 
+import Float = tango.text.convert.Float;
+
 interface IDataResponder
 {
 	void addValidation(IValidationResponder);
@@ -9,30 +11,74 @@ interface IDataResponder
 
 interface IValidationResponder
 {
+	void atStaticThis(IDeclarationWriter wr);
 	void atBody(IDeclarationWriter wr);
 	void atOnValidate(IDeclarationWriter wr);
 }
 
-class RequiredCtxt : IDecoratorContext
+abstract class DataResponderCtxt : IDecoratorContext
 {
 	this(IDataResponder resp)
 	{ this.resp = resp; }
 	IDataResponder resp;
 	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
+	abstract IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null);
+
+}
+
+class RequiredCtxt : DataResponderCtxt
+{
+	this(IDataResponder resp) { super(resp); }
+	
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
 	{
 		if(decl.type != DeclType.Field) return null;
-		
-		auto fdecl = cast(FieldDeclaration)decl;
-		if(fdecl is null) return null;
-		
+		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
 		resp.addValidation(new RequiredRes(fdecl));
-		
 		return null;
 	}
 }
 
-class RequiredRes : IValidationResponder
+char[] toParamString(Var[] params)
+{
+	char[] res; bool first = true;
+	foreach(var; params)
+	{
+		switch(var.type)
+		{
+		case VarT.String:
+			res ~= `"` ~ var.string_ ~ `"`;
+			break;
+		case VarT.Number:
+			res ~= Float.toString(var.number_, 0);
+			break;
+		default:
+			throw new Exception("Unhandled param type in toParamString");
+		}
+		
+		if(!first) {
+			res ~= ",";
+		}
+		first = false;
+	}
+	return res;
+}
+
+class MinLengthCtxt : DataResponderCtxt
+{
+	this(IDataResponder resp) { super(resp); }
+	
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
+	{
+		if(decl.type != DeclType.Field) return null;
+		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
+		resp.addValidation(new InstanceValidationRes(fdecl, "MinLengthValidation", toParamString(params)));
+		return null;
+	}
+}
+
+
+abstract class ValidationResponder : IValidationResponder
 {
 	this(FieldDeclaration decl)
 	{
@@ -40,14 +86,61 @@ class RequiredRes : IValidationResponder
 	}
 	FieldDeclaration decl;
 	
+	void atStaticThis(IDeclarationWriter wr)
+	{ }
+	
 	void atBody(IDeclarationWriter wr)
 	{ }
 	
 	void atOnValidate(IDeclarationWriter wr)
+	{	}
+}
+
+class RequiredRes : ValidationResponder
+{
+	this(FieldDeclaration decl) { super(decl); }
+	
+	void atOnValidate(IDeclarationWriter wr)
 	{
-		wr ~= "if(!ExistenceValidation!(" ~ decl.fieldType ~ ").validate("
+		wr ~= "\tif(!ExistenceValidation!(" ~ decl.fieldType ~ ").validate("
 				~ decl.name ~
 				")) ";
-		wr ~= "fail(ExistenceValidation!(" ~ decl.fieldType ~ ").error);";
+		wr ~= "fail(ExistenceValidation!(" ~ decl.fieldType ~ ").error);\n";
+	}
+}
+
+class InstanceValidationRes : ValidationResponder
+{
+	this(FieldDeclaration decl, char[] type, char[] constructParams = null, char[] templateParams = null)
+	{
+		super(decl);
+		this.type = type;
+		this.constructParams = constructParams;
+		this.templateParams = templateParams;
+		
+	}
+	char[] type, constructParams, templateParams;
+	
+	void atStaticThis(IDeclarationWriter wr)
+	{
+		wr ~= decl.name ~ type ~ " = new " ~ type;
+		if(templateParams.length) wr ~= "!(" ~ templateParams ~ ")";
+		wr ~= "(" ~ constructParams ~ ")";
+		wr ~= ";\n";
+	}
+	
+	void atBody(IDeclarationWriter wr)
+	{
+		wr ~= "static " ~ type;
+		if(templateParams.length) wr ~= "!(" ~ templateParams ~ ")";
+		wr ~= " " ~ decl.name ~ type ~ ";\n";
+	}
+	
+	void atOnValidate(IDeclarationWriter wr)
+	{
+		wr ~= "\tif(!" ~ decl.name ~ type ~ ".validate("
+				~ decl.name ~
+				")) ";
+		wr ~= "fail(" ~ decl.name ~ type ~ ".error);\n";
 	}
 }

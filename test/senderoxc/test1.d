@@ -118,10 +118,12 @@ Res iroute(Req req)
 
 
 /+@data+/ class User
-: IObject
+: IObject, IHttpSet
 
 {
+	/+@primary_key+/ uint id;
 	/+@required+/ char[] email;
+	/+@minLength(8)+/ char[] username; 
 	char[] firstname;
 	char[] lastname;
 
@@ -130,7 +132,9 @@ Var opIndex(char[] key)
 	Var res;
 	switch(key)
 	{
+		case "id": bind(var, id); break;
 		case "email": bind(var, email); break;
+		case "username": bind(var, username); break;
 		case "firstname": bind(var, firstname); break;
 		case "lastname": bind(var, lastname); break;
 		default: return Var();
@@ -141,6 +145,78 @@ int opApply (int delegate (inout char[] key, inout Var val) dg) {}
 void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) {}
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
+
+void httpSet(IObject obj, Request req)
+{
+	foreach(key, val; obj)
+	{
+		switch(key)
+		{
+			case "id": convertParam2!(typeof(id), Req)(id, val); break;
+			case "email": convertParam2!(typeof(email), Req)(email, val); break;
+			case "username": convertParam2!(typeof(username), Req)(username, val); break;
+			case "firstname": convertParam2!(typeof(firstname), Req)(firstname, val); break;
+			case "lastname": convertParam2!(typeof(lastname), Req)(lastname, val); break;
+			default: break;
+		}
+	}
+}
+
+public uint id() { return id_; }
+private uint id_;
+
+static this()
+{
+	auto sqlGen = db.getSqlGenerator;
+	insertBinder = createBinder(["email","username","firstname","lastname","id"];);
+	insertSql = sqlGen.makeInsertSql("User",["email","username","firstname","lastname","id"];);
+}
+
+static Binder insertBinder, updateBinder, fetchBinder;
+static char[] insertSql, updateSql, selectByIDSql, deleteSql;
+
+public bool save()
+{
+	if(id_) {
+		scope st = db.prepare(updateSql);
+		st.execute(updateBinder(this));
+	}
+	else {
+		scope st = db.prepare(insertSql);
+		st.execute(insertBinder(this));
+		id_ = st.getLastInsertID;
+	}
+	return true;}
+
+public static User getByID(uint id)
+{
+	scope st = db.prepare(selectByIDSql);
+	st.execute(id);
+	auto res = new User;
+	if(st.fetch(fetchBinder(res))) return res;
+	else return null;
+}
+
+public bool destroy()
+{
+	scope st = db.prepare(deleteSql);
+	st.execute(id_);
+	return true;
+}
+
+static this()
+{
+usernameMinLengthValidation = new MinLengthValidation(0);
+}
+
+static MinLengthValidation usernameMinLengthValidation;
+
+bool validate()
+{
+	if(!ExistenceValidation!(char[]).validate(email)) fail(ExistenceValidation!(char[]).error);
+	if(!usernameMinLengthValidation.validate(username)) fail(usernameMinLengthValidation.error);
+
+}
 
 
 }

@@ -208,9 +208,10 @@ class Message : IMessage
 			
 			char[] renderDefault()
 			{
-				auto i = trunc(x);
-				if(feqrel(i, x) >= real.mant_dig/2) return Integer.toString(rndlong(x));
-				else return Float.toString(x);
+				//auto i = trunc(x);
+				//if(feqrel(i, x) >= real.mant_dig/2) return Integer.toString(rndlong(x));
+				//else return Float.toString(x);
+				return Float.toString(x, 0);
 			}
 			
 			switch(p.elementFormat)
