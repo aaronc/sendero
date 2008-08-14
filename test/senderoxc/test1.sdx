@@ -66,9 +66,9 @@ module test1;
 
 @data class User
 {
-	@primary_key uint id;
+	//@primary_key uint id;
 	@required char[] email;
-	@minLength(8) char[] username; 
+	@minLength(8) @maxLength(40) char[] username; 
 	char[] firstname;
 	char[] lastname;
 }

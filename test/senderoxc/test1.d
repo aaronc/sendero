@@ -121,9 +121,9 @@ Res iroute(Req req)
 : IObject, IHttpSet
 
 {
-	/+@primary_key+/ uint id;
+	//@primary_key uint id;
 	/+@required+/ char[] email;
-	/+@minLength(8)+/ char[] username; 
+	/+@minLength(8)+/ /+@maxLength(40)+/ char[] username; 
 	char[] firstname;
 	char[] lastname;
 
@@ -132,7 +132,6 @@ Var opIndex(char[] key)
 	Var res;
 	switch(key)
 	{
-		case "id": bind(var, id); break;
 		case "email": bind(var, email); break;
 		case "username": bind(var, username); break;
 		case "firstname": bind(var, firstname); break;
@@ -146,13 +145,13 @@ void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) {}
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
+
 void httpSet(IObject obj, Request req)
 {
 	foreach(key, val; obj)
 	{
 		switch(key)
 		{
-			case "id": convertParam2!(typeof(id), Req)(id, val); break;
 			case "email": convertParam2!(typeof(email), Req)(email, val); break;
 			case "username": convertParam2!(typeof(username), Req)(username, val); break;
 			case "firstname": convertParam2!(typeof(firstname), Req)(firstname, val); break;
@@ -162,28 +161,70 @@ void httpSet(IObject obj, Request req)
 	}
 }
 
+static this()
+{
+	emailExistenceValidation = new ExistenceValidation!(char[])();
+	usernameMinLengthValidation = new MinLengthValidation(8);
+	usernameMaxLengthValidation = new MaxLengthValidation(40);
+}
+
+static ExistenceValidation!(char[]) emailExistenceValidation;
+static MinLengthValidation usernameMinLengthValidation;
+static MaxLengthValidation usernameMaxLengthValidation;
+
+bool validate()
+{
+	bool succeed = true;
+
+	void fail(char[] field, Error err)	{
+		succeed = false;
+		errors_.add(field, err)
+	}
+
+	if(!emailExistenceValidation.validate(email)) fail("email", emailExistenceValidation.error);
+	if(!usernameMinLengthValidation.validate(username)) fail("username", usernameMinLengthValidation.error);
+	if(!usernameMaxLengthValidation.validate(username)) fail("username", usernameMaxLengthValidation.error);
+
+	return succeed;
+}
+
+
+mixin SessionAllocate!();
+
+ErrorMap errors()
+{
+	return errors_;
+}
+void clearErrors()
+{
+	errors_.reset;
+}
+private ErrorMap errors_;
+
 public uint id() { return id_; }
 private uint id_;
 
 static this()
 {
 	auto sqlGen = db.getSqlGenerator;
-	insertBinder = createBinder(["email","username","firstname","lastname","id"];);
-	insertSql = sqlGen.makeInsertSql("User",["email","username","firstname","lastname","id"];);
+	auto quote = sqlGen.getIdentifierQuoteCharacter; char[] idQuoted = quote ~ "id" ~ quote;
+	insertSql = sqlGen.makeInsertSql("User",["email", "username", "firstname", "lastname"]);
+	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",["email", "username", "firstname", "lastname"]);
+	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["email", "username", "firstname", "lastname", "id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
+	deleteSql = "DELETE FROM User WHERE " ~ idQuoted ~ " = ?");
 }
 
-static Binder insertBinder, updateBinder, fetchBinder;
-static char[] insertSql, updateSql, selectByIDSql, deleteSql;
+const static char[] insertSql, updateSql, selectByIDSql, deleteSql;
 
 public bool save()
 {
 	if(id_) {
 		scope st = db.prepare(updateSql);
-		st.execute(updateBinder(this));
+		st.execute(email, username, firstname, lastname, id_);
 	}
 	else {
 		scope st = db.prepare(insertSql);
-		st.execute(insertBinder(this));
+		st.execute(email, username, firstname, lastname);
 		id_ = st.getLastInsertID;
 	}
 	return true;}
@@ -191,9 +232,9 @@ public bool save()
 public static User getByID(uint id)
 {
 	scope st = db.prepare(selectByIDSql);
-	st.execute(id);
+	st.execute(id_);
 	auto res = new User;
-	if(st.fetch(fetchBinder(res))) return res;
+	if(st.fetch(res.email, res.username, res.firstname, res.lastname, res.id_)) return res;
 	else return null;
 }
 
@@ -202,22 +243,6 @@ public bool destroy()
 	scope st = db.prepare(deleteSql);
 	st.execute(id_);
 	return true;
-}
-
-static this()
-{
-	emailExistenceValidation = new ExistenceValidation!(char[])();
-	usernameMinLengthValidation = new MinLengthValidation(8);
-}
-
-static ExistenceValidation!(char[]) emailExistenceValidation;
-static MinLengthValidation usernameMinLengthValidation;
-
-bool validate()
-{
-	if(!emailExistenceValidation.validate(email)) fail(emailExistenceValidation.error);
-	if(!usernameMinLengthValidation.validate(username)) fail(usernameMinLengthValidation.error);
-
 }
 
 

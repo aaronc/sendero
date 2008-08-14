@@ -142,7 +142,7 @@ class RequiredRes : ValidationResponder
 		wr ~= "\tif(!ExistenceValidation!(" ~ decl.fieldType ~ ").validate("
 				~ decl.name ~
 				")) ";
-		wr ~= "fail(ExistenceValidation!(" ~ decl.fieldType ~ ").error);\n";
+		wr ~= "fail(\"" ~ decl.name ~ "\", ExistenceValidation!(" ~ decl.fieldType ~ ").error);\n";
 	}
 }
 
@@ -178,6 +178,6 @@ class InstanceValidationRes : ValidationResponder
 		wr ~= "\tif(!" ~ decl.name ~ type ~ ".validate("
 				~ decl.name ~
 				")) ";
-		wr ~= "fail(" ~ decl.name ~ type ~ ".error);\n";
+		wr ~= "fail(\"" ~ decl.name ~ "\", " ~ decl.name ~ type ~ ".error);\n";
 	}
 }
