@@ -64,6 +64,43 @@ char[] toParamString(Var[] params)
 	return res;
 }
 
+class InstValidCtxt : DataResponderCtxt
+{
+	this(IDataResponder resp, char[] type)
+	{
+		super(resp);
+		this.type = type;
+	}
+	char[] type;
+	
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
+	{
+		if(decl.type != DeclType.Field) return null;
+		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
+		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params)) );
+		return null;
+	}
+}
+
+class TempInstValidCtxt : DataResponderCtxt
+{
+	this(IDataResponder resp, char[] type)
+	{
+		super(resp);
+		this.type = type;
+	}
+	char[] type;
+	
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
+	{
+		if(decl.type != DeclType.Field) return null;
+		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
+		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params), fdecl.fieldType));
+		return null;
+	}
+}
+
+
 class MinLengthCtxt : DataResponderCtxt
 {
 	this(IDataResponder resp) { super(resp); }
@@ -123,7 +160,7 @@ class InstanceValidationRes : ValidationResponder
 	
 	void atStaticThis(IDeclarationWriter wr)
 	{
-		wr ~= decl.name ~ type ~ " = new " ~ type;
+		wr ~= "\t" ~  decl.name ~ type ~ " = new " ~ type;
 		if(templateParams.length) wr ~= "!(" ~ templateParams ~ ")";
 		wr ~= "(" ~ constructParams ~ ")";
 		wr ~= ";\n";

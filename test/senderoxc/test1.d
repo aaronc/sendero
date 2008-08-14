@@ -206,14 +206,16 @@ public bool destroy()
 
 static this()
 {
-usernameMinLengthValidation = new MinLengthValidation(0);
+	emailExistenceValidation = new ExistenceValidation!(char[])();
+	usernameMinLengthValidation = new MinLengthValidation(8);
 }
 
+static ExistenceValidation!(char[]) emailExistenceValidation;
 static MinLengthValidation usernameMinLengthValidation;
 
 bool validate()
 {
-	if(!ExistenceValidation!(char[]).validate(email)) fail(ExistenceValidation!(char[]).error);
+	if(!emailExistenceValidation.validate(email)) fail(emailExistenceValidation.error);
 	if(!usernameMinLengthValidation.validate(username)) fail(usernameMinLengthValidation.error);
 
 }

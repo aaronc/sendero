@@ -41,13 +41,12 @@ class DataContext : IDecoratorContext
 		auto res = new DataResponder(decl);
 		res.iobj = cast(IObjectResponder)iobj.init(decl, binder, params);
 		debug assert(res.iobj);
-		binder.bindDecorator(DeclType.Field, "required", new RequiredCtxt(res));
-		binder.bindDecorator(DeclType.Field, "minLength", new MinLengthCtxt(res));
-		//binder.bindDecorator(DeclType.Field, "regex"); // value = a string literal, class = an identifier
-		//binder.bindDecorator(DeclType.Field, "minLength");
-		//binder.bindDecorator(DeclType.Field, "maxLength");
-		//binder.bindDecorator(DeclType.Field, "minValue");
-		//binder.bindDecorator(DeclType.Field, "maxValue");
+		binder.bindDecorator(DeclType.Field, "required", new TempInstValidCtxt(res, "ExistenceValidation"));
+		binder.bindDecorator(DeclType.Field, "minLength", new InstValidCtxt(res, "MinLengthValidation"));
+		binder.bindDecorator(DeclType.Field, "maxLength", new InstValidCtxt(res, "MaxLengthValidation"));
+		binder.bindDecorator(DeclType.Field, "regex", new InstValidCtxt(res, "FormatValidation")); // value = a string literal, class = an identifier
+		binder.bindDecorator(DeclType.Field, "minValue", new TempInstValidCtxt(res, "MinValueValidation"));
+		binder.bindDecorator(DeclType.Field, "maxValue", new TempInstValidCtxt(res, "MaxValueValidation"));
 		//binder.bindDecorator(DeclType.Field, "xmlEntityFilter");
 		//binder.bindDecorator(DeclType.Field, "htmlXSSFilter");
 		//binder.bindDecorator(DeclType.Field, "fixedDateTimeParser");
