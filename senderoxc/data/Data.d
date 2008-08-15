@@ -1,8 +1,9 @@
 module senderoxc.data.Data;
 
-import senderoxc.data.IObjectReflector;
 import decorated_d.core.Decoration;
 
+import senderoxc.data.Schema;
+import senderoxc.data.IObjectReflector;
 import senderoxc.data.Validations;
 
 /*
@@ -22,6 +23,7 @@ class DataContext : IDecoratorContext
 	this()
 	{
 		iobj = new IObjectContext;
+		
 	}
 	
 	IObjectContext iobj;
@@ -76,8 +78,11 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	this(DeclarationInfo decl)
 	{
 		this.decl = decl;
+		schema = new Schema;
 		createFieldInfo;
 	}
+	
+	Schema schema;
 	
 	void createFieldInfo()
 	{
