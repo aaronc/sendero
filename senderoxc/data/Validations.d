@@ -146,6 +146,30 @@ class RequiredRes : ValidationResponder
 	}
 }
 
+class RequiredRes2 : IValidationResponder
+{
+	this(char[] type, char[] name)
+	{
+		this.type = type;
+		this.name = name;
+	}
+	char[] type, name;
+	
+	void atStaticThis(IDeclarationWriter wr)
+	{ }
+	
+	void atBody(IDeclarationWriter wr)
+	{ }
+	
+	void atOnValidate(IDeclarationWriter wr)
+	{
+		wr ~= "\tif(!ExistenceValidation!(" ~ type ~ ").validate("
+				~ name ~
+				")) ";
+		wr ~= "fail(\"" ~ name ~ "\", ExistenceValidation!(" ~ type ~ ").error);\n";
+	}
+}
+
 class InstanceValidationRes : ValidationResponder
 {
 	this(FieldDeclaration decl, char[] type, char[] constructParams = null, char[] templateParams = null)

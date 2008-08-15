@@ -126,8 +126,8 @@ Res iroute(Req req)
 	//@primary_key uint id;
 	/+@required+/ char[] email;
 	/+@minLength(8)+/ /+@maxLength(40)+/ char[] username; 
-	char[] firstname;
-	char[] lastname;
+	/+@string("firstname")+/;
+	/+@string("lastname")+/;
 
 Var opIndex(char[] key)
 {
@@ -136,8 +136,6 @@ Var opIndex(char[] key)
 	{
 		case "email": bind(var, email); break;
 		case "username": bind(var, username); break;
-		case "firstname": bind(var, firstname); break;
-		case "lastname": bind(var, lastname); break;
 		default: return Var();
 	}
 	return res;
@@ -156,8 +154,6 @@ void httpSet(IObject obj, Request req)
 		{
 			case "email": convertParam2!(typeof(email), Req)(email, val); break;
 			case "username": convertParam2!(typeof(username), Req)(username, val); break;
-			case "firstname": convertParam2!(typeof(firstname), Req)(firstname, val); break;
-			case "lastname": convertParam2!(typeof(lastname), Req)(lastname, val); break;
 			default: break;
 		}
 	}
@@ -210,9 +206,9 @@ static this()
 {
 	auto sqlGen = db.getSqlGenerator;
 	auto quote = sqlGen.getIdentifierQuoteCharacter; char[] idQuoted = quote ~ "id" ~ quote;
-	insertSql = sqlGen.makeInsertSql("User",["email", "username", "firstname", "lastname"]);
-	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",["email", "username", "firstname", "lastname"]);
-	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["email", "username", "firstname", "lastname", "id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
+	insertSql = sqlGen.makeInsertSql("User",["email", "username"]);
+	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",["email", "username"]);
+	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["email", "username", "id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
 	deleteSql = "DELETE FROM User WHERE " ~ idQuoted ~ " = ?");
 }
 
@@ -222,11 +218,11 @@ public bool save()
 {
 	if(id_) {
 		scope st = db.prepare(updateSql);
-		st.execute(email, username, firstname, lastname, id_);
+		st.execute(email, username, id_);
 	}
 	else {
 		scope st = db.prepare(insertSql);
-		st.execute(email, username, firstname, lastname);
+		st.execute(email, username);
 		id_ = st.getLastInsertID;
 	}
 	return true;}
@@ -236,7 +232,7 @@ public static User getByID(uint id)
 	scope st = db.prepare(selectByIDSql);
 	st.execute(id_);
 	auto res = new User;
-	if(st.fetch(res.email, res.username, res.firstname, res.lastname, res.id_)) return res;
+	if(st.fetch(res.email, res.username, res.id_)) return res;
 	else return null;
 }
 
@@ -246,6 +242,9 @@ public bool destroy()
 	st.execute(id_);
 	return true;
 }
+
+string firstname;
+string lastname;
 
 
 }

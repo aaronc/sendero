@@ -2,7 +2,7 @@ module senderoxc.data.Data;
 
 import decorated_d.core.Decoration;
 
-import senderoxc.data.Schema;
+//import senderoxc.data.Schema;
 import senderoxc.data.IObjectReflector;
 import senderoxc.data.Validations;
 
@@ -63,10 +63,10 @@ class DataContext : IDecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		/+foreach(type; Schema.fieldTypes)
+		foreach(type; DataResponder.Schema.fieldTypes)
 		{
-			//binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
-		}+/
+			binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
+		}
 		
 		
 		return res;
@@ -122,6 +122,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
 		writeCRUD(wr); wr ~= "\n";
+		schema.write(wr); wr ~= "\n";
 		/+wr.addBaseType("IBindable");
 		
 		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
@@ -320,5 +321,100 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\tst.execute(id_);\n";
 		wr ~= "\treturn true;\n";
 		wr ~= "}\n";
+	}
+	
+	class Schema
+	{
+		Column[char[]] columns;
+		
+		const static char[][] fieldTypes = 
+			[
+			 "bool",
+			 "ubyte",
+			 "byte",
+			 "ushort",
+			 "short",
+			 "uint",
+			 "int",
+			 "ulong",
+			 "long",
+			 "float",
+			 "double",
+			 //"real",
+			 //"text",
+			 "string",
+			 "blob",
+			 "DateTime",
+			 "Time",
+			 //"Date",
+			 //"TimeOfDay"
+			 ];
+		
+		Column newColumn(char[] type, char[] name, StandaloneDecorator decorator)
+		{
+			return new Column(type, name, decorator);
+		}
+		
+		class Column
+		{
+			this(char[] type, char[] name, StandaloneDecorator decorator)
+			{
+				this.type = type;
+				this.name = name;
+				this.decorator = decorator;
+				foreach(dec; decorator.decorators)
+				{
+					switch(dec.name)
+					{
+					case "required":
+						addValidation(new RequiredRes2(type, name));
+						break;
+					default:
+						break;
+					// validations
+					// filters
+					// convertors
+					}
+				}
+			}
+			
+			char[] type, name;
+			StandaloneDecorator decorator;
+			
+			//ColumnInfo info;
+		}
+		
+		void write(IDeclarationWriter wr)
+		{
+			foreach(name, col; columns)
+			{
+				wr ~= col.type ~ " " ~  name ~ ";\n";
+			}
+		}
+	}
+}
+
+
+
+class FieldCtxt : IStandaloneDecoratorContext
+{
+	this(DataResponder resp, char[] type)
+	{
+		this.resp = resp;
+		this.type = type;
+	}
+	DataResponder resp;
+	char[] type;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	{
+		if(resp.decl == parentDecl) {
+			if(decorator.params.length && decorator.params[0].type == VarT.String) {
+				auto name = decorator.params[0].string_;
+				resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
+			}
+		}
+		
+		return null;
 	}
 }

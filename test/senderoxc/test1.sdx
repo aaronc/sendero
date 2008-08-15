@@ -71,6 +71,6 @@ import test.senderoxc.test2;
 	//@primary_key uint id;
 	@required char[] email;
 	@minLength(8) @maxLength(40) char[] username; 
-	char[] firstname;
-	char[] lastname;
+	@string("firstname");
+	@string("lastname");
 }
