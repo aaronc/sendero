@@ -180,7 +180,7 @@ bool validate()
 
 	void fail(char[] field, Error err)	{
 		succeed = false;
-		errors_.add(field, err)
+		__errors__.add(field, err)
 	}
 
 	if(!ExistenceValidation!(string).validate(email_)) fail("email_", ExistenceValidation!(string).error);
@@ -195,13 +195,15 @@ mixin SessionAllocate!();
 
 ErrorMap errors()
 {
-	return errors_;
+	return __errors__;
 }
 void clearErrors()
 {
-	errors_.reset;
+	__errors__.reset;
 }
-private ErrorMap errors_;
+private ErrorMap __errors__;
+
+private StaticBitArray!(1,4) __touched__;
 
 static this()
 {
@@ -228,6 +230,40 @@ public bool save()
 	}
 	return true;}
 
+public bool save()
+{
+	if(!__touched__.hasTrue) return true;
+	if(!this.validate) return false;
+	bindTouched(Serializer binder)
+	{
+		foreach(idx, dirty; __touched__)
+		{
+			if(dirty) {
+				switch(idx)
+				{
+				case 0:binder.add("email", email);
+				case 1:binder.add("username", username);
+				case 2:binder.add("firstname", firstname);
+				case 3:binder.add("lastname", lastname);
+				default:debug assert(false);
+				}
+			}
+		}
+	}
+
+	if(id_) {
+		auto inserter = db.sqlGen.makeInserter;
+		bindTouched(inserter);
+		return inserter.execute(db);
+	}
+	else {
+		auto updater = db.sqlGen.makeUpdater;
+		bindTouched(updater);
+		return updater.execute(db, id_);
+	}
+	return true;
+}
+
 public static User getByID(uint id)
 {
 	scope st = db.prepare(selectByIDSql);
@@ -248,19 +284,19 @@ public uint id() {return id_;}
 private uint id_;
 
 public string email() { return email_;}
-public void email(string val) {email_ = val;}
+public void email(string val) {__touched__[0] = true; email_ = val;}
 private string email_;
 
 public string username() { return username_;}
-public void username(string val) {username_ = val;}
+public void username(string val) {__touched__[1] = true; username_ = val;}
 private string username_;
 
 public string firstname() { return firstname_;}
-public void firstname(string val) {firstname_ = val;}
+public void firstname(string val) {__touched__[2] = true; firstname_ = val;}
 private string firstname_;
 
 public string lastname() { return lastname_;}
-public void lastname(string val) {lastname_ = val;}
+public void lastname(string val) {__touched__[3] = true; lastname_ = val;}
 private string lastname_;
 
 

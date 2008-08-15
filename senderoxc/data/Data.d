@@ -5,6 +5,9 @@ import decorated_d.core.Decoration;
 //import senderoxc.data.Schema;
 import senderoxc.data.Validations;
 
+import Ingeter = tango.text.convert.Integer;
+import tango.math.Math;
+
 /*
  * TODO:
  * 
@@ -110,9 +113,20 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		validations ~= v;
 	}
 	
-	Getter[] getters;
+	void addGetter(Getter getter)
+	{
+		getters ~= getter;
+	}
 	
-	Setter[] setters;
+	uint addSetter(Setter setter)
+	{
+		setters ~= setter;
+		return setters.length - 1;
+	}
+	
+	private Getter[] getters;
+	
+	private Setter[] setters;
 	
 	void finish(IDeclarationWriter wr)
 	{
@@ -213,7 +227,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\tvoid fail(char[] field, Error err)";
 		wr ~= "\t{\n";
 		wr ~= "\t\tsucceed = false;\n";
-		wr ~= "\t\terrors_.add(field, err)\n";
+		wr ~= "\t\t__errors__.add(field, err)\n";
 		wr ~= "\t}\n\n";
 		
 		foreach(v; validations)
@@ -235,15 +249,15 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	{
 		wr ~= "ErrorMap errors()\n";
 		wr ~= "{\n";
-		wr ~= "\treturn errors_;\n";
+		wr ~= "\treturn __errors__;\n";
 		wr ~= "}\n";
 		
 		wr ~= "void clearErrors()\n";
 		wr ~= "{\n";
-		wr ~= "\terrors_.reset;\n";
+		wr ~= "\t__errors__.reset;\n";
 		wr ~= "}\n";
 		
-		wr ~= "private ErrorMap errors_;";
+		wr ~= "private ErrorMap __errors__;";
 	}
 	
 	void writeCRUD(IDeclarationWriter wr)
@@ -276,6 +290,11 @@ class DataResponder : IDecoratorResponder, IDataResponder
 			return res;
 		}
 		
+		wr ~= "\n";
+		
+		wr ~= "private StaticBitArray!(";
+		wr ~= Integer.toString(cast(uint)ceil(cast(real)(setters.length)/ 32)) ~ ",";
+		wr ~= Integer.toString(setters.length) ~ ") __touched__;\n";
 		wr ~= "\n";
 		
 		wr ~= "static this()\n";
@@ -329,6 +348,52 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\t}\n";
 		wr ~= "\treturn true;";
 		wr ~= "}\n";
+		wr ~= "\n";
+		
+		wr ~= "public bool save()\n";
+		wr ~= "{\n";
+		
+		wr ~= "\tif(!__touched__.hasTrue) return true;\n";
+		wr ~= "\tif(!this.validate) return false;\n";
+		
+		// BEGIN Write bindTouched
+		
+		wr ~= "\tbindTouched(Serializer binder)\n";
+		wr ~= "\t{\n";
+		
+			wr ~= "\t\tforeach(idx, dirty; __touched__)\n";
+			wr ~= "\t\t{\n";
+				wr ~= "\t\t\tif(dirty) {\n";
+					wr ~= "\t\t\t\tswitch(idx)\n";
+					wr ~= "\t\t\t\t{\n";
+					foreach(idx, setter; setters)
+					{
+						wr ~= "\t\t\t\tcase " ~ Integer.toString(idx) ~ ":binder.add(\"";
+						wr ~= setter.name ~ "\", " ~ setter.colField ~ ");\n";
+					}
+					wr ~= "\t\t\t\tdefault:debug assert(false);\n";
+					wr ~= "\t\t\t\t}\n";
+				wr ~= "\t\t\t}\n";
+			wr ~= "\t\t}\n";
+		
+		wr ~= "\t}\n\n";
+		
+		// END Write bindTouched
+		
+		wr ~= "\tif(id_) {\n";
+		wr ~= "\t\tauto inserter = db.sqlGen.makeInserter;\n";
+		wr ~= "\t\tbindTouched(inserter);\n";
+		wr ~= "\t\treturn inserter.execute(db);\n";
+		wr ~= "\t}\n";
+		wr ~= "\telse {\n";
+		
+		wr ~= "\t\tauto updater = db.sqlGen.makeUpdater;\n";
+		wr ~= "\t\tbindTouched(updater);\n";
+		wr ~= "\t\treturn updater.execute(db, id_);\n";
+		wr ~= "\t}\n";
+		wr ~= "\treturn true;\n";
+		wr ~= "}\n";	
+			
 		wr ~= "\n";
 		
 		wr ~= "public static " ~ decl.name ~ " getByID(uint id)\n";
@@ -404,6 +469,7 @@ struct Setter
 {
 	char[] type;
 	char[] name;
+	char[] colField;
 }
 
 
@@ -423,8 +489,8 @@ class FieldCtxt : IStandaloneDecoratorContext
 			if(decorator.params.length && decorator.params[0].type == VarT.String) {
 				auto name = decorator.params[0].string_;
 				//resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
-				resp.getters ~= Getter(name);
-				resp.setters ~= Setter(type, name);
+				resp.addGetter(Getter(name));
+				auto idx = resp.addSetter(Setter(type, name, name));
 				
 				char[] pname = name ~ "_";
 				foreach(dec; decorator.decorators)
@@ -445,7 +511,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 					}
 				}
 				
-				return new FieldResponder(type, name);
+				return new FieldResponder(idx, type, name);
 			}
 		}
 		
@@ -453,19 +519,33 @@ class FieldCtxt : IStandaloneDecoratorContext
 	}
 }
 
-class FieldResponder : IDecoratorResponder
+class AbstractFieldResponder : IDecoratorResponder
 {
-	this(char[] type, char[] name)
+	this(uint index, char[] type, char[] name)
 	{
+		this.index = index;
 		this.type = type;
 		this.name = name;
 	}
+	uint index;
 	char[] type, name;
+	
+	abstract void finish(IDeclarationWriter wr);
+}
+
+class FieldResponder : AbstractFieldResponder
+{
+	this(uint index, char[] type, char[] name)
+	{
+		super(index, type, name);
+	}
 	
 	void finish(IDeclarationWriter wr)
 	{
 		wr ~= "public " ~ type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
-		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {" ~ name ~ "_ = val;}\n";
+		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {";
+		wr ~= "__touched__[" ~ Integer.toString(index) ~ "] = true; " ~ name ~ "_ = val;";
+		wr ~= "}\n";
 		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
 	}
 }
@@ -486,9 +566,9 @@ class HasOneCtxt : IStandaloneDecoratorContext
 					decorator.params[1].type == VarT.String) {
 				auto type = decorator.params[0].string_;
 				auto name = decorator.params[1].string_;
-				resp.getters ~= Getter(name);
-				resp.setters ~= Setter(type, name);
-				return new HasOneResponder(type, name);
+				resp.addGetter(Getter(name));
+				auto idx = resp.addSetter(Setter(type, name, name ~ ".id_"));
+				return new HasOneResponder(idx, type, name);
 			}
 		}
 		
@@ -496,19 +576,19 @@ class HasOneCtxt : IStandaloneDecoratorContext
 	}
 }
 
-class HasOneResponder : IDecoratorResponder
+class HasOneResponder : AbstractFieldResponder
 {
-	this(char[] type, char[] name)
+	this(uint index, char[] type, char[] name)
 	{
-		this.type = type;
-		this.name = name;
+		super(index, type, name);
 	}
-	char[] type, name;
 	
 	void finish(IDeclarationWriter wr)
 	{
 		wr ~= "public " ~ type ~ " " ~ name ~ "() {return " ~ name ~ "_;}\n";
-		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {" ~ name ~ "_ = val;}\n";
+		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {";
+		wr ~= "__touched__[" ~ Integer.toString(index) ~ "] = true; " ~ name ~ "_ = val;";
+		wr ~= "}\n";
 		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_.get;\n\n";
 	}
 }

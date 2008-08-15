@@ -13,6 +13,8 @@ import sendero.xml.XPath;
 import sendero.routing.Router;
 import sendero.http.Request;
 
+import sendero.util.collection.StaticBitArray;
+
 import qcf.TestRunner;
 
 int main(char[][] args)
