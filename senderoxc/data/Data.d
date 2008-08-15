@@ -3,7 +3,6 @@ module senderoxc.data.Data;
 import decorated_d.core.Decoration;
 
 //import senderoxc.data.Schema;
-import senderoxc.data.IObjectReflector;
 import senderoxc.data.Validations;
 
 /*
@@ -22,11 +21,8 @@ class DataContext : IDecoratorContext
 {
 	this()
 	{
-		iobj = new IObjectContext;
 		
 	}
-	
-	IObjectContext iobj;
 	
 	private bool touched = false;
 	
@@ -41,8 +37,6 @@ class DataContext : IDecoratorContext
 		touched = true;
 		
 		auto res = new DataResponder(decl);
-		res.iobj = cast(IObjectResponder)iobj.init(decl, binder, params);
-		debug assert(res.iobj);
 		/+binder.bindDecorator(DeclType.Field, "required", new TempInstValidCtxt(res, "ExistenceValidation"));
 		binder.bindDecorator(DeclType.Field, "minLength", new InstValidCtxt(res, "MinLengthValidation"));
 		binder.bindDecorator(DeclType.Field, "maxLength", new InstValidCtxt(res, "MaxLengthValidation"));
@@ -69,6 +63,7 @@ class DataContext : IDecoratorContext
 		}
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
+		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
 		
 		
 		return res;
@@ -108,7 +103,6 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	FieldInfo[char[]] fieldInfo;
 	
 	DeclarationInfo decl;
-	IObjectResponder iobj;
 	IValidationResponder[] validations;
 	
 	void addValidation(IValidationResponder v)
@@ -185,14 +179,11 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\t{\n";
 		wr ~= "\t\tswitch(key)\n";
 		wr ~= "\t\t{\n";
-		foreach(cd; decl.declarations)
+		foreach(setter; setters)
 		{
-			if(cd.type == DeclType.Field)
-			{
-				wr ~= "\t\t\tcase \"" ~ cd.name ~ "\": ";
-				wr ~= "convertParam2!(typeof(" ~ cd.name ~ "), Req)(" ~ cd.name ~ ", val); ";
-				wr ~= "break;\n";
-			}
+			wr ~= "\t\t\tcase \"" ~ setter.name ~ "\": ";
+			wr ~= setter.name ~ " = convertParam2!(" ~ setter.type ~ ", Req)(val); ";
+			wr ~= "break;\n";
 		}
 		wr ~= "\t\t\tdefault: break;\n";
 		wr ~= "\t\t}\n";
@@ -285,10 +276,6 @@ class DataResponder : IDecoratorResponder, IDataResponder
 			return res;
 		}
 		
-		wr ~= "\n";
-		
-		wr ~= "public uint id() { return id_; }\n";
-		wr ~= "private uint id_;\n";
 		wr ~= "\n";
 		
 		wr ~= "static this()\n";
@@ -391,56 +378,33 @@ class DataResponder : IDecoratorResponder, IDataResponder
 			 //"TimeOfDay"
 			 ];
 		
-		Column newColumn(char[] type, char[] name, StandaloneDecorator decorator)
+		Column newColumn()
 		{
-			return new Column(type, name, decorator);
+			return new Column();
 		}
 		
 		class Column
 		{
-			this(char[] type, char[] name, StandaloneDecorator decorator)
-			{
-				this.type = type;
-				this.name = name;
-				this.decorator = decorator;
-				char[] pname = name ~ "_";
-				foreach(dec; decorator.decorators)
-				{
-					switch(dec.name)
-					{
-					case "required": addValidation(new RequiredRes(type, pname)); break;
-					case "minLength": addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
-					case "maxLength": addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
-					case "regex": addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
-					case "minValue": addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type)); break;
-					case "maxValue": addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type)); break;
-					default:
-						break;
-					// validations
-					// filters
-					// convertors
-					}
-				}
-			}
 			
-			char[] type, name;
-			StandaloneDecorator decorator;
-			
-			//ColumnInfo info;
 		}
 		
 		void write(IDeclarationWriter wr)
 		{
-			foreach(name, col; columns)
-			{
-				wr ~= "public " ~ col.type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
-				wr ~= "public void " ~  name ~ "(" ~ col.type ~ " val) {" ~ name ~ "_ = val;}\n";
-				wr ~= "private " ~ col.type ~ " " ~  name ~ "_;\n\n";
-			}
+			
 		}
 	}
 }
 
+struct Getter
+{
+	char[] name;
+}
+
+struct Setter
+{
+	char[] type;
+	char[] name;
+}
 
 
 class FieldCtxt : IStandaloneDecoratorContext
@@ -458,9 +422,30 @@ class FieldCtxt : IStandaloneDecoratorContext
 		if(resp.decl == parentDecl) {
 			if(decorator.params.length && decorator.params[0].type == VarT.String) {
 				auto name = decorator.params[0].string_;
-				resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
+				//resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
 				resp.getters ~= Getter(name);
-				resp.setters ~= Setter(name, type);
+				resp.setters ~= Setter(type, name);
+				
+				char[] pname = name ~ "_";
+				foreach(dec; decorator.decorators)
+				{
+					switch(dec.name)
+					{
+					case "required": resp.addValidation(new RequiredRes(type, pname)); break;
+					case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
+					case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
+					case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
+					case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type)); break;
+					case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type)); break;
+					default:
+						break;
+					// validations
+					// filters
+					// convertors
+					}
+				}
+				
+				return new FieldResponder(type, name);
 			}
 		}
 		
@@ -468,15 +453,21 @@ class FieldCtxt : IStandaloneDecoratorContext
 	}
 }
 
-struct Getter
+class FieldResponder : IDecoratorResponder
 {
-	char[] name;
-}
-
-struct Setter
-{
-	char[] type;
-	char[] name;
+	this(char[] type, char[] name)
+	{
+		this.type = type;
+		this.name = name;
+	}
+	char[] type, name;
+	
+	void finish(IDeclarationWriter wr)
+	{
+		wr ~= "public " ~ type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
+		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {" ~ name ~ "_ = val;}\n";
+		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
+	}
 }
 
 class HasOneCtxt : IStandaloneDecoratorContext
@@ -496,7 +487,7 @@ class HasOneCtxt : IStandaloneDecoratorContext
 				auto type = decorator.params[0].string_;
 				auto name = decorator.params[1].string_;
 				resp.getters ~= Getter(name);
-				resp.setters ~= Setter(name, type);
+				resp.setters ~= Setter(type, name);
 				return new HasOneResponder(type, name);
 			}
 		}
@@ -519,5 +510,46 @@ class HasOneResponder : IDecoratorResponder
 		wr ~= "public " ~ type ~ " " ~ name ~ "() {return " ~ name ~ "_;}\n";
 		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {" ~ name ~ "_ = val;}\n";
 		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_.get;\n\n";
+	}
+}
+
+class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
+{
+	this(DataResponder resp)
+	{
+		this.resp = resp;
+	}
+	DataResponder resp;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	{
+		if(resp.decl == parentDecl) {
+			char[] name = "id";
+			if(decorator.params.length > 0 &&
+					decorator.params[0].type == VarT.String) {
+				name = decorator.params[0].string_;
+			}
+			
+			resp.getters ~= Getter(name);
+			
+			return new AutoPrimaryKeyResponder(name);
+		}
+		
+		return null;
+	}
+}
+
+class AutoPrimaryKeyResponder : IDecoratorResponder
+{
+	this(char[] name)
+	{
+		this.name = name;
+	}
+	char[] name;
+	
+	void finish(IDeclarationWriter wr)
+	{
+		wr ~= "public uint " ~ name ~ "() {return " ~ name ~ "_;}\n";
+		wr ~= "private uint " ~ name ~ "_;\n\n";
 	}
 }

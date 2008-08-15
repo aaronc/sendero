@@ -23,21 +23,7 @@ abstract class DataResponderCtxt : IDecoratorContext
 	IDataResponder resp;
 	
 	abstract IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null);
-
 }
-/+
-class RequiredCtxt : DataResponderCtxt
-{
-	this(IDataResponder resp) { super(resp); }
-	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
-	{
-		if(decl.type != DeclType.Field) return null;
-		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
-		resp.addValidation(new RequiredRes(fdecl));
-		return null;
-	}
-}+/
 
 char[] toParamString(Var[] params)
 {
@@ -63,42 +49,6 @@ char[] toParamString(Var[] params)
 	}
 	return res;
 }
-/+
-class InstValidCtxt : DataResponderCtxt
-{
-	this(IDataResponder resp, char[] type)
-	{
-		super(resp);
-		this.type = type;
-	}
-	char[] type;
-	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
-	{
-		if(decl.type != DeclType.Field) return null;
-		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
-		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params)) );
-		return null;
-	}
-}+/
-/+
-class TempInstValidCtxt : DataResponderCtxt
-{
-	this(IDataResponder resp, char[] type)
-	{
-		super(resp);
-		this.type = type;
-	}
-	char[] type;
-	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
-	{
-		if(decl.type != DeclType.Field) return null;
-		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
-		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params), fdecl.fieldType));
-		return null;
-	}
-}+/
 
 abstract class ValidationResponder : IValidationResponder
 {

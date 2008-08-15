@@ -123,27 +123,11 @@ Res iroute(Req req)
 : IObject, IHttpSet
 
 {
-	//@primary_key uint id;
+	/+@autoPrimaryKey("id")+/;
 	/+@required+/ /+@string("email")+/;
 	/+@minLength(8)+/ /+@maxLength(40)+/ /+@string("username")+/; 
 	/+@string("firstname")+/;
 	/+@string("lastname")+/;
-
-public string email() { return email_;}
-public void email(string val) {email_ = val;}
-private string email_;
-
-public string firstname() { return firstname_;}
-public void firstname(string val) {firstname_ = val;}
-private string firstname_;
-
-public string username() { return username_;}
-public void username(string val) {username_ = val;}
-private string username_;
-
-public string lastname() { return lastname_;}
-public void lastname(string val) {lastname_ = val;}
-private string lastname_;
 
 
 Var opIndex(char[] key)
@@ -151,6 +135,7 @@ Var opIndex(char[] key)
 	Var res;
 	switch(key)
 	{
+		case "id": bind(var, id()); break;
 		case "email": bind(var, email()); break;
 		case "username": bind(var, username()); break;
 		case "firstname": bind(var, firstname()); break;
@@ -171,6 +156,10 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
+			case "email": email = convertParam2!(string, Req)(val); break;
+			case "username": username = convertParam2!(string, Req)(val); break;
+			case "firstname": firstname = convertParam2!(string, Req)(val); break;
+			case "lastname": lastname = convertParam2!(string, Req)(val); break;
 			default: break;
 		}
 	}
@@ -214,9 +203,6 @@ void clearErrors()
 }
 private ErrorMap errors_;
 
-public uint id() { return id_; }
-private uint id_;
-
 static this()
 {
 	auto sqlGen = db.getSqlGenerator;
@@ -257,6 +243,25 @@ public bool destroy()
 	st.execute(id_);
 	return true;
 }
+
+public uint id() {return id_;}
+private uint id_;
+
+public string email() { return email_;}
+public void email(string val) {email_ = val;}
+private string email_;
+
+public string username() { return username_;}
+public void username(string val) {username_ = val;}
+private string username_;
+
+public string firstname() { return firstname_;}
+public void firstname(string val) {firstname_ = val;}
+private string firstname_;
+
+public string lastname() { return lastname_;}
+public void lastname(string val) {lastname_ = val;}
+private string lastname_;
 
 
 }
