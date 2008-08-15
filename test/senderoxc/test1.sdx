@@ -1,4 +1,6 @@
-module test1;
+module test.senderoxc.test1;
+
+import test.senderoxc.test2;
 
 @controller class MainCtlr
 {

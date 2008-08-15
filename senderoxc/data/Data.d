@@ -31,7 +31,7 @@ class DataContext : IDecoratorContext
 	void writeImports(IDeclarationWriter wr)
 	{
 		if(touched)
-			wr.prepend("import sendero_base.Core, sendero.data.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
+			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
 	}
 	
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
@@ -61,6 +61,12 @@ class DataContext : IDecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
+		/+foreach(type; Schema.fieldTypes)
+		{
+			//binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
+		}+/
+		
+		
 		return res;
 	}
 }
@@ -70,7 +76,29 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	this(DeclarationInfo decl)
 	{
 		this.decl = decl;
+		createFieldInfo;
 	}
+	
+	void createFieldInfo()
+	{
+		foreach(cd; decl.declarations)
+		{
+			if(cd.type == DeclType.Field)
+			{
+				auto fdecl = cast(FieldDeclaration)cd;
+				if(fdecl) fieldInfo[fdecl.name] = new FieldInfo(fdecl);
+			}
+		}
+	}
+	
+	class FieldInfo
+	{
+		this(FieldDeclaration fdecl)
+		{ this.fdecl = fdecl; }
+		FieldDeclaration fdecl;
+	}
+	
+	FieldInfo[char[]] fieldInfo;
 	
 	DeclarationInfo decl;
 	IObjectResponder iobj;
@@ -97,30 +125,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		{
 			
 		}
-		wr ~= "}\n";
-		
-		wr ~= "static FieldInfo[] reflect()\n";
-		wr ~= "{\n";
-		
-		wr ~= 	"char[] classname = T.stringof;\n"
-				"FieldInfo[] info;\n"
-		
-				"uint n = 0;"
-		
-				"static if(is(T == class)) {"
-					"alias BaseTypeTupleOf!(T) BTT;"
-			
-					"static if(BTT.length) {"
-						"static if(!is(BTT[0] == Object)) {"
-							"info ~= ReflectionOf!(BTT[0]).doReflect;"
-							"n += info.length;"
-						"}"
-					"}"
-				"}";
-				
-		
-				
-		wr ~= "}\n\n";+/
+		wr ~= "}\n";+/
 	}
 	
 	void writeIHttpSet(IDeclarationWriter wr)
