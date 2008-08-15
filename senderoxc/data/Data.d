@@ -43,12 +43,12 @@ class DataContext : IDecoratorContext
 		auto res = new DataResponder(decl);
 		res.iobj = cast(IObjectResponder)iobj.init(decl, binder, params);
 		debug assert(res.iobj);
-		binder.bindDecorator(DeclType.Field, "required", new TempInstValidCtxt(res, "ExistenceValidation"));
+		/+binder.bindDecorator(DeclType.Field, "required", new TempInstValidCtxt(res, "ExistenceValidation"));
 		binder.bindDecorator(DeclType.Field, "minLength", new InstValidCtxt(res, "MinLengthValidation"));
 		binder.bindDecorator(DeclType.Field, "maxLength", new InstValidCtxt(res, "MaxLengthValidation"));
 		binder.bindDecorator(DeclType.Field, "regex", new InstValidCtxt(res, "FormatValidation")); // value = a string literal, class = an identifier
 		binder.bindDecorator(DeclType.Field, "minValue", new TempInstValidCtxt(res, "MinValueValidation"));
-		binder.bindDecorator(DeclType.Field, "maxValue", new TempInstValidCtxt(res, "MaxValueValidation"));
+		binder.bindDecorator(DeclType.Field, "maxValue", new TempInstValidCtxt(res, "MaxValueValidation"));+/
 		//binder.bindDecorator(DeclType.Field, "xmlEntityFilter");
 		//binder.bindDecorator(DeclType.Field, "htmlXSSFilter");
 		//binder.bindDecorator(DeclType.Field, "fixedDateTimeParser");
@@ -67,6 +67,8 @@ class DataContext : IDecoratorContext
 		{
 			binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
 		}
+		
+		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
 		
 		
 		return res;
@@ -114,15 +116,20 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		validations ~= v;
 	}
 	
+	Getter[] getters;
+	
+	Setter[] setters;
+	
 	void finish(IDeclarationWriter wr)
 	{
-		iobj.finish(wr); wr ~= "\n";
+		//iobj.finish(wr); wr ~= "\n";
+		schema.write(wr); wr ~= "\n";
+		writeIObject(wr); wr ~= "\n";
 		writeIHttpSet(wr); wr ~= "\n";
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
 		writeCRUD(wr); wr ~= "\n";
-		schema.write(wr); wr ~= "\n";
 		/+wr.addBaseType("IBindable");
 		
 		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
@@ -132,6 +139,40 @@ class DataResponder : IDecoratorResponder, IDataResponder
 			
 		}
 		wr ~= "}\n";+/
+	}
+	
+	void writeIObject(IDeclarationWriter wr)
+	{
+		wr.addBaseType("IObject");
+		
+		wr ~= "Var opIndex(char[] key)\n";
+		wr ~= "{\n";
+		wr ~= "\tVar res;\n";
+		wr ~= "\tswitch(key)\n";
+		wr ~= "\t{\n";
+		
+		foreach(getter; getters)
+		{
+			wr ~= "\t\tcase \"" ~ getter.name ~ "\": ";
+			wr ~= "bind(var, " ~ getter.name ~ "()); ";
+			wr ~= "break;\n";
+		}
+		
+		wr ~= "\t\tdefault: return Var();\n";
+		wr ~= "\t}\n";
+		wr ~= "\treturn res;\n";
+		
+		wr ~= "}\n";
+		
+		wr ~= "int opApply (int delegate (inout char[] key, inout Var val) dg) {}\n";
+		
+		wr ~= "void opIndexAssign(Var val, char[] key) {}\n";
+		
+		wr ~= "Var opCall(Var[] params, IExecContext ctxt) {}\n";
+		
+		wr ~= "void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}\n";
+		
+		wr ~= "\n";
 	}
 	
 	void writeIHttpSet(IDeclarationWriter wr)
@@ -362,13 +403,17 @@ class DataResponder : IDecoratorResponder, IDataResponder
 				this.type = type;
 				this.name = name;
 				this.decorator = decorator;
+				char[] pname = name ~ "_";
 				foreach(dec; decorator.decorators)
 				{
 					switch(dec.name)
 					{
-					case "required":
-						addValidation(new RequiredRes2(type, name));
-						break;
+					case "required": addValidation(new RequiredRes(type, pname)); break;
+					case "minLength": addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
+					case "maxLength": addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
+					case "regex": addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
+					case "minValue": addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type)); break;
+					case "maxValue": addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type)); break;
 					default:
 						break;
 					// validations
@@ -388,7 +433,9 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		{
 			foreach(name, col; columns)
 			{
-				wr ~= col.type ~ " " ~  name ~ ";\n";
+				wr ~= "public " ~ col.type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
+				wr ~= "public void " ~  name ~ "(" ~ col.type ~ " val) {" ~ name ~ "_ = val;}\n";
+				wr ~= "private " ~ col.type ~ " " ~  name ~ "_;\n\n";
 			}
 		}
 	}
@@ -412,9 +459,65 @@ class FieldCtxt : IStandaloneDecoratorContext
 			if(decorator.params.length && decorator.params[0].type == VarT.String) {
 				auto name = decorator.params[0].string_;
 				resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
+				resp.getters ~= Getter(name);
+				resp.setters ~= Setter(name, type);
 			}
 		}
 		
 		return null;
+	}
+}
+
+struct Getter
+{
+	char[] name;
+}
+
+struct Setter
+{
+	char[] type;
+	char[] name;
+}
+
+class HasOneCtxt : IStandaloneDecoratorContext
+{	
+	this(DataResponder resp)
+	{
+		this.resp = resp;
+	}
+	DataResponder resp;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	{
+		if(resp.decl == parentDecl) {
+			if(decorator.params.length > 1 &&
+					decorator.params[0].type == VarT.String &&
+					decorator.params[1].type == VarT.String) {
+				auto type = decorator.params[0].string_;
+				auto name = decorator.params[1].string_;
+				resp.getters ~= Getter(name);
+				resp.setters ~= Setter(name, type);
+				return new HasOneResponder(type, name);
+			}
+		}
+		
+		return null;
+	}
+}
+
+class HasOneResponder : IDecoratorResponder
+{
+	this(char[] type, char[] name)
+	{
+		this.type = type;
+		this.name = name;
+	}
+	char[] type, name;
+	
+	void finish(IDeclarationWriter wr)
+	{
+		wr ~= "public " ~ type ~ " " ~ name ~ "() {return " ~ name ~ "_;}\n";
+		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {" ~ name ~ "_ = val;}\n";
+		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_.get;\n\n";
 	}
 }

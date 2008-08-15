@@ -25,7 +25,7 @@ abstract class DataResponderCtxt : IDecoratorContext
 	abstract IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null);
 
 }
-
+/+
 class RequiredCtxt : DataResponderCtxt
 {
 	this(IDataResponder resp) { super(resp); }
@@ -37,7 +37,7 @@ class RequiredCtxt : DataResponderCtxt
 		resp.addValidation(new RequiredRes(fdecl));
 		return null;
 	}
-}
+}+/
 
 char[] toParamString(Var[] params)
 {
@@ -63,7 +63,7 @@ char[] toParamString(Var[] params)
 	}
 	return res;
 }
-
+/+
 class InstValidCtxt : DataResponderCtxt
 {
 	this(IDataResponder resp, char[] type)
@@ -80,8 +80,8 @@ class InstValidCtxt : DataResponderCtxt
 		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params)) );
 		return null;
 	}
-}
-
+}+/
+/+
 class TempInstValidCtxt : DataResponderCtxt
 {
 	this(IDataResponder resp, char[] type)
@@ -98,30 +98,15 @@ class TempInstValidCtxt : DataResponderCtxt
 		resp.addValidation( new InstanceValidationRes(fdecl, type, toParamString(params), fdecl.fieldType));
 		return null;
 	}
-}
-
-
-class MinLengthCtxt : DataResponderCtxt
-{
-	this(IDataResponder resp) { super(resp); }
-	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
-	{
-		if(decl.type != DeclType.Field) return null;
-		auto fdecl = cast(FieldDeclaration)decl; if(fdecl is null) return null;
-		resp.addValidation(new InstanceValidationRes(fdecl, "MinLengthValidation", toParamString(params)));
-		return null;
-	}
-}
-
+}+/
 
 abstract class ValidationResponder : IValidationResponder
 {
-	this(FieldDeclaration decl)
+	this(char[] name)
 	{
-		this.decl = decl;
+		this.name = name;
 	}
-	FieldDeclaration decl;
+	char[] name;
 	
 	void atStaticThis(IDeclarationWriter wr)
 	{ }
@@ -135,25 +120,12 @@ abstract class ValidationResponder : IValidationResponder
 
 class RequiredRes : ValidationResponder
 {
-	this(FieldDeclaration decl) { super(decl); }
-	
-	void atOnValidate(IDeclarationWriter wr)
-	{
-		wr ~= "\tif(!ExistenceValidation!(" ~ decl.fieldType ~ ").validate("
-				~ decl.name ~
-				")) ";
-		wr ~= "fail(\"" ~ decl.name ~ "\", ExistenceValidation!(" ~ decl.fieldType ~ ").error);\n";
-	}
-}
-
-class RequiredRes2 : IValidationResponder
-{
 	this(char[] type, char[] name)
 	{
 		this.type = type;
-		this.name = name;
+		super(name);
 	}
-	char[] type, name;
+	char[] type;
 	
 	void atStaticThis(IDeclarationWriter wr)
 	{ }
@@ -172,19 +144,19 @@ class RequiredRes2 : IValidationResponder
 
 class InstanceValidationRes : ValidationResponder
 {
-	this(FieldDeclaration decl, char[] type, char[] constructParams = null, char[] templateParams = null)
+	this(char[] valType, char[] name, char[] constructParams = null, char[] templateParams = null)
 	{
-		super(decl);
-		this.type = type;
+		this.valType = valType;
+		super(name);
 		this.constructParams = constructParams;
 		this.templateParams = templateParams;
-		
 	}
-	char[] type, constructParams, templateParams;
+	
+	char[] valType, constructParams, templateParams;
 	
 	void atStaticThis(IDeclarationWriter wr)
 	{
-		wr ~= "\t" ~  decl.name ~ type ~ " = new " ~ type;
+		wr ~= "\t" ~  name ~ valType ~ " = new " ~ valType;
 		if(templateParams.length) wr ~= "!(" ~ templateParams ~ ")";
 		wr ~= "(" ~ constructParams ~ ")";
 		wr ~= ";\n";
@@ -192,16 +164,16 @@ class InstanceValidationRes : ValidationResponder
 	
 	void atBody(IDeclarationWriter wr)
 	{
-		wr ~= "static " ~ type;
+		wr ~= "private static " ~ valType;
 		if(templateParams.length) wr ~= "!(" ~ templateParams ~ ")";
-		wr ~= " " ~ decl.name ~ type ~ ";\n";
+		wr ~= " " ~ name ~ valType ~ ";\n";
 	}
 	
 	void atOnValidate(IDeclarationWriter wr)
 	{
-		wr ~= "\tif(!" ~ decl.name ~ type ~ ".validate("
-				~ decl.name ~
+		wr ~= "\tif(!" ~ name ~ valType ~ ".validate("
+				~ name ~
 				")) ";
-		wr ~= "fail(\"" ~ decl.name ~ "\", " ~ decl.name ~ type ~ ".error);\n";
+		wr ~= "fail(\"" ~ name ~ "\", " ~ name ~ valType ~ ".error);\n";
 	}
 }

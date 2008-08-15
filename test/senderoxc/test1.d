@@ -124,18 +124,37 @@ Res iroute(Req req)
 
 {
 	//@primary_key uint id;
-	/+@required+/ char[] email;
-	/+@minLength(8)+/ /+@maxLength(40)+/ char[] username; 
+	/+@required+/ /+@string("email")+/;
+	/+@minLength(8)+/ /+@maxLength(40)+/ /+@string("username")+/; 
 	/+@string("firstname")+/;
 	/+@string("lastname")+/;
+
+public string email() { return email_;}
+public void email(string val) {email_ = val;}
+private string email_;
+
+public string firstname() { return firstname_;}
+public void firstname(string val) {firstname_ = val;}
+private string firstname_;
+
+public string username() { return username_;}
+public void username(string val) {username_ = val;}
+private string username_;
+
+public string lastname() { return lastname_;}
+public void lastname(string val) {lastname_ = val;}
+private string lastname_;
+
 
 Var opIndex(char[] key)
 {
 	Var res;
 	switch(key)
 	{
-		case "email": bind(var, email); break;
-		case "username": bind(var, username); break;
+		case "email": bind(var, email()); break;
+		case "username": bind(var, username()); break;
+		case "firstname": bind(var, firstname()); break;
+		case "lastname": bind(var, lastname()); break;
 		default: return Var();
 	}
 	return res;
@@ -152,8 +171,6 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "email": convertParam2!(typeof(email), Req)(email, val); break;
-			case "username": convertParam2!(typeof(username), Req)(username, val); break;
 			default: break;
 		}
 	}
@@ -161,14 +178,12 @@ void httpSet(IObject obj, Request req)
 
 static this()
 {
-	emailExistenceValidation = new ExistenceValidation!(char[])();
-	usernameMinLengthValidation = new MinLengthValidation(8);
-	usernameMaxLengthValidation = new MaxLengthValidation(40);
+	username_MinLengthValidation = new MinLengthValidation(8);
+	username_MaxLengthValidation = new MaxLengthValidation(40);
 }
 
-static ExistenceValidation!(char[]) emailExistenceValidation;
-static MinLengthValidation usernameMinLengthValidation;
-static MaxLengthValidation usernameMaxLengthValidation;
+private static MinLengthValidation username_MinLengthValidation;
+private static MaxLengthValidation username_MaxLengthValidation;
 
 bool validate()
 {
@@ -179,9 +194,9 @@ bool validate()
 		errors_.add(field, err)
 	}
 
-	if(!emailExistenceValidation.validate(email)) fail("email", emailExistenceValidation.error);
-	if(!usernameMinLengthValidation.validate(username)) fail("username", usernameMinLengthValidation.error);
-	if(!usernameMaxLengthValidation.validate(username)) fail("username", usernameMaxLengthValidation.error);
+	if(!ExistenceValidation!(string).validate(email_)) fail("email_", ExistenceValidation!(string).error);
+	if(!username_MinLengthValidation.validate(username_)) fail("username_", username_MinLengthValidation.error);
+	if(!username_MaxLengthValidation.validate(username_)) fail("username_", username_MaxLengthValidation.error);
 
 	return succeed;
 }
@@ -206,9 +221,9 @@ static this()
 {
 	auto sqlGen = db.getSqlGenerator;
 	auto quote = sqlGen.getIdentifierQuoteCharacter; char[] idQuoted = quote ~ "id" ~ quote;
-	insertSql = sqlGen.makeInsertSql("User",["email", "username"]);
-	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",["email", "username"]);
-	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["email", "username", "id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
+	insertSql = sqlGen.makeInsertSql("User",[]);
+	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",[]);
+	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
 	deleteSql = "DELETE FROM User WHERE " ~ idQuoted ~ " = ?");
 }
 
@@ -218,11 +233,11 @@ public bool save()
 {
 	if(id_) {
 		scope st = db.prepare(updateSql);
-		st.execute(email, username, id_);
+		st.execute(, id_);
 	}
 	else {
 		scope st = db.prepare(insertSql);
-		st.execute(email, username);
+		st.execute();
 		id_ = st.getLastInsertID;
 	}
 	return true;}
@@ -232,7 +247,7 @@ public static User getByID(uint id)
 	scope st = db.prepare(selectByIDSql);
 	st.execute(id_);
 	auto res = new User;
-	if(st.fetch(res.email, res.username, res.id_)) return res;
+	if(st.fetch(res.id_)) return res;
 	else return null;
 }
 
@@ -242,9 +257,6 @@ public bool destroy()
 	st.execute(id_);
 	return true;
 }
-
-string firstname;
-string lastname;
 
 
 }
