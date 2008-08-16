@@ -11,6 +11,9 @@ import sendero_base.Serialization;
 import decorated_d.compiler.Main;
 
 import senderoxc.SenderoExt;
+import senderoxc.data.Schema;
+
+import dbi.all;
 
 class Conf
 {
@@ -75,19 +78,11 @@ int main(char[][] args)
 	if(args.length > 1) {
 		auto compiler = new SenderoXCCompiler;
 		compiler.compile(args[1]);
-		
-		/+auto fname = Util.substitute(args[1], ".", "/");
-		auto outname = fname ~ ".d";
-		fname ~= ".sdx";
-		
-		Stdout.formatln("Opening file {}", fname);
-		auto f = new File(fname);
-		auto src = cast(char[])f.read;
-		auto res = new FileConduit(outname, FileConduit.WriteCreate);
-		
-		auto compiler = new DecoratedDCompiler;
-		assert(compiler.compile(src,cast(void delegate(char[]))&res.write, fname, outname));
-		res.flush.close;+/
+			
+		debug {
+			auto db = getDatabaseForURL("sqlite://senderoxc_debug.sqlite");
+			Schema.commit(db);
+		}
 	}
 	
 	return 0;

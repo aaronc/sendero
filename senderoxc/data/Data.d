@@ -2,11 +2,15 @@ module senderoxc.data.Data;
 
 import decorated_d.core.Decoration;
 
-//import senderoxc.data.Schema;
+import senderoxc.data.Schema;
 import senderoxc.data.Validations;
 
 import Ingeter = tango.text.convert.Integer;
 import tango.math.Math;
+
+import tango.core.Signal;
+
+import dbi.Database;
 
 /*
  * TODO:
@@ -60,7 +64,7 @@ class DataContext : IDecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		foreach(type; DataResponder.Schema.fieldTypes)
+		foreach(type; Schema.FieldTypes)
 		{
 			binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
 		}
@@ -78,7 +82,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	this(DeclarationInfo decl)
 	{
 		this.decl = decl;
-		schema = new Schema;
+		schema = Schema.create(decl.name);
 		createFieldInfo;
 	}
 	
@@ -131,7 +135,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	void finish(IDeclarationWriter wr)
 	{
 		//iobj.finish(wr); wr ~= "\n";
-		schema.write(wr); wr ~= "\n";
+//		schema.write(wr); wr ~= "\n";
 		writeIObject(wr); wr ~= "\n";
 		writeIHttpSet(wr); wr ~= "\n";
 		writeValidations(wr);  wr ~= "\n";
@@ -415,49 +419,6 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\treturn true;\n";
 		wr ~= "}\n";
 	}
-	
-	class Schema
-	{
-		Column[char[]] columns;
-		
-		const static char[][] fieldTypes = 
-			[
-			 "bool",
-			 "ubyte",
-			 "byte",
-			 "ushort",
-			 "short",
-			 "uint",
-			 "int",
-			 "ulong",
-			 "long",
-			 "float",
-			 "double",
-			 //"real",
-			 //"text",
-			 "string",
-			 "blob",
-			 "DateTime",
-			 "Time",
-			 //"Date",
-			 //"TimeOfDay"
-			 ];
-		
-		Column newColumn()
-		{
-			return new Column();
-		}
-		
-		class Column
-		{
-			
-		}
-		
-		void write(IDeclarationWriter wr)
-		{
-			
-		}
-	}
 }
 
 struct Getter
@@ -483,7 +444,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 	DataResponder resp;
 	char[] type;
 	
-	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
 	{
 		if(resp.decl == parentDecl) {
 			if(decorator.params.length && decorator.params[0].type == VarT.String) {
@@ -492,12 +453,23 @@ class FieldCtxt : IStandaloneDecoratorContext
 				resp.addGetter(Getter(name));
 				auto idx = resp.addSetter(Setter(type, name, name));
 				
+				auto col = Schema.prepColumnInfo(type);
+				col.name = name;
+				
+				if(decorator.params.length > 1 && decorator.params[0].type == VarT.Number)
+					col.limit = cast(typeof(col.limit))decorator.params[0].number_;
+				
 				char[] pname = name ~ "_";
 				foreach(dec; decorator.decorators)
 				{
 					switch(dec.name)
 					{
-					case "required": resp.addValidation(new RequiredRes(type, pname)); break;
+					case "required":
+						resp.addValidation(new RequiredRes(type, pname));
+						col.notNull = true;
+						break;
+					case "primaryKey": col.primaryKey = true; break;
+					case "autoIncrement": col.autoIncrement = true; break;
 					case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
 					case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
 					case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
@@ -510,6 +482,8 @@ class FieldCtxt : IStandaloneDecoratorContext
 					// convertors
 					}
 				}
+								
+				resp.schema.addColumn(col);
 				
 				return new FieldResponder(idx, type, name);
 			}
@@ -558,7 +532,7 @@ class HasOneCtxt : IStandaloneDecoratorContext
 	}
 	DataResponder resp;
 	
-	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
 	{
 		if(resp.decl == parentDecl) {
 			if(decorator.params.length > 1 &&
@@ -567,6 +541,10 @@ class HasOneCtxt : IStandaloneDecoratorContext
 				auto type = decorator.params[0].string_;
 				auto name = decorator.params[1].string_;
 				resp.addGetter(Getter(name));
+				
+				auto col = ColumnInfo(name ~ "_id", BindType.UInt);
+				resp.schema.addColumn(col);
+				
 				auto idx = resp.addSetter(Setter(type, name, name ~ ".id_"));
 				return new HasOneResponder(idx, type, name);
 			}
@@ -601,7 +579,7 @@ class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
 	}
 	DataResponder resp;
 	
-	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl)
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
 	{
 		if(resp.decl == parentDecl) {
 			char[] name = "id";
@@ -611,6 +589,12 @@ class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
 			}
 			
 			resp.getters ~= Getter(name);
+			
+			auto col = ColumnInfo(name, BindType.UInt);
+			col.primaryKey = true;
+			col.autoIncrement = true;
+			col.notNull = true;
+			resp.schema.addColumn(col);
 			
 			return new AutoPrimaryKeyResponder(name);
 		}

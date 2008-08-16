@@ -123,12 +123,11 @@ Res iroute(Req req)
 : IObject, IHttpSet
 
 {
-	/+@autoPrimaryKey("id")+/;
-	/+@required+/ /+@string("email")+/;
-	/+@minLength(8)+/ /+@maxLength(40)+/ /+@string("username")+/; 
-	/+@string("firstname")+/;
-	/+@string("lastname")+/;
-
+	/+@primaryKey+/ /+@autoIncrement+/ /+@UInt("id")+/;
+	/+@required+/ /+@String("email")+/;
+	/+@minLength(8)+/ /+@maxLength(40)+/ /+@String("username")+/; 
+	/+@String("firstname")+/;
+	/+@String("lastname")+/;
 
 Var opIndex(char[] key)
 {
@@ -156,10 +155,11 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "email": email = convertParam2!(string, Req)(val); break;
-			case "username": username = convertParam2!(string, Req)(val); break;
-			case "firstname": firstname = convertParam2!(string, Req)(val); break;
-			case "lastname": lastname = convertParam2!(string, Req)(val); break;
+			case "id": id = convertParam2!(UInt, Req)(val); break;
+			case "email": email = convertParam2!(String, Req)(val); break;
+			case "username": username = convertParam2!(String, Req)(val); break;
+			case "firstname": firstname = convertParam2!(String, Req)(val); break;
+			case "lastname": lastname = convertParam2!(String, Req)(val); break;
 			default: break;
 		}
 	}
@@ -183,7 +183,7 @@ bool validate()
 		__errors__.add(field, err)
 	}
 
-	if(!ExistenceValidation!(string).validate(email_)) fail("email_", ExistenceValidation!(string).error);
+	if(!ExistenceValidation!(String).validate(email_)) fail("email_", ExistenceValidation!(String).error);
 	if(!username_MinLengthValidation.validate(username_)) fail("username_", username_MinLengthValidation.error);
 	if(!username_MaxLengthValidation.validate(username_)) fail("username_", username_MaxLengthValidation.error);
 
@@ -203,7 +203,7 @@ void clearErrors()
 }
 private ErrorMap __errors__;
 
-private StaticBitArray!(1,4) __touched__;
+private StaticBitArray!(1,5) __touched__;
 
 static this()
 {
@@ -241,10 +241,11 @@ public bool save()
 			if(dirty) {
 				switch(idx)
 				{
-				case 0:binder.add("email", email);
-				case 1:binder.add("username", username);
-				case 2:binder.add("firstname", firstname);
-				case 3:binder.add("lastname", lastname);
+				case 0:binder.add("id", id);
+				case 1:binder.add("email", email);
+				case 2:binder.add("username", username);
+				case 3:binder.add("firstname", firstname);
+				case 4:binder.add("lastname", lastname);
 				default:debug assert(false);
 				}
 			}
@@ -280,24 +281,25 @@ public bool destroy()
 	return true;
 }
 
-public uint id() {return id_;}
-private uint id_;
+public UInt id() { return id_;}
+public void id(UInt val) {__touched__[0] = true; id_ = val;}
+private UInt id_;
 
-public string email() { return email_;}
-public void email(string val) {__touched__[0] = true; email_ = val;}
-private string email_;
+public String email() { return email_;}
+public void email(String val) {__touched__[1] = true; email_ = val;}
+private String email_;
 
-public string username() { return username_;}
-public void username(string val) {__touched__[1] = true; username_ = val;}
-private string username_;
+public String username() { return username_;}
+public void username(String val) {__touched__[2] = true; username_ = val;}
+private String username_;
 
-public string firstname() { return firstname_;}
-public void firstname(string val) {__touched__[2] = true; firstname_ = val;}
-private string firstname_;
+public String firstname() { return firstname_;}
+public void firstname(String val) {__touched__[3] = true; firstname_ = val;}
+private String firstname_;
 
-public string lastname() { return lastname_;}
-public void lastname(string val) {__touched__[3] = true; lastname_ = val;}
-private string lastname_;
+public String lastname() { return lastname_;}
+public void lastname(String val) {__touched__[4] = true; lastname_ = val;}
+private String lastname_;
 
 
 }

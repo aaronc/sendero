@@ -181,6 +181,13 @@ abstract class Msg
 	}
 }
 
+interface IMsgSource
+{
+	MsgMap getMsgs();
+	alias getMsgs getErrors;
+}
+
+
 class Success : Msg
 {
 	this()

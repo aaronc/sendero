@@ -68,9 +68,9 @@ import test.senderoxc.test2;
 
 @data class User
 {
-	@autoPrimaryKey("id");
-	@required @string("email");
-	@minLength(8) @maxLength(40) @string("username"); 
-	@string("firstname");
-	@string("lastname");
+	@primaryKey @autoIncrement @UInt("id");
+	@required @String("email");
+	@minLength(8) @maxLength(40) @String("username"); 
+	@String("firstname");
+	@String("lastname");
 }

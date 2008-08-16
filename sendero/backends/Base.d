@@ -5,6 +5,8 @@
 
 module sendero.backends.Base;
 
+import sendero.core.Config;
+
 public import sendero.http.Response;
 public import sendero.http.Request;
 
