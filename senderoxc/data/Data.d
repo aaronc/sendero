@@ -35,8 +35,12 @@ class DataContext : IDecoratorContext
 	
 	void writeImports(IDeclarationWriter wr)
 	{
-		if(touched)
+		if(touched) {
 			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
+			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
+			wr.prepend("import sendero.core.Memory;\n");
+			wr.prepend("import sendero.util.collection.StaticBitArray;\n");
+		}
 	}
 	
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
@@ -137,11 +141,12 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		//iobj.finish(wr); wr ~= "\n";
 //		schema.write(wr); wr ~= "\n";
 		writeIObject(wr); wr ~= "\n";
+		writeChangeTracking(wr); wr ~= "\n";
 		writeIHttpSet(wr); wr ~= "\n";
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
-		writeCRUD(wr); wr ~= "\n";
+		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");
 		
 		wr ~= "static Binder createBinder(char[][] fieldNames = null)\n";
@@ -166,7 +171,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		foreach(getter; getters)
 		{
 			wr ~= "\t\tcase \"" ~ getter.name ~ "\": ";
-			wr ~= "bind(var, " ~ getter.name ~ "()); ";
+			wr ~= "bind(res, " ~ getter.name ~ "()); ";
 			wr ~= "break;\n";
 		}
 		
@@ -176,11 +181,11 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		
 		wr ~= "}\n";
 		
-		wr ~= "int opApply (int delegate (inout char[] key, inout Var val) dg) {}\n";
+		wr ~= "int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }\n";
 		
 		wr ~= "void opIndexAssign(Var val, char[] key) {}\n";
 		
-		wr ~= "Var opCall(Var[] params, IExecContext ctxt) {}\n";
+		wr ~= "Var opCall(Var[] params, IExecContext ctxt) { return Var(); }\n";
 		
 		wr ~= "void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}\n";
 		
@@ -231,7 +236,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\tvoid fail(char[] field, Error err)";
 		wr ~= "\t{\n";
 		wr ~= "\t\tsucceed = false;\n";
-		wr ~= "\t\t__errors__.add(field, err)\n";
+		wr ~= "\t\t__errors__.add(field, err);\n";
 		wr ~= "\t}\n\n";
 		
 		foreach(v; validations)
@@ -262,6 +267,14 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "}\n";
 		
 		wr ~= "private ErrorMap __errors__;";
+	}
+	
+	void writeChangeTracking(IDeclarationWriter wr)
+	{
+		wr ~= "private StaticBitArray!(";
+		wr ~= Integer.toString(cast(uint)ceil(cast(real)(setters.length)/ 32)) ~ ",";
+		wr ~= Integer.toString(setters.length) ~ ") __touched__;\n";
+		wr ~= "\n";
 	}
 	
 	void writeCRUD(IDeclarationWriter wr)
@@ -450,14 +463,14 @@ class FieldCtxt : IStandaloneDecoratorContext
 			if(decorator.params.length && decorator.params[0].type == VarT.String) {
 				auto name = decorator.params[0].string_;
 				//resp.schema.columns[name] = resp.schema.newColumn(type, name, decorator);
-				resp.addGetter(Getter(name));
-				auto idx = resp.addSetter(Setter(type, name, name));
 				
 				auto col = Schema.prepColumnInfo(type);
 				col.name = name;
 				
 				if(decorator.params.length > 1 && decorator.params[0].type == VarT.Number)
 					col.limit = cast(typeof(col.limit))decorator.params[0].number_;
+				
+				bool no_map = false;
 				
 				char[] pname = name ~ "_";
 				foreach(dec; decorator.decorators)
@@ -475,6 +488,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 					case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
 					case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type)); break;
 					case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type)); break;
+					case "no_map": no_map = true; break;
 					default:
 						break;
 					// validations
@@ -485,7 +499,15 @@ class FieldCtxt : IStandaloneDecoratorContext
 								
 				resp.schema.addColumn(col);
 				
-				return new FieldResponder(idx, type, name);
+				if(!no_map) {
+					auto dType = Schema.getDType(type);
+					
+					resp.addGetter(Getter(name));
+					auto idx = resp.addSetter(Setter(dType, name, name));
+				
+					return new FieldResponder(idx, dType, name);
+				}
+				else return null;
 			}
 		}
 		

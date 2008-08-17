@@ -73,4 +73,5 @@ import test.senderoxc.test2;
 	@minLength(8) @maxLength(40) @String("username"); 
 	@String("firstname");
 	@String("lastname");
+	@Time("last_login");
 }

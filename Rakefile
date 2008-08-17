@@ -32,7 +32,7 @@ file "test_sendero.exe" => SRC do
 end
 
 task :senderoxc => SENDEROXC_SRC do
-  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofc:/tools/dmd/bin/senderoxc -debug"
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofc:/tools/dmd/bin/senderoxc -debug -debug=SenderoXCUnittest"
 end
 
 task :build => ["test_sendero.exe"]
@@ -44,7 +44,7 @@ task :test => [:build, :test_files] do
 end
 
 task :test_senderoxc => [:senderoxc] do
-  sh "senderoxc test.senderoxc.test1"
+  sh "senderoxc"
 end
 
 task :default => [:test, :test_senderoxc]

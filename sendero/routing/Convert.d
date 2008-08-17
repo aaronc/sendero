@@ -207,8 +207,9 @@ template ConvertParam(char[] n) {
 	"}";
 }
 
-void convertParam2(T, Req)(inout T val, Var param)
+T convertParam2(T, Req)(Var param)
 {
+	T val;
 	static if(is(T == char[]))
 	{
 		switch(param.type)
@@ -292,7 +293,7 @@ void convertParam2(T, Req)(inout T val, Var param)
 	}
 	else static assert(false, "Unhandled conversion type " ~ T.stringof);
 	
-	return true;
+	return val;
 }
 
 void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
@@ -388,7 +389,7 @@ void convertParams2(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p
 		else {
 			if(Index < paramNames.length) {
 				auto param = params[paramNames[Index]];
-				convertParam2!(Type, Req)(p[Index], param);
+				p[Index] = convertParam2!(Type, Req)(param);
 			}
 		}
 	}

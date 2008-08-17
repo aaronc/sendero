@@ -126,7 +126,7 @@ class Statement
 		
 		foreach(Index, Type; T)
 		{
-			static if (is(Type) == BindInfo))
+			static if (is(Type == BindInfo))
 				ptrs ~= info.ptrs;
 			static if(is(Type == class) || is(Type == struct)) {
 				t[Index] = new Type;

@@ -25,20 +25,20 @@ abstract class Validation(T) : AbstractValidation
 	abstract bool validate(T t);
 }
 
-class ExistenceValidation(T) : Validation!(T)
+class ExistenceValidation(T)// : Validation!(T)
 {
 	static this()
 	{
-		existenceError = new ExistenceValidationError;
+		error = new ExistenceValidationError;
 	}
-	private static ExistenceValidationError existenceError;
+	static ExistenceValidationError error;
 	
-	this()
+	/+this()
 	{
 		error = existenceError;
-	}
+	}+/
 	
-	bool validate(T t)
+	static bool validate(T t)
 	{
 		static if(isDynamicArrayType!(T))
 			return t.length != 0;

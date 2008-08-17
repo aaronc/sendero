@@ -10,7 +10,7 @@ version(SenderoSessionGC)
 	import sendero.session.GC;
 }
 
-import tango.core.Memory;
+public import tango.core.Memory;
 
 struct DefaultAllocator
 {

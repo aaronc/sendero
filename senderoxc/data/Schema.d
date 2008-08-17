@@ -34,6 +34,35 @@ class Schema
 		columns[i.name] = i;
 	}
 	
+	static char[] getDType(char[] type)
+	{
+		/+switch(decoratorType)
+		{
+		case "Bool": return "bool";
+		case "UByte": return "ubyte";
+		case "Byte": return "byte";
+		case "UShort": return "short";
+		case "Short": return "short";
+		case "UInt": return "uint";
+		case "Int": return "int";
+		case "ULong": return "ulong";
+		case "Long": return "long";
+		case "Float": return "float";
+		case "Double": return "double";
+		case "String": return "char[]";
+		case "Text": return "char[]";
+		case "Binary": return "ubyte[]";
+		case "Blob": return "ubyte[]";
+		case "DateTime": return "DateTime";
+		case "Time": return "Time";
+		default: assert(false, "Unsupport field decorator type " ~ decoratorType);
+		}+/
+		
+		auto pField = type in FieldTypes2;
+		assert(pField, "Unsupported field type " ~ type);
+		return pField.DType;
+	}
+	
 	static ColumnInfo prepColumnInfo(char[] fieldType)
 	{
 		ColumnInfo col;
@@ -51,13 +80,54 @@ class Schema
 		case "Float": col.type = BindType.Float; break;
 		case "Double": col.type = BindType.Double; break;
 		case "String": col.type = BindType.String; col.limit = 255; break;
-		case "Blob": col.type = BindType.Binary; col.limit = 255; break;
+		case "Text": col.type = BindType.String; col.limit = ushort.max - 1; break;
+		case "Binary": col.type = BindType.Binary; col.limit = 255; break;
+		case "Blob": col.type = BindType.Binary; col.limit = ushort.max - 1; break;
 		case "DateTime": col.type = BindType.DateTime; break;			
 		case "Time": col.type = BindType.Time; break;
 		default: assert(false, "Unsupport field type " ~ fieldType);
 		}
 		return col;
 	}
+	
+	static this()
+	{
+		foreach(f; fields) FieldTypes2[f.type] = f;
+	}
+	
+	static Field[char[]] FieldTypes2;
+	
+	struct Field
+	{
+		char[] type;
+		char[] DType;
+		BindType bindType;
+		uint limit;
+	}
+	
+	const static Field[] fields =
+		[
+		 Field("Bool","bool", BindType.Bool),
+		 Field("UByte","ubyte", BindType.UByte),
+		 Field("Byte","byte", BindType.Byte),
+		 Field("UShort","ushort", BindType.UShort),
+		 Field("Short","short", BindType.Short),
+		 Field("UInt","uint", BindType.UInt),
+		 Field("Int","int", BindType.Int),
+		 Field("ULong","ulong", BindType.ULong),
+		 Field("Long","long", BindType.Long),
+		 Field("Float","float", BindType.Float),
+		 Field("Double","double", BindType.Double),
+		 Field("String","char[]", BindType.String, 255),
+		 Field("Text","char[]", BindType.String, ushort.max - 1),
+		 Field("Binary","ubyte[]", BindType.Binary, 255),
+		 Field("Blob","ubyte[]", BindType.Binary, ushort.max - 1),
+		 Field("DateTime","DateTime", BindType.DateTime),
+		 Field("Time","Time", BindType.Time),
+		 //Field("Date","Date", BindType.Date),
+		 //Field("TimeOfDay","TimeOfDay", BindType.Date)
+		 ];
+	
 	
 	const static char[][] FieldTypes = 
 		[
@@ -75,6 +145,8 @@ class Schema
 		 //"real",
 		 //"text",
 		 "String",
+		 "Text",
+		 "Binary",
 		 "Blob",
 		 "DateTime",
 		 "Time",

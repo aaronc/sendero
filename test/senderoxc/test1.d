@@ -3,6 +3,9 @@ module test.senderoxc.test1;
 
 import sendero.routing.Router, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute, sendero.view.View;
 import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;
+import sendero.http.Request, sendero.routing.Convert;
+import sendero.core.Memory;
+import sendero.util.collection.StaticBitArray;
 
 
 
@@ -128,25 +131,30 @@ Res iroute(Req req)
 	/+@minLength(8)+/ /+@maxLength(40)+/ /+@String("username")+/; 
 	/+@String("firstname")+/;
 	/+@String("lastname")+/;
+	/+@Time("last_login")+/;
 
 Var opIndex(char[] key)
 {
 	Var res;
 	switch(key)
 	{
-		case "id": bind(var, id()); break;
-		case "email": bind(var, email()); break;
-		case "username": bind(var, username()); break;
-		case "firstname": bind(var, firstname()); break;
-		case "lastname": bind(var, lastname()); break;
+		case "id": bind(res, id()); break;
+		case "email": bind(res, email()); break;
+		case "username": bind(res, username()); break;
+		case "firstname": bind(res, firstname()); break;
+		case "lastname": bind(res, lastname()); break;
+		case "last_login": bind(res, last_login()); break;
 		default: return Var();
 	}
 	return res;
 }
-int opApply (int delegate (inout char[] key, inout Var val) dg) {}
+int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
 void opIndexAssign(Var val, char[] key) {}
-Var opCall(Var[] params, IExecContext ctxt) {}
+Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
+
+
+private StaticBitArray!(1,6) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -155,11 +163,12 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "id": id = convertParam2!(UInt, Req)(val); break;
-			case "email": email = convertParam2!(String, Req)(val); break;
-			case "username": username = convertParam2!(String, Req)(val); break;
-			case "firstname": firstname = convertParam2!(String, Req)(val); break;
-			case "lastname": lastname = convertParam2!(String, Req)(val); break;
+			case "id": id = convertParam2!(uint, Req)(val); break;
+			case "email": email = convertParam2!(char[], Req)(val); break;
+			case "username": username = convertParam2!(char[], Req)(val); break;
+			case "firstname": firstname = convertParam2!(char[], Req)(val); break;
+			case "lastname": lastname = convertParam2!(char[], Req)(val); break;
+			case "last_login": last_login = convertParam2!(Time, Req)(val); break;
 			default: break;
 		}
 	}
@@ -180,7 +189,7 @@ bool validate()
 
 	void fail(char[] field, Error err)	{
 		succeed = false;
-		__errors__.add(field, err)
+		__errors__.add(field, err);
 	}
 
 	if(!ExistenceValidation!(String).validate(email_)) fail("email_", ExistenceValidation!(String).error);
@@ -202,104 +211,29 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
+public uint id() { return id_;}
+public void id(uint val) {__touched__[0] = true; id_ = val;}
+private uint id_;
 
-private StaticBitArray!(1,5) __touched__;
+public char[] email() { return email_;}
+public void email(char[] val) {__touched__[1] = true; email_ = val;}
+private char[] email_;
 
-static this()
-{
-	auto sqlGen = db.getSqlGenerator;
-	auto quote = sqlGen.getIdentifierQuoteCharacter; char[] idQuoted = quote ~ "id" ~ quote;
-	insertSql = sqlGen.makeInsertSql("User",[]);
-	updateSql = sqlGen.makeUpdateSql("WHERE " ~ idQuoted ~ " = ?", "User",[]);
-	selectByIDSq = "SELECT " ~ sqlGen.makeFieldList(["id_"]) ~ " FROM User WHERE " ~ idQuoted ~ " = ?");
-	deleteSql = "DELETE FROM User WHERE " ~ idQuoted ~ " = ?");
-}
+public char[] username() { return username_;}
+public void username(char[] val) {__touched__[2] = true; username_ = val;}
+private char[] username_;
 
-const static char[] insertSql, updateSql, selectByIDSql, deleteSql;
+public char[] firstname() { return firstname_;}
+public void firstname(char[] val) {__touched__[3] = true; firstname_ = val;}
+private char[] firstname_;
 
-public bool save()
-{
-	if(id_) {
-		scope st = db.prepare(updateSql);
-		st.execute(, id_);
-	}
-	else {
-		scope st = db.prepare(insertSql);
-		st.execute();
-		id_ = st.getLastInsertID;
-	}
-	return true;}
+public char[] lastname() { return lastname_;}
+public void lastname(char[] val) {__touched__[4] = true; lastname_ = val;}
+private char[] lastname_;
 
-public bool save()
-{
-	if(!__touched__.hasTrue) return true;
-	if(!this.validate) return false;
-	bindTouched(Serializer binder)
-	{
-		foreach(idx, dirty; __touched__)
-		{
-			if(dirty) {
-				switch(idx)
-				{
-				case 0:binder.add("id", id);
-				case 1:binder.add("email", email);
-				case 2:binder.add("username", username);
-				case 3:binder.add("firstname", firstname);
-				case 4:binder.add("lastname", lastname);
-				default:debug assert(false);
-				}
-			}
-		}
-	}
-
-	if(id_) {
-		auto inserter = db.sqlGen.makeInserter;
-		bindTouched(inserter);
-		return inserter.execute(db);
-	}
-	else {
-		auto updater = db.sqlGen.makeUpdater;
-		bindTouched(updater);
-		return updater.execute(db, id_);
-	}
-	return true;
-}
-
-public static User getByID(uint id)
-{
-	scope st = db.prepare(selectByIDSql);
-	st.execute(id_);
-	auto res = new User;
-	if(st.fetch(res.id_)) return res;
-	else return null;
-}
-
-public bool destroy()
-{
-	scope st = db.prepare(deleteSql);
-	st.execute(id_);
-	return true;
-}
-
-public UInt id() { return id_;}
-public void id(UInt val) {__touched__[0] = true; id_ = val;}
-private UInt id_;
-
-public String email() { return email_;}
-public void email(String val) {__touched__[1] = true; email_ = val;}
-private String email_;
-
-public String username() { return username_;}
-public void username(String val) {__touched__[2] = true; username_ = val;}
-private String username_;
-
-public String firstname() { return firstname_;}
-public void firstname(String val) {__touched__[3] = true; firstname_ = val;}
-private String firstname_;
-
-public String lastname() { return lastname_;}
-public void lastname(String val) {__touched__[4] = true; lastname_ = val;}
-private String lastname_;
+public Time last_login() { return last_login_;}
+public void last_login(Time val) {__touched__[5] = true; last_login_ = val;}
+private Time last_login_;
 
 
 }
