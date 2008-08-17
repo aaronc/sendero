@@ -1,3 +1,5 @@
+import sendero.util.Construct;
+
 import sendero.view.SenderoTemplate;
 import sendero.view.LocalText;
 

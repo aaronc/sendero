@@ -231,7 +231,7 @@ class Statement
 				BindType[] types = setBindTypes(t);
 				inst.stmt.setParamTypes(types);
 				
-				debug Stdout.formatln("Param Types {}", types);
+				//debug Stdout.formatln("Param Types {}", types);
 				
 				ubyte[] signature = cast(ubyte[])T.stringof;
 				foreach(Index, Type; T)

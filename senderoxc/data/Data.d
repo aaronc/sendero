@@ -5,7 +5,7 @@ import decorated_d.core.Decoration;
 import senderoxc.data.Schema;
 import senderoxc.data.Validations;
 
-import Ingeter = tango.text.convert.Integer;
+import Integer = tango.text.convert.Integer;
 import tango.math.Math;
 
 import tango.core.Signal;
@@ -218,13 +218,13 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	
 	void writeValidations(IDeclarationWriter wr)
 	{
-		wr ~= "static this()\n";
+		/+wr ~= "static this()\n";
 		wr ~= "{\n";
 		foreach(v; validations)
 		{
 			v.atStaticThis(wr);
 		}
-		wr ~= "}\n\n";
+		wr ~= "}\n\n";+/
 		
 		foreach(v; validations)
 		{

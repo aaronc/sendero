@@ -7,12 +7,10 @@ import Util = tango.text.Util;
 
 import sendero_base.confscript.Parser;
 import sendero_base.Serialization;
-import sendero_base.util.ArrayWriter;
-
-import decorated_d.compiler.Main;
 
 import senderoxc.SenderoExt;
 import senderoxc.data.Schema;
+import senderoxc.Compiler;
 
 import dbi.all;
 
@@ -31,55 +29,7 @@ class Conf
 	}
 }
 
-class SenderoXCCompiler
-{
-	static char[][char[]] compiledModules;
-	
-	void compile(char[] modname)
-	{
-		// Check for cyclic dependencies
-		if(modname in compiledModules) return;
-		compiledModules[modname] = modname;
-		
-		auto fname = Util.substitute(modname, ".", "/");
-		
-		if(exists(fname ~ ".sdx")) {
-			auto outname = fname ~ ".d";
-			fname ~= ".sdx";
-			Stdout.formatln("Opening file {}", fname);
-			auto f = new File(fname);
-			auto src = cast(char[])f.read;
-			
-			char[] existingRes;
-			
-			if(exists(outname)) {
-				auto existingResFile = new File(outname);
-				existingRes = cast(char[])existingResFile.read;
-			}
-			
-			auto res = new ArrayWriter!(char);			
-			auto compiler = new DecoratedDCompiler;
-			compiler.onImportStatement.attach(&this.compile);
-			assert(compiler.compile(src,&res.append, fname, outname));
-			
-			if(res.get != existingRes) {
-				auto resFile = new FileConduit(outname, FileConduit.WriteCreate);
-				resFile.write(res.get);
-				resFile.flush.close;
-			}
-		}
-		else if(exists(fname ~ ".d")) {
-			fname ~= ".d";
-			Stdout.formatln("Opening file {}", fname);
-			auto f = new File(fname);
-			auto src = cast(char[])f.read;
-			
-			auto compiler = new DecoratedDCompiler;
-			compiler.onImportStatement.attach(&this.compile);
-			assert(compiler.compile(src,(char[]){}, fname, null));
-		}
-	}
-}
+
 
 int main(char[][] args)
 {

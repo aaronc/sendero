@@ -2,6 +2,8 @@ module test.senderoxc.test1;
 
 import test.senderoxc.test2;
 
+@cyclic("test.senderoxc.cyclic");
+
 @controller class MainCtlr
 {
 	@GET
