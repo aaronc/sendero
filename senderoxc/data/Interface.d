@@ -2,7 +2,6 @@ module senderoxc.data.Interface;
 
 import decorated_d.core.Decoration;
 import senderoxc.data.IInterface;
-import sendero.util.Call;
 
 class InterfaceCtxt : IStandaloneDecoratorContext
 {
@@ -38,17 +37,21 @@ class InterfaceResp : IInterface, IDecoratorResponder
 {
 	this(char[] name, char[] iname = null)
 	{
-		this.name = name;
-		if(iname.length) this.iname = iname;
-		else this.iname = "I" ~ name;
+		this.name_ = name;
+		if(iname.length) this.iname_ = iname;
+		else this.iname_ = "I" ~ name;
 		
-		InterfaceCtxt.interfaces[name] = this;
-		InterfaceCtxt.interfaces[iname] = this;
+		InterfaceCtxt.interfaces[name_] = this;
+		InterfaceCtxt.interfaces[iname_] = this;
 	}
-	char[] name, iname;
+	
+	char[] iname() { return iname_; }
+	char[] name() { return name_; }
+	
+	private char[] name_, iname_;
 	
 	void finish(IDeclarationWriter wr)
 	{
-		
+		wr ~= "interface " ~ iname ~ "{ };";
 	}
 }

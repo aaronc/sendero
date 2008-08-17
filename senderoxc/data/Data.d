@@ -91,7 +91,10 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		this.decl = decl;
 		schema = Schema.create(decl.name);
 		createFieldInfo;
+		hasInterface = findInterface(decl.name);
 	}
+	
+	IInterface hasInterface;
 	
 	Schema schema;
 	
@@ -141,6 +144,8 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	
 	void finish(IDeclarationWriter wr)
 	{
+		if(hasInterface) wr.addBaseType(hasInterface.iname);
+		
 		//iobj.finish(wr); wr ~= "\n";
 //		schema.write(wr); wr ~= "\n";
 		writeIObject(wr); wr ~= "\n";

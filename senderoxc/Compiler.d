@@ -106,12 +106,16 @@ class SenderoXCCompiler
 		
 		Stdout.formatln("Writing module {}", modname);
 		
+		foreach(name, child; imports)
+			child.write;
+		
 		writeThis;
 	}
 	
 	void writeThis()
 	{
-		auto outname = modname ~ ".d";
+		auto outname = Util.substitute(modname, ".", "/");
+		outname ~= ".d";
 		
 		char[] existingRes;
 		

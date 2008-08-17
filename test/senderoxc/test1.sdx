@@ -1,6 +1,7 @@
 module test.senderoxc.test1;
 
 import test.senderoxc.test2;
+import test.senderoxc.IUser;
 
 @controller class MainCtlr
 {

@@ -11,6 +11,7 @@ import sendero.util.collection.StaticBitArray, sendero.util.Singleton;
 
 
 import test.senderoxc.test2;
+import test.senderoxc.IUser;
 
 /+@controller+/ class MainCtlr
 {
@@ -124,7 +125,7 @@ Res iroute(Req req)
 
 
 /+@data+/ class User
-: IObject, IHttpSet
+: IUser, IObject, IHttpSet
 
 {
 	/+@primaryKey+/ /+@autoIncrement+/ /+@UInt("id")+/;

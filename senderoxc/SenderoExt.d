@@ -27,7 +27,7 @@ class SenderoExtContext : IDecoratorContext
 		binder.bindDecorator(DeclType.Class, "controller", cCtxt);
 		auto dCtxt = new DataContext;
 		binder.bindDecorator(DeclType.Class, "data", dCtxt);
-		binder.bindStandaloneDecorator("interface", new InterfaceCtxt);
+		binder.bindStandaloneDecorator("dataInterface", new InterfaceCtxt);
 		
 		return new SenderoExtResponder(cCtxt, dCtxt);
 	}

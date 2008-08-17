@@ -90,6 +90,7 @@ int main(char[][] args)
 		auto regression = new Regression("senderoxc");
 		regression.regressFile("test1.d");
 		regression.regressFile("test2.d");
+		regression.regressFile("IUser.d");
 	}
 	
 	return 0;
