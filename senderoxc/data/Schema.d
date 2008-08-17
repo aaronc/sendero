@@ -58,15 +58,20 @@ class Schema
 		default: assert(false, "Unsupport field decorator type " ~ decoratorType);
 		}+/
 		
-		auto pField = type in FieldTypes2;
-		assert(pField, "Unsupported field type " ~ type);
-		return pField.DType;
+		auto pType = type in FieldTypes2;
+		assert(pType, "Unsupported field type " ~ type);
+		return pType.DType;
 	}
 	
-	static ColumnInfo prepColumnInfo(char[] fieldType)
+	static ColumnInfo prepColumnInfo(char[] type)
 	{
 		ColumnInfo col;
-		switch(fieldType)
+		auto pType = type in FieldTypes2;
+		assert(pType, "Unsupported field type " ~ type);
+		col.type = pType.bindType;
+		col.limit = pType.limit;
+		return col;
+		/+switch(fieldType)
 		{
 		case "Bool": col.type = BindType.Bool; break;
 		case "UByte": col.type = BindType.UByte; break;
@@ -87,7 +92,7 @@ class Schema
 		case "Time": col.type = BindType.Time; break;
 		default: assert(false, "Unsupport field type " ~ fieldType);
 		}
-		return col;
+		return col;+/
 	}
 	
 	static this()
@@ -95,9 +100,9 @@ class Schema
 		foreach(f; fields) FieldTypes2[f.type] = f;
 	}
 	
-	static Field[char[]] FieldTypes2;
+	static FieldType[char[]] FieldTypes2;
 	
-	struct Field
+	struct FieldType
 	{
 		char[] type;
 		char[] DType;
@@ -105,31 +110,31 @@ class Schema
 		uint limit;
 	}
 	
-	const static Field[] fields =
+	const static FieldType[] fields =
 		[
-		 Field("Bool","bool", BindType.Bool),
-		 Field("UByte","ubyte", BindType.UByte),
-		 Field("Byte","byte", BindType.Byte),
-		 Field("UShort","ushort", BindType.UShort),
-		 Field("Short","short", BindType.Short),
-		 Field("UInt","uint", BindType.UInt),
-		 Field("Int","int", BindType.Int),
-		 Field("ULong","ulong", BindType.ULong),
-		 Field("Long","long", BindType.Long),
-		 Field("Float","float", BindType.Float),
-		 Field("Double","double", BindType.Double),
-		 Field("String","char[]", BindType.String, 255),
-		 Field("Text","char[]", BindType.String, ushort.max - 1),
-		 Field("Binary","ubyte[]", BindType.Binary, 255),
-		 Field("Blob","ubyte[]", BindType.Binary, ushort.max - 1),
-		 Field("DateTime","DateTime", BindType.DateTime),
-		 Field("Time","Time", BindType.Time),
-		 //Field("Date","Date", BindType.Date),
-		 //Field("TimeOfDay","TimeOfDay", BindType.Date)
+		 FieldType("Bool","bool", BindType.Bool),
+		 FieldType("UByte","ubyte", BindType.UByte),
+		 FieldType("Byte","byte", BindType.Byte),
+		 FieldType("UShort","ushort", BindType.UShort),
+		 FieldType("Short","short", BindType.Short),
+		 FieldType("UInt","uint", BindType.UInt),
+		 FieldType("Int","int", BindType.Int),
+		 FieldType("ULong","ulong", BindType.ULong),
+		 FieldType("Long","long", BindType.Long),
+		 FieldType("Float","float", BindType.Float),
+		 FieldType("Double","double", BindType.Double),
+		 FieldType("String","char[]", BindType.String, 255),
+		 FieldType("Text","char[]", BindType.String, ushort.max - 1),
+		 FieldType("Binary","ubyte[]", BindType.Binary, 255),
+		 FieldType("Blob","ubyte[]", BindType.Binary, ushort.max - 1),
+		 FieldType("DateTime","DateTime", BindType.DateTime),
+		 FieldType("Time","Time", BindType.Time),
+		 //FieldType("Date","Date", BindType.Date),
+		 //FieldType("TimeOfDay","TimeOfDay", BindType.Date)
 		 ];
 	
 	
-	const static char[][] FieldTypes = 
+	deprecated const static char[][] FieldTypes = 
 		[
 		 "Bool",
 		 "UByte",

@@ -68,9 +68,9 @@ class DataContext : IDecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		foreach(type; Schema.FieldTypes)
+		foreach(type; Schema.fields)
 		{
-			binder.bindStandaloneDecorator(type, new FieldCtxt(res, type));
+			binder.bindStandaloneDecorator(type.type, new FieldCtxt(res, type.type));
 		}
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
