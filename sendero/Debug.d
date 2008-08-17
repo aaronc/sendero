@@ -31,7 +31,9 @@ static this()
 	Log.lookup("debug").add(new SenderoAppender("debug", new LayoutDate));
 }
 
-
+void initOptlinkMap(char[] filename) {
+	OptlinkMap.init(filename);
+}
 
 import cn.kuehne.flectioned;
 

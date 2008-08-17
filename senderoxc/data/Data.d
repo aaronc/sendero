@@ -146,6 +146,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
+		writeCRUD(wr)_; wr ~= "\n"
 		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");
 		
@@ -277,6 +278,11 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "\n";
 	}
 	
+	void writeCRUD_(IDeclarationWriter wr)
+	{
+		
+	}
+	
 	void writeCRUD(IDeclarationWriter wr)
 	{
 		char[] quoteList(char[][] list, char[] prefix = null)
@@ -307,11 +313,6 @@ class DataResponder : IDecoratorResponder, IDataResponder
 			return res;
 		}
 		
-		wr ~= "\n";
-		
-		wr ~= "private StaticBitArray!(";
-		wr ~= Integer.toString(cast(uint)ceil(cast(real)(setters.length)/ 32)) ~ ",";
-		wr ~= Integer.toString(setters.length) ~ ") __touched__;\n";
 		wr ~= "\n";
 		
 		wr ~= "static this()\n";
