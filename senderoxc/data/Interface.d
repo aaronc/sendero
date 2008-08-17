@@ -18,7 +18,7 @@ class InterfaceCtxt : IStandaloneDecoratorContext
 			char[] iname;
 			if(dec.params.length > 1 && dec.params[1].type == VarT.String)
 				iname = dec.params[1].string_;
-			return InterfaceResp.create(name, iname);
+			return new InterfaceResp(name, iname);
 		}
 		
 		return null;
@@ -36,21 +36,16 @@ class InterfaceCtxt : IStandaloneDecoratorContext
 
 class InterfaceResp : IInterface, IDecoratorResponder
 {
-	private this(char[] name, char[] iname = null)
+	this(char[] name, char[] iname = null)
 	{
 		this.name = name;
 		if(iname.length) this.iname = iname;
 		else this.iname = "I" ~ name;
+		
+		InterfaceCtxt.interfaces[name] = this;
+		InterfaceCtxt.interfaces[iname] = this;
 	}
 	char[] name, iname;
-	
-	static InterfaceResp create(char[] name, char[] iname = null)
-	{
-		auto res = new InterfaceResp(name, iname);
-		InterfaceCtxt.interfaces[name] = res;
-		InterfaceCtxt.interfaces[iname] = res;
-		return res;
-	}
 	
 	void finish(IDeclarationWriter wr)
 	{
