@@ -181,6 +181,7 @@ abstract class Msg
 	}
 }
 
+
 interface IMsgSource
 {
 	MsgMap getMsgs();
@@ -224,7 +225,7 @@ class FieldMsgs : Msg
 	Msg[] msgs;
 }
 
-version(Unittest)
+debug(SenderoUnittest)
 {
 	import tango.util.Convert;
 	import tango.io.Stdout;

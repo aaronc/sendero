@@ -3,9 +3,10 @@ module test.senderoxc.test1;
 
 import sendero.routing.Router, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute, sendero.view.View;
 import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;
+import sendero.db.DBProvider;
 import sendero.http.Request, sendero.routing.Convert;
 import sendero.core.Memory;
-import sendero.util.collection.StaticBitArray;
+import sendero.util.collection.StaticBitArray, sendero.util.Singleton;
 
 
 
@@ -154,7 +155,7 @@ Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
 
-private StaticBitArray!(1,6) __touched__;
+private StaticBitArray!(1,5) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -163,7 +164,6 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "id": id = convertParam2!(uint, Req)(val); break;
 			case "email": email = convertParam2!(char[], Req)(val); break;
 			case "username": username = convertParam2!(char[], Req)(val); break;
 			case "firstname": firstname = convertParam2!(char[], Req)(val); break;
@@ -211,28 +211,28 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
+alias DefaultDatabaseProvider db;
 public uint id() { return id_;}
-public void id(uint val) {__touched__[0] = true; id_ = val;}
 private uint id_;
 
 public char[] email() { return email_;}
-public void email(char[] val) {__touched__[1] = true; email_ = val;}
+public void email(char[] val) {__touched__[0] = true; email_ = val;}
 private char[] email_;
 
 public char[] username() { return username_;}
-public void username(char[] val) {__touched__[2] = true; username_ = val;}
+public void username(char[] val) {__touched__[1] = true; username_ = val;}
 private char[] username_;
 
 public char[] firstname() { return firstname_;}
-public void firstname(char[] val) {__touched__[3] = true; firstname_ = val;}
+public void firstname(char[] val) {__touched__[2] = true; firstname_ = val;}
 private char[] firstname_;
 
 public char[] lastname() { return lastname_;}
-public void lastname(char[] val) {__touched__[4] = true; lastname_ = val;}
+public void lastname(char[] val) {__touched__[3] = true; lastname_ = val;}
 private char[] lastname_;
 
 public Time last_login() { return last_login_;}
-public void last_login(Time val) {__touched__[5] = true; last_login_ = val;}
+public void last_login(Time val) {__touched__[4] = true; last_login_ = val;}
 private Time last_login_;
 
 

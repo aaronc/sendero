@@ -3,6 +3,8 @@ module sendero.core.Config;
 import tango.io.File, tango.io.FilePath;
 import sendero_base.confscript.Parser, sendero_base.Serialization;
 
+import sendero.Exception;
+
 class SenderoConfig
 {
 	private this() {}
@@ -23,9 +25,10 @@ class SenderoConfig
 		auto cfg = cfgObj[configName];
 		
 		if(cfg.type == VarT.Object) {
-			auto inst = new SenderoConfig;
+			inst = new SenderoConfig;
 			deserialize(inst, cfg.obj_);
 		}
+		else throw new SenderoException("Unable to find configuration " ~ configName ~ " in " ~ filename);
 	}
 	
 	private static SenderoConfig inst;

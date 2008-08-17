@@ -11,6 +11,8 @@ import dbi.Registry;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
 
+import sendero.core.Config;
+
 public import sendero.db.Statement;
 
 class DBConnectionProvider(char[] dbUrl)
@@ -18,6 +20,14 @@ class DBConnectionProvider(char[] dbUrl)
 	static Database createNewConnection()
 	{
 		return getDatabaseForURL(dbUrl);
+	}
+}
+
+class DefaultConnectionProvider
+{
+	static Database createNewConnection()
+	{
+		return getDatabaseForURL(SenderoConfig().dbUrl);
 	}
 }
 
@@ -223,3 +233,4 @@ class DBProvider(DBConnectionProvider)
 	}
 }
 
+alias DBProvider!(DefaultConnectionProvider) DefaultDatabaseProvider;

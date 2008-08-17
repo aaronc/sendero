@@ -9,6 +9,8 @@ import sendero.core.Memory;
 import sendero.util.collection.SimpleList;
 import tango.stdc.string;
 
+debug import tango.util.Convert;
+
 int strcmp(char[] x, char[] y)
 {
 	uint min = x.length;
@@ -242,12 +244,42 @@ struct NestedMap(T, Alloc = DefaultAllocator)
 	{
 		return first is null && list.empty;
 	}
+	
+	debug static char[] print(NestedMap!(T, Alloc) map) {
+		char[] res;
+
+		void doMap(NestedMap!(T, Alloc) m, uint indent = 0)
+		{
+			char[] tabs() { char[] t; for(uint i = 0; i < indent; ++i) t ~= "\t"; return t; }
+
+			foreach(x; m)
+			{
+				res ~= tabs ~ to!(char[])(x) ~ "\n";
+			}
+			
+			foreach(key, value; m)
+			{
+				res ~= tabs ~ key ~ "\n";
+				//foreach(x; value)
+				//	res ~= "\t" ~ x ~ "\n";
+				
+				doMap(value, indent + 1);
+			}
+		}
+		
+		doMap(map);
+		
+		return res;
+	}
 }
 
-version(Unittest)
+
+
+debug(SenderoUnittest)
 {
 import sendero.core.Memory;
 import tango.io.Stdout;
+import qcf.Regression;
 	
 unittest
 {
@@ -261,6 +293,10 @@ unittest
 	map.add("aaron", 14);
 	map.add("john", 7);
 	map.add("john", "joe", 3);
+	
+	
+	
+	
 	foreach(key, value; map)
 	{
 		Stdout(key).newline;
@@ -281,5 +317,11 @@ unittest
 	{
 		Stdout(x).newline;
 	}
+	
+	Stdout("Print:").newline;
+	Stdout(map.print(map)).newline;
+	
+	auto r = new Regression("msg");
+	r.regress("nested_map.txt", map.print(map));
 }
 }

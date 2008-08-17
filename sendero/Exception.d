@@ -5,6 +5,14 @@
 
 module sendero.Exception;
 
+class SenderoException : Exception
+{
+	this(char[] msg, Exception next = null)
+	{
+		super(msg, next);
+	}
+}
+
 class ConversionNotAvailableException : Exception
 {
 	this(char[] msg)

@@ -37,9 +37,10 @@ class DataContext : IDecoratorContext
 	{
 		if(touched) {
 			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
+			wr.prepend("import sendero.db.DBProvider;\n");
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
-			wr.prepend("import sendero.util.collection.StaticBitArray;\n");
+			wr.prepend("import sendero.util.collection.StaticBitArray, sendero.util.Singleton;\n");
 		}
 	}
 	
@@ -74,8 +75,8 @@ class DataContext : IDecoratorContext
 		}
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
+//		binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
 		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
-		
 		
 		return res;
 	}
@@ -146,7 +147,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
-		writeCRUD(wr)_; wr ~= "\n"
+		writeCRUD_(wr); wr ~= "\n";
 		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");
 		
@@ -280,7 +281,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	
 	void writeCRUD_(IDeclarationWriter wr)
 	{
-		
+		wr ~= "alias DefaultDatabaseProvider db;";
 	}
 	
 	void writeCRUD(IDeclarationWriter wr)
@@ -472,6 +473,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 					col.limit = cast(typeof(col.limit))decorator.params[0].number_;
 				
 				bool no_map = false;
+				bool no_set = false;
 				
 				char[] pname = name ~ "_";
 				foreach(dec; decorator.decorators)
@@ -483,7 +485,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 						col.notNull = true;
 						break;
 					case "primaryKey": col.primaryKey = true; break;
-					case "autoIncrement": col.autoIncrement = true; break;
+					case "autoIncrement": col.autoIncrement = true; no_set = true; break;
 					case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
 					case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
 					case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
@@ -502,9 +504,12 @@ class FieldCtxt : IStandaloneDecoratorContext
 				
 				if(!no_map) {
 					resp.addGetter(Getter(name));
-					auto idx = resp.addSetter(Setter(type.DType, name, name));
-				
-					return new FieldResponder(idx, type.DType, name);
+					
+					if(no_set) return new NoSetFieldResponder(type.DType, name);
+					else {
+						auto idx = resp.addSetter(Setter(type.DType, name, name));
+						return new FieldResponder(idx, type.DType, name);
+					}
 				}
 				else return null;
 			}
@@ -541,6 +546,22 @@ class FieldResponder : AbstractFieldResponder
 		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {";
 		wr ~= "__touched__[" ~ Integer.toString(index) ~ "] = true; " ~ name ~ "_ = val;";
 		wr ~= "}\n";
+		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
+	}
+}
+
+class NoSetFieldResponder : IDecoratorResponder
+{
+	this(char[] type, char[] name)
+	{
+		this.type = type;
+		this.name = name;
+	}
+	char[] type, name;
+	
+	void finish(IDeclarationWriter wr)
+	{
+		wr ~= "public " ~ type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
 		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
 	}
 }
