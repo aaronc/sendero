@@ -10,9 +10,68 @@ import decorated_d.compiler.Main;
 
 class SenderoXCCompiler
 {
+	/+this(char[] modname)
+	{
+		this.modname = modname;
+		if(exists(fname ~ ".sdx")) {
+			auto outname = fname ~ ".d";
+			fname ~= ".sdx";
+			Stdout.formatln("Opening file {}", fname);
+			auto f = new File(fname);
+			auto src = cast(char[])f.read;
+			
+			char[] existingRes;
+			
+			if(exists(outname)) {
+				auto existingResFile = new File(outname);
+				existingRes = cast(char[])existingResFile.read;
+			}
+			
+			auto res = new ArrayWriter!(char);			
+			auto compiler = new DecoratedDCompiler(src, fname);
+			compiler.onImportStatement.attach(&this.compile);
+			assert(compiler.parse);
+			compiler.build.process.finish(&res.append, outname);
+			
+			if(res.get != existingRes) {
+				auto resFile = new FileConduit(outname, FileConduit.WriteCreate);
+				resFile.write(res.get);
+				resFile.flush.close;
+			}
+		}
+		else if(exists(fname ~ ".d")) {
+			fname ~= ".d";
+			Stdout.formatln("Opening file {}", fname);
+			auto f = new File(fname);
+			auto src = cast(char[])f.read;
+			
+			auto compiler = new DecoratedDCompiler(src, fname);
+			compiler.onImportStatement.attach(&this.compile);
+			assert(compiler.parse);
+			compiler.build;
+		}
+	}
+	
+	char[] modname;
+	
+	static SenderoXCCompiler[char[]] registeredModules;
+	
+	void registerImport(char[] modname)
+	{
+		auto pCompiler = modname in registeredModules;
+		if(pCompiler is null) {
+			auto compiler = new SenderoXCCompiler(modname);
+			registeredModules[modname] = compiler;
+			imports[modname] = compiler;
+		}
+		else imports[modname] = *pCompiler;
+	}
+	
+	SenderoXCCompiler[char[]] imports;+/
+	
 	static char[][char[]] compiledModules;
 	
-	char[] justCompile(char[] modname)
+	deprecated char[] justCompile(char[] modname)
 	{
 		if(modname in compiledModules) return null;
 		compiledModules[modname] = modname;
