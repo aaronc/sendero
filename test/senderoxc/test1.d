@@ -192,7 +192,7 @@ bool validate()
 		__errors__.add(field, err);
 	}
 
-	if(!ExistenceValidation!(String).validate(email_)) fail("email_", ExistenceValidation!(String).error);
+	if(!ExistenceValidation!(char[]).validate(email_)) fail("email_", ExistenceValidation!(char[]).error);
 	if(!username_MinLengthValidation.validate(username_)) fail("username_", username_MinLengthValidation.error);
 	if(!username_MaxLengthValidation.validate(username_)) fail("username_", username_MaxLengthValidation.error);
 

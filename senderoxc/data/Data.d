@@ -68,9 +68,9 @@ class DataContext : IDecoratorContext
 		//binder.bindDecorator(DeclType.Field, "hideRender");
 		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		foreach(type; Schema.fields)
+		foreach(type; Schema.FieldTypes)
 		{
-			binder.bindStandaloneDecorator(type.type, new FieldCtxt(res, type.type));
+			binder.bindStandaloneDecorator(type.type, new FieldCtxt(res, type));
 		}
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
@@ -449,13 +449,13 @@ struct Setter
 
 class FieldCtxt : IStandaloneDecoratorContext
 {
-	this(DataResponder resp, char[] type)
+	this(DataResponder resp, Schema.FieldType type)
 	{
 		this.resp = resp;
 		this.type = type;
 	}
 	DataResponder resp;
-	char[] type;
+	Schema.FieldType type;
 	
 	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
 	{
@@ -478,7 +478,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 					switch(dec.name)
 					{
 					case "required":
-						resp.addValidation(new RequiredRes(type, pname));
+						resp.addValidation(new RequiredRes(type.DType, pname));
 						col.notNull = true;
 						break;
 					case "primaryKey": col.primaryKey = true; break;
@@ -486,8 +486,8 @@ class FieldCtxt : IStandaloneDecoratorContext
 					case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
 					case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
 					case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
-					case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type)); break;
-					case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type)); break;
+					case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type.DType)); break;
+					case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type.DType)); break;
 					case "no_map": no_map = true; break;
 					default:
 						break;
@@ -500,12 +500,10 @@ class FieldCtxt : IStandaloneDecoratorContext
 				resp.schema.addColumn(col);
 				
 				if(!no_map) {
-					auto dType = Schema.getDType(type);
-					
 					resp.addGetter(Getter(name));
-					auto idx = resp.addSetter(Setter(dType, name, name));
+					auto idx = resp.addSetter(Setter(type.DType, name, name));
 				
-					return new FieldResponder(idx, dType, name);
+					return new FieldResponder(idx, type.DType, name);
 				}
 				else return null;
 			}
