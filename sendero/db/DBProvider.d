@@ -5,9 +5,7 @@
 
 module sendero.db.DBProvider;
 
-import dbi.Database;
-import dbi.Statement;
-import dbi.Registry;
+import dbi.all;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
 
@@ -40,6 +38,7 @@ interface IProvider(StatementT)
 	void beginTransact();
 	void rollback();
 	void commit();
+	SqlGenerator sqlGen();
 }
 
 class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(StatementT)
@@ -121,6 +120,11 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 	void commit()
 	{
 		inst.commit;
+	}
+	
+	SqlGenerator sqlGen()
+	{
+		return inst.sqlGen;
 	}
 	
 	private ConnectionT inst;
@@ -230,6 +234,12 @@ class DBProvider(DBConnectionProvider)
 	{
 		auto provider = getProvider;
 		provider.commit;
+	}
+	
+	static SqlGenerator sqlGen()
+	{
+		auto provider = getProvider;
+		return provider.sqlGen;
 	}
 }
 

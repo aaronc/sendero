@@ -281,7 +281,19 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	
 	void writeCRUD_(IDeclarationWriter wr)
 	{
-		wr ~= "alias DefaultDatabaseProvider db;";
+		wr ~= "alias DefaultDatabaseProvider db;\n";
+		wr ~= "\n";
+		
+		wr ~= "private static char[] deleteSql;\n";
+		
+		wr ~= "public void destroy()\n";
+		wr ~= "{\n";
+		//wr ~= "\tif(!deleteSql.length) db.sqlGen.makeDeleteSql(\"" ~ decl.name ~ "\", \"id\");\n";
+		wr ~= "\tif(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql(\"" ~ decl.name ~ "\", [\"id\"]);\n";
+		wr ~= "\tscope st = db.prepare(deleteSql);\n";
+		wr ~= "\tst.execute(id_);\n";
+		wr ~= "}\n";
+		wr ~= "\n";
 	}
 	
 	void writeCRUD(IDeclarationWriter wr)

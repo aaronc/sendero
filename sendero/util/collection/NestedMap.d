@@ -293,34 +293,10 @@ unittest
 	map.add("aaron", 14);
 	map.add("john", 7);
 	map.add("john", "joe", 3);
-	
-	
-	
-	
-	foreach(key, value; map)
-	{
-		Stdout(key).newline;
-		foreach(x; value)
-			Stdout("\t")(x).newline;
-		
-		foreach(k, v; value)
-		{
-			Stdout("\t")(k).newline;
-			foreach(x; v)
-				Stdout("\t")("\t")(x).newline;
-		}
-	}
 	map.add(1);
 	map.add(2);
 	map.add(3);
-	foreach(x; map)
-	{
-		Stdout(x).newline;
-	}
-	
-	Stdout("Print:").newline;
-	Stdout(map.print(map)).newline;
-	
+
 	auto r = new Regression("msg");
 	r.regress("nested_map.txt", map.print(map));
 }

@@ -212,6 +212,16 @@ void clearErrors()
 }
 private ErrorMap __errors__;
 alias DefaultDatabaseProvider db;
+
+private static char[] deleteSql;
+public void destroy()
+{
+	if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql("User", ["id"]);
+	scope st = db.prepare(deleteSql);
+	st.execute(id_);
+}
+
+
 public uint id() { return id_;}
 private uint id_;
 
