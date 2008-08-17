@@ -143,6 +143,7 @@ class DModuleCompiler : SenderoXCCompiler
 	void processThis() {
 		
 	}
+	
 	void writeThis() {
 		
 	}

@@ -4,6 +4,7 @@ import decorated_d.core.Decoration;
 
 import senderoxc.Controller;
 import senderoxc.data.Data;
+import senderoxc.data.Interface;
 
 import tango.util.log.Log;
 
@@ -26,6 +27,7 @@ class SenderoExtContext : IDecoratorContext
 		binder.bindDecorator(DeclType.Class, "controller", cCtxt);
 		auto dCtxt = new DataContext;
 		binder.bindDecorator(DeclType.Class, "data", dCtxt);
+		binder.bindStandaloneDecorator("interface", new InterfaceCtxt);
 		
 		return new SenderoExtResponder(cCtxt, dCtxt);
 	}
