@@ -17,6 +17,9 @@ import dbi.all;
 debug(SenderoXCUnittest) {
 	import qcf.Regression;
 	import qcf.TestRunner;
+	import qcf.StackTrace;
+	import tango.util.log.Config;
+	static this() { initOptlinkMap("senderoxc.map"); }
 }
 
 class Conf
@@ -49,8 +52,21 @@ int main(char[][] args)
 	
 	void run(char[] modname)
 	{
-		auto compiler = new SenderoXCCompiler;	
-		compiler.compile(modname);
+		try
+		{
+			auto compiler = SenderoXCCompiler.create(modname);
+			assert(compiler);
+			compiler.process;
+			compiler.write;
+		}
+		catch(Exception ex)
+		{
+			Stdout.formatln("Caught exception: {}", ex.toString);
+			if(ex.info) {
+				Stdout.formatln("Stack trace");
+				Stdout(ex.info.toString).newline;
+			}
+		}
 			
 		debug {
 			try
