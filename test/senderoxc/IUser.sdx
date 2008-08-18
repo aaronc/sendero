@@ -1,0 +1,3 @@
+module IUser;
+
+@dataInterface("User");

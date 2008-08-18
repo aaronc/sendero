@@ -1,0 +1,15 @@
+module test2;
+
+@data class BlogEntry
+{
+	@autoPrimaryKey("id");
+
+	@hasOne("User", "author");
+	@String("entry");
+	@Time("created");
+	@Time("modified");
+	
+	@required @String("title");
+	
+	@String("tags");
+}

@@ -90,7 +90,7 @@ class DataContext : IDecoratorContext
 	}
 }
 
-class DataResponder : IDecoratorResponder, IDataResponder
+class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 {
 	this(DeclarationInfo decl)
 	{
@@ -98,7 +98,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		schema = Schema.create(decl.name);
 		createFieldInfo;
 		hasInterface = findInterface(decl.name);
-		mapper = Mapper.create(decl.name, schema);
+		mapper = Mapper.create(decl.name, schema, this);
 	}
 	
 	IInterface hasInterface;
@@ -123,6 +123,8 @@ class DataResponder : IDecoratorResponder, IDataResponder
 				addMethod(fdecl);
 			}
 		}
+		
+		mapper.init;
 	}
 	
 	void addInterface(char[] interfaceName, char[][] imports = null)
@@ -639,6 +641,15 @@ class NoSetFieldResponder : IDecoratorResponder
 		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
 	}
 }
+
+class ClassTableInheritanceCtxt : IStandaloneDecoratorContext
+{
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
+	{
+		return null;
+	}
+}
+
 
 class HasOneCtxt : IStandaloneDecoratorContext
 {	
