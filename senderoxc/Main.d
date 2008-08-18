@@ -12,7 +12,13 @@ import senderoxc.SenderoExt;
 import senderoxc.data.Schema;
 import senderoxc.Compiler;
 
+import sendero.core.Config;
+
 import dbi.all;
+
+version(dbi_mysql) {
+	import senderoxc.data.MysqlMapper;
+}
 
 debug(SenderoXCUnittest) {
 	import qcf.Regression;
@@ -22,9 +28,18 @@ debug(SenderoXCUnittest) {
 	static this() { initOptlinkMap("senderoxc.map"); }
 }
 
-class Conf
+class SenderoXCConfig
 {
+	mixin Config!(SenderoXCConfig);
+	
 	char[][] includeDirs;
+	
+	char[] modname;
+	
+	static void load(char[] configName, char[] filename = "senderoxc.conf")
+	{
+		loadConfig(configName, filename);
+	}
 	
 	void serialize(Ar)(Ar ar)
 	{
@@ -32,24 +47,8 @@ class Conf
 	}
 }
 
-
-
 int main(char[][] args)
 {
-	/+auto confFile = new File("senderoxc.conf");
-	if(!confFile) {
-		Stdout.formatln("Unable to find senderoxc.conf");
-		return -1;
-	}
-	
-	auto confObj = parseConf(cast(char[])confFile.read);
-	auto conf = new Conf;
-	auto v = confObj[""];
-	if(v.type == VarT.Object)
-		Deserializer.deserialize(conf, v.obj_);+/
-	
-	//DecoratedDCompiler.addModuleContext();
-	
 	void run(char[] modname)
 	{
 		try
@@ -67,23 +66,25 @@ int main(char[][] args)
 				Stdout(ex.info.toString).newline;
 			}
 		}
-			
-		debug {
-			try
-			{
-				auto db = getDatabaseForURL("sqlite://senderoxc_debug.sqlite");
-				Schema.commit(db);
-				db.close;
-			}
-			catch(Exception ex)
-			{
-				Stdout.formatln("Caught exception: {}, while commiting db schema", ex.toString);
-			}
+		
+		try
+		{
+			Stdout.formatln("Committing db schema to {}", SenderoConfig().dbUrl);
+			auto db = getDatabaseForURL(SenderoConfig().dbUrl);
+			Schema.commit(db);
+			db.close;
+		}
+		catch(Exception ex)
+		{
+			Stdout.formatln("Caught exception: {}, while commiting db schema", ex.toString);
 		}
 	}
 	
 	if(args.length > 1) {
-		run(args[1]);
+		SenderoConfig.load(args[1]);
+		SenderoXCConfig.load(args[1]);
+		
+		run(SenderoXCConfig().modname);
 	}
 	else debug(SenderoXCUnittest) {
 		run("test.senderoxc.test1");

@@ -3,13 +3,25 @@ module sendero.core.Config;
 import tango.io.File, tango.io.FilePath;
 import sendero_base.confscript.Parser, sendero_base.Serialization;
 
-import sendero.Exception;
+public import sendero.Exception;
 
-class SenderoConfig
+template Config(T)
 {
+	static this()
+	{
+		inst = new T;
+	}
+	
 	private this() {}
 	
-	static void load(char[] configName, char[] filename = "sendero.conf")
+	static T opCall()
+	{
+		return inst;
+	}	
+
+	private static T inst;
+		
+	private static void loadConfig(char[] configName, char[] filename)
 	{
 		auto fp = new FilePath(filename);
 		
@@ -25,20 +37,24 @@ class SenderoConfig
 		auto cfg = cfgObj[configName];
 		
 		if(cfg.type == VarT.Object) {
-			inst = new SenderoConfig;
+			inst = new T;
 			deserialize(inst, cfg.obj_);
 		}
 		else throw new SenderoException("Unable to find configuration " ~ configName ~ " in " ~ filename);
 	}
+
+}
+
+class SenderoConfig
+{
+	mixin Config!(SenderoConfig);
 	
-	private static SenderoConfig inst;
-	
-	static SenderoConfig opCall()
+	static void load(char[] configName, char[] filename = "sendero.conf")
 	{
-		return inst;
+		loadConfig(configName, filename);
 	}
 	
-	char[] dbUrl;
+	char[] dbUrl = "sqlite://sendero_debug.sqlite";
 	
 	void serialize(Ar)(Ar ar)
 	{

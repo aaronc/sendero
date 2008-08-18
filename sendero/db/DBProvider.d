@@ -36,7 +36,7 @@ version(dbi_mysql) {
 	{
 		static MysqlDatabase createNewConnection()
 		{
-			assert(SenderoConfig() !is null);
+			debug assert(SenderoConfig() !is null);
 			auto url = SenderoConfig().dbUrl;
 			auto db = cast(MysqlDatabase)getDatabaseForURL(url);
 			assert(db, "Unable to create database connection or Database type is not Mysql, DB URL: " ~ url);

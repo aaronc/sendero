@@ -1,4 +1,3 @@
-import sendero.util.Construct;
 import sendero.util.Call;
 
 import sendero.view.SenderoTemplate;
