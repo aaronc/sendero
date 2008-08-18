@@ -11,6 +11,7 @@ import sendero_base.Serialization;
 import senderoxc.SenderoExt;
 import senderoxc.data.Schema;
 import senderoxc.Compiler;
+import senderoxc.Config;
 
 import sendero.core.Config;
 
@@ -28,35 +29,18 @@ debug(SenderoXCUnittest) {
 	static this() { initOptlinkMap("senderoxc.map"); }
 }
 
-class SenderoXCConfig
-{
-	mixin Config!(SenderoXCConfig);
-	
-	char[][] includeDirs;
-	
-	char[] modname;
-	
-	static void load(char[] configName, char[] filename = "senderoxc.conf")
-	{
-		loadConfig(configName, filename);
-	}
-	
-	void serialize(Ar)(Ar ar)
-	{
-		ar (includeDirs, "includeDirs");
-	}
-}
-
 int main(char[][] args)
 {
-	void run(char[] modname)
+	void run(char[] modname, char[] outdir = null)
 	{
+		Stdout.formatln("Running SenderoXC on module {}", modname);
+		
 		try
 		{
 			auto compiler = SenderoXCCompiler.create(modname);
 			assert(compiler);
 			compiler.process;
-			compiler.write;
+			compiler.write(outdir);
 		}
 		catch(Exception ex)
 		{
@@ -87,11 +71,15 @@ int main(char[][] args)
 		run(SenderoXCConfig().modname);
 	}
 	else debug(SenderoXCUnittest) {
+		SenderoConfig.load("test");
 		run("test.senderoxc.test1");
 		auto regression = new Regression("senderoxc");
 		regression.regressFile("test1.d");
 		regression.regressFile("test2.d");
 		regression.regressFile("IUser.d");
+		
+		SenderoConfig.load("test");
+		run("test.senderoxc.test1");
 	}
 	
 	return 0;

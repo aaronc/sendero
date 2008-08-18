@@ -8,6 +8,15 @@ import sendero_base.util.ArrayWriter;
 
 import decorated_d.compiler.Main;
 
+import senderoxc.Config;
+
+char[] regularizeDirname(char[] dirname)
+{
+	if(dirname.length && (dirname[$-1] != '/' || dirname[$-1] != '\\'))
+		return dirname ~ "/";
+	else return dirname;
+}
+
 class SenderoXCCompiler
 {
 	this(char[] modname, DecoratedDCompiler compiler, char[][] imports)
@@ -24,6 +33,57 @@ class SenderoXCCompiler
 			return *pCompiler;
 		
 		char[][] imports;
+		
+		bool openModule(char[] modname, out char[] filename, out bool isSDX, out char[] dir)
+		{
+			filename = null;
+			isSDX = false;
+			dir = null;
+			
+			auto fname = Util.substitute(modname, ".", "/");
+			
+			auto sdxname = fname ~ ".sdx";
+			
+			if(exists(sdxname)) {
+				filename = sdxname;
+				isSDX = true;
+				return true;
+			}
+			
+			foreach(includeDir; SenderoXCConfig().includeDirs)
+			{
+				auto dirname = regularizeDirname(includeDir);
+				if(exists(dirname ~ sdxname))
+				{
+					filename = dirname ~ sdxname;
+					isSDX = true;
+					dir = dirname;
+					return true;
+				}
+			}
+			
+			auto dname = fname ~ ".d";
+			
+			if(exists(dname)) {
+				filename = dname;
+				isSDX = false;
+				return true;
+			}
+			
+			foreach(includeDir; SenderoXCConfig().includeDirs)
+			{
+				auto dirname = regularizeDirname(includeDir);
+				if(exists(dirname ~ dname))
+				{
+					filename = dirname ~ dname;
+					isSDX = false;
+					dir = dirname;
+					return true;
+				}
+			}
+			
+			return false;
+		}
 
 		DecoratedDCompiler createDDCompiler(char[] fname)
 		{
@@ -43,27 +103,25 @@ class SenderoXCCompiler
 			return compiler;
 		}
 		
-		Stdout.formatln("Reading module {}", modname);
+		Stdout.formatln("Looking for module {}", modname);
 		
-		auto fname = Util.substitute(modname, ".", "/");
+		char[] filename, dirname;
+		bool isSDX;
 		
-		if(exists(fname ~ ".sdx")) {
-			fname ~= ".sdx";
-			auto compiler = createDDCompiler(fname);
-			
-			auto sxcompiler = new SenderoXCCompiler(modname, compiler, imports);
-			registeredModules[modname] = sxcompiler;
-			return sxcompiler;
+		if(openModule(modname, filename, isSDX, dirname))
+		{
+			auto compiler = createDDCompiler(filename);
+			if(isSDX) {
+				auto sxcompiler = new SenderoXCCompiler(modname, compiler, imports);
+				registeredModules[modname] = sxcompiler;
+				return sxcompiler;
+			}
+			else {
+				auto dcompiler = new DModuleCompiler(modname, compiler, imports);
+				registeredModules[modname] = dcompiler;
+				return dcompiler;
+			}
 		}
-		else if(exists(fname ~ ".d")) {
-			fname ~= ".d";
-			auto compiler = createDDCompiler(fname);
-
-			auto dcompiler = new DModuleCompiler(modname, compiler, imports);
-			registeredModules[modname] = dcompiler;
-			return dcompiler;
-		}
-		else return null;
 	}
 	
 	const char[] modname;
@@ -98,7 +156,7 @@ class SenderoXCCompiler
 		compiler.process;
 	}
 	
-	final void write()
+	final void write(char[] outdir = null)
 	{
 		if(written_) return;
 		
@@ -112,9 +170,11 @@ class SenderoXCCompiler
 		writeThis;
 	}
 	
-	void writeThis()
+	void writeThis(char[] outdir = null)
 	{
-		auto outname = Util.substitute(modname, ".", "/");
+		if(outdir.length && (outdir[$-1] != '/' || outdir[$-1] != '\\'))
+			outdir ~= '/';
+		auto outname = outdir ~ Util.substitute(modname, ".", "/");
 		outname ~= ".d";
 		
 		char[] existingRes;

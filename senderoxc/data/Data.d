@@ -8,6 +8,7 @@ import senderoxc.data.Mapper;
 import senderoxc.data.IInterface;
 import sendero.util.Call;
 
+public import senderoxc.util.CodeGen;
 import Integer = tango.text.convert.Integer;
 import tango.math.Math;
 
@@ -97,6 +98,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		schema = Schema.create(decl.name);
 		createFieldInfo;
 		hasInterface = findInterface(decl.name);
+		mapper = Mapper.create(decl.name, schema);
 	}
 	
 	IInterface hasInterface;
@@ -104,6 +106,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	char[][] imports;
 	
 	Schema schema;
+	Mapper mapper;
 	
 	void init()
 	{
@@ -201,7 +204,8 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
-		writeCRUD_(wr); wr ~= "\n";
+		mapper.write(wr.after);
+		//writeCRUD_(wr); wr ~= "\n";
 		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");
 		

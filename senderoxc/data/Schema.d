@@ -34,6 +34,11 @@ class Schema
 		columns[i.name] = i;
 	}
 	
+	char[][] getPrimaryKeyCols()
+	{
+		return ["id"];
+	}
+	
 	static ColumnInfo prepColumnInfo(FieldType type)
 	{
 		ColumnInfo col;

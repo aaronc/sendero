@@ -205,17 +205,15 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-alias DefaultDatabaseProvider db;
 
+alias DefaultDatabaseProvider db;
 private static char[] deleteSql;
 public void destroy()
 {
 	if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql("User", ["id"]);
 	scope st = db.prepare(deleteSql);
-	st.execute(id_);
+	st.execute(id);
 }
-
-
 public uint id() { return id_;}
 private uint id_;
 

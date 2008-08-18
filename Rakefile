@@ -32,7 +32,7 @@ file "test_sendero.exe" => SRC do
 end
 
 task :senderoxc => SENDEROXC_SRC do
-  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofc:/tools/dmd/bin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP"
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofc:/tools/dmd/bin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP"
 end
 
 task :build => ["test_sendero.exe"]
