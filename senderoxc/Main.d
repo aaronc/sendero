@@ -71,15 +71,29 @@ int main(char[][] args)
 		run(SenderoXCConfig().modname);
 	}
 	else debug(SenderoXCUnittest) {
+		Stdout.formatln("Runing Sqlite tests");
+		
 		SenderoConfig.load("test");
-		run("test.senderoxc.test1");
+		SenderoXCConfig().includeDirs ~= "test/senderoxc";
+		
+		run("test1");
 		auto regression = new Regression("senderoxc");
 		regression.regressFile("test1.d");
 		regression.regressFile("test2.d");
 		regression.regressFile("IUser.d");
 		
-		SenderoConfig.load("test");
-		run("test.senderoxc.test1");
+		
+		version(dbi_mysql) {
+			SenderoXCCompiler.reset;
+			
+			Stdout.formatln("Runing Mysql tests");
+			SenderoConfig.load("test_mysql");
+			run("test1", "test/senderoxc/mysql");
+			regression = new Regression("senderoxc/mysql");
+			regression.regressFile("test1.d");
+			regression.regressFile("test2.d");
+			regression.regressFile("IUser.d");
+		}
 	}
 	
 	return 0;

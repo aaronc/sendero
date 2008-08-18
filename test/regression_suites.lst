@@ -1,4 +1,5 @@
 
+test/senderoxc/mysql
 test/senderoxc
 test/template
 test/xpath

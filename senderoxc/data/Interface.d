@@ -2,12 +2,14 @@ module senderoxc.data.Interface;
 
 import decorated_d.core.Decoration;
 import senderoxc.data.IInterface;
+import senderoxc.Reset;
 
 class InterfaceCtxt : IStandaloneDecoratorContext
 {
 	static this()
 	{
 		Call!("Interface.find", IInterface, char[]).register(&find);
+		SenderoXCReset.onReset.attach(&InterfaceCtxt.reset);
 	}
 	
 	IDecoratorResponder init(StandaloneDecorator dec, DeclarationInfo parentDecl, IContextBinder binder)
@@ -31,6 +33,11 @@ class InterfaceCtxt : IStandaloneDecoratorContext
 	}
 	
 	static InterfaceResp[char[]] interfaces;
+	
+	static void reset()
+	{
+		interfaces = null;
+	}
 }
 
 class InterfaceResp : IInterface, IDecoratorResponder

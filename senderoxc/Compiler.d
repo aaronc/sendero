@@ -1,6 +1,6 @@
 module senderoxc.Compiler;
 
-import tango.io.File, tango.io.FileConduit, tango.io.Path;
+import tango.io.File, tango.io.FileConduit, tango.io.Path, tango.io.FilePath;
 import tango.io.Stdout;
 import tango.util.log.Config;
 import Util = tango.text.Util;
@@ -9,6 +9,7 @@ import sendero_base.util.ArrayWriter;
 import decorated_d.compiler.Main;
 
 import senderoxc.Config;
+import senderoxc.Reset;
 
 char[] regularizeDirname(char[] dirname)
 {
@@ -19,10 +20,11 @@ char[] regularizeDirname(char[] dirname)
 
 class SenderoXCCompiler
 {
-	this(char[] modname, DecoratedDCompiler compiler, char[][] imports)
+	this(char[] modname, DecoratedDCompiler compiler, char[][] imports, char[] dirname = null)
 	{
 		this.modname = modname;
 		this.compiler = compiler;
+		this.dirname = dirname;
 		foreach(i; imports) registerImport(i);
 	}
 	
@@ -112,7 +114,7 @@ class SenderoXCCompiler
 		{
 			auto compiler = createDDCompiler(filename);
 			if(isSDX) {
-				auto sxcompiler = new SenderoXCCompiler(modname, compiler, imports);
+				auto sxcompiler = new SenderoXCCompiler(modname, compiler, imports, dirname);
 				registeredModules[modname] = sxcompiler;
 				return sxcompiler;
 			}
@@ -122,9 +124,10 @@ class SenderoXCCompiler
 				return dcompiler;
 			}
 		}
+		else return null;
 	}
 	
-	const char[] modname;
+	const char[] modname, dirname;
 	private DecoratedDCompiler compiler;
 	private bool processed_ = false;
 	private bool written_ = false;
@@ -151,7 +154,7 @@ class SenderoXCCompiler
 		processThis;
 	}
 	
-	void processThis()
+	protected void processThis()
 	{
 		compiler.process;
 	}
@@ -165,22 +168,34 @@ class SenderoXCCompiler
 		Stdout.formatln("Writing module {}", modname);
 		
 		foreach(name, child; imports)
-			child.write;
+			child.write(outdir);
 		
-		writeThis;
+		writeThis(outdir);
 	}
 	
-	void writeThis(char[] outdir = null)
+	protected void writeThis(char[] outdir = null)
 	{
-		if(outdir.length && (outdir[$-1] != '/' || outdir[$-1] != '\\'))
-			outdir ~= '/';
-		auto outname = outdir ~ Util.substitute(modname, ".", "/");
-		outname ~= ".d";
+		if(outdir.length) {
+			outdir = regularizeDirname(outdir);
+			Stdout.formatln("Writing to directory {}", outdir);
+		}
+		else {
+			outdir = dirname;
+			Stdout.formatln("Writing to directory {}", outdir);
+		}
+		
+		auto fname = Util.substitute(modname, ".", "/");
+		char[] outname = outdir ~ fname ~ ".d";
+		auto fpath = new FilePath(outname);
+		if(!exists(fpath.parent)) {
+			createFolder(fpath.parent);
+		}
 		
 		char[] existingRes;
 		
-		if(exists(outname)) {
-			auto existingResFile = new File(outname);
+		if(fpath.exists) {
+			auto existingResFile = new File(fpath.toString);
+			assert(existingResFile);
 			existingRes = cast(char[])existingResFile.read;
 		}
 		
@@ -188,13 +203,28 @@ class SenderoXCCompiler
 		compiler.finish(&res.append, outname);
 		
 		if(res.get != existingRes) {
+			if(fpath.exists) copy(outname, outname ~ ".bak");
+			Stdout.formatln("Commiting file {}", fpath.toString);
 			auto resFile = new FileConduit(outname, FileConduit.WriteCreate);
+			assert(resFile);
 			resFile.write(res.get);
 			resFile.flush.close;
 		}
+		else Stdout.formatln("File {} is up-to-date", outname);
+	}
+	
+	void compile()
+	{
+		
 	}
 	
 	SenderoXCCompiler[char[]] imports;
+	
+	static void reset()
+	{
+		registeredModules = null;
+		SenderoXCReset.onReset();
+	}
 }
 
 class DModuleCompiler : SenderoXCCompiler
@@ -208,7 +238,12 @@ class DModuleCompiler : SenderoXCCompiler
 		
 	}
 	
-	void writeThis() {
+	void writeThis(char[] outdir = null) {
+		
+	}
+	
+	void compile()
+	{
 		
 	}
 }

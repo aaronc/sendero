@@ -1,11 +1,17 @@
 module senderoxc.data.Schema;
 
 import dbi.Database;
+import senderoxc.Reset;
 
 debug import tango.io.Stdout;
 
 class Schema
 {
+	static this()
+	{
+		SenderoXCReset.onReset.attach(&Schema.reset);
+	}
+	
 	static Schema[char[]] schemas;
 	
 	private this(char[] tablename)
@@ -124,6 +130,11 @@ class Schema
 				db.execute(createSql);
 			}
 		}
+	}
+	
+	static void reset()
+	{
+		schemas = null;
 	}
 }
 
