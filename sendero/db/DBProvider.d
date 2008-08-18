@@ -13,7 +13,7 @@ import sendero.core.Config;
 
 public import sendero.db.Statement;
 
-class DBConnectionProvider(char[] dbUrl)
+class DBConnectionProvider(char[] dbUrl, DatabaseT = Database)
 {
 	static Database createNewConnection()
 	{
@@ -29,7 +29,41 @@ class DefaultConnectionProvider
 	}
 }
 
-interface IProvider(StatementT)
+version(dbi_mysql) {
+	import dbi.mysql.MysqlDatabase;
+	
+	class DefaultMysqlConnectionProvider
+	{
+		static MysqlDatabase createNewConnection()
+		{
+			assert(SenderoConfig() !is null);
+			auto url = SenderoConfig().dbUrl;
+			auto db = cast(MysqlDatabase)getDatabaseForURL(url);
+			assert(db, "Unable to create database connection or Database type is not Mysql, DB URL: " ~ url);
+			return db;
+		}
+	}
+	
+}
+
+version(dbi_sqlite) {
+	import dbi.sqlite.SqliteDatabase;
+	
+	class DefaultSqliteConnectionProvider
+	{
+		static SqliteDatabase createNewConnection()
+		{
+			assert(SenderoConfig() !is null);
+			auto url = SenderoConfig().dbUrl;
+			auto db = cast(SqliteDatabase)getDatabaseForURL(url);
+			assert(db, "Unable to create database connection or Database type is not Sqlite, DB URL: " ~ url);
+			return db;
+		}
+	}
+}
+
+
+interface IProvider(StatementT, ConnectionT)
 {
 	bool prepare(char[] statement, inout StatementT stmt, char[] key = null);
 	bool prepareRaw(char[] statement, inout IStatement stmt, char[] key = null);
@@ -39,9 +73,10 @@ interface IProvider(StatementT)
 	void rollback();
 	void commit();
 	SqlGenerator sqlGen();
+	ConnectionT getInstance();
 }
 
-class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(StatementT)
+class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(StatementT, ConnectionT)
 {
 	this(ConnectionT inst)
 	{
@@ -127,6 +162,11 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 		return inst.sqlGen;
 	}
 	
+	ConnectionT getInstance()
+	{
+		return inst;
+	}
+	
 	private ConnectionT inst;
 	private StatementT[char[]] cachedStatements;
 	private IStatement[char[]] cachedRawStatements;
@@ -139,18 +179,18 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 
 
 
-class DBProvider(DBConnectionProvider)
+class DBProvider(DBConnectionProvider, DatabaseT = Database)
 {
-	private static this()
+	static this()
 	{
-		pool = new ConnectionPool!(Database, DBConnectionProvider);
-		providers_ = new ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer))(null);
+		pool = new ConnectionPool!(DatabaseT, DBConnectionProvider);
+		providers_ = new ThreadLocal!(ProviderContainer!(DatabaseT, DBProvider!(DBConnectionProvider, DatabaseT), StatementContainer))(null);
 	}
 	
 	private static ConnectionPool!(Database, DBConnectionProvider) pool;
 	private static ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)) providers_;
 	
-	private static IProvider!(StatementContainer) getProvider()
+	private static IProvider!(StatementContainer, DatabaseT) getProvider()
 	{
 		debug assert(providers_);
 		auto provider = providers_.val;
@@ -241,6 +281,19 @@ class DBProvider(DBConnectionProvider)
 		auto provider = getProvider;
 		return provider.sqlGen;
 	}
+	
+	static DatabaseT database()
+	{
+		auto provider = getProvider;
+		return provider.getInstance;
+	}
 }
 
 alias DBProvider!(DefaultConnectionProvider) DefaultDatabaseProvider;
+version(dbi_mysql) {
+	alias DBProvider!(DefaultMysqlConnectionProvider) DefaultMysqlProvider;	
+}
+
+version(dbi_mysql) {
+	alias DBProvider!(DefaultSqliteConnectionProvider) DefaultSqliteProvider;	
+}
