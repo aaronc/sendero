@@ -48,10 +48,52 @@ class InterfaceResp : IInterface, IDecoratorResponder
 	char[] iname() { return iname_; }
 	char[] name() { return name_; }
 	
+	char[][] interfaces;
+	char[][] imports;
+	FunctionDeclaration[] decls;
+	
+	void addInterface(char[] interfaceName, char[][] imports = null)
+	{
+		interfaces ~= interfaceName;
+	}
+	
+	void addMethod(FunctionDeclaration decl)
+	{
+		decls ~= decl;
+	}
+	
 	private char[] name_, iname_;
 	
 	void finish(IDeclarationWriter wr)
 	{
-		wr ~= "interface " ~ iname ~ "{ };";
+		auto pr = wr.after;
+		
+		pr.f("interface {}", iname);
+		if(interfaces.length) pr(" : ");
+		auto len = interfaces.length;
+		for(uint i = 0; i < len; ++i) {
+			pr(interfaces[i]);
+			if(i < len - 1) pr(", ");
+		}
+		pr.nl;
+		pr("{").nl;
+		pr.indent;
+		
+		foreach(decl; decls)
+		{
+			char[] params;
+			len = decl.params.length;
+			for(uint i = 0; i < len; ++i) {
+				params ~= decl.params[i].type;
+				if(decl.params[i].name.length)
+					params ~= " " ~ decl.params[i].name;
+				if(i < len - 1) pr(", ");
+			}
+			
+			pr.fln("{} {}({});", decl.retType, decl.name, params);
+		}
+		
+		pr.dedent;
+		pr("}").nl;
 	}
 }

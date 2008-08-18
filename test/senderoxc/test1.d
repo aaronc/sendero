@@ -125,7 +125,7 @@ Res iroute(Req req)
 
 
 /+@data+/ class User
-: IUser, IObject, IHttpSet
+: IUser
 
 {
 	/+@primaryKey+/ /+@autoIncrement+/ /+@UInt("id")+/;
@@ -154,7 +154,6 @@ int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
 void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
-
 
 private StaticBitArray!(1,5) __touched__;
 

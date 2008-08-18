@@ -80,6 +80,8 @@ class DataContext : IDecoratorContext
 //		binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
 		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
 		
+		res.init;
+		
 		return res;
 	}
 }
@@ -95,8 +97,45 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	}
 	
 	IInterface hasInterface;
+	char[][] interfaces;
+	char[][] imports;
 	
 	Schema schema;
+	
+	void init()
+	{
+		addInterface("IObject");
+		addInterface("IHttpSet");
+		
+		foreach(child;decl.declarations)
+		{
+			if(child.type == DeclType.Function &&
+					!child.isStatic && child.protection == Protection.Public)
+			{
+				auto fdecl = cast(FunctionDeclaration)child;
+				assert(fdecl);
+				addMethod(fdecl);
+			}
+		}
+	}
+	
+	void addInterface(char[] interfaceName, char[][] imports = null)
+	{
+		if(hasInterface) {
+			hasInterface.addInterface(interfaceName, imports);
+		}
+		else {
+			interfaces ~= interfaceName;
+			imports ~= imports;
+		}
+	}
+	
+	void addMethod(FunctionDeclaration decl)
+	{
+		if(hasInterface) {
+			hasInterface.addMethod(decl);
+		}
+	}
 	
 	void createFieldInfo()
 	{
@@ -130,11 +169,13 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	void addGetter(Getter getter)
 	{
 		getters ~= getter;
+		addMethod(new FunctionDeclaration(getter.name, getter.type));
 	}
 	
 	uint addSetter(Setter setter)
 	{
 		setters ~= setter;
+		addMethod(new FunctionDeclaration(setter.name, "void", [FunctionDeclaration.Param(setter.type)]));
 		return setters.length - 1;
 	}
 	
@@ -146,9 +187,12 @@ class DataResponder : IDecoratorResponder, IDataResponder
 	{
 		if(hasInterface) wr.addBaseType(hasInterface.iname);
 		
+		foreach(iface; interfaces)
+			wr.addBaseType(iface);
+		
 		//iobj.finish(wr); wr ~= "\n";
 //		schema.write(wr); wr ~= "\n";
-		writeIObject(wr); wr ~= "\n";
+		writeIObject(wr.after); wr ~= "\n";
 		writeChangeTracking(wr); wr ~= "\n";
 		writeIHttpSet(wr); wr ~= "\n";
 		writeValidations(wr);  wr ~= "\n";
@@ -167,44 +211,47 @@ class DataResponder : IDecoratorResponder, IDataResponder
 		wr ~= "}\n";+/
 	}
 	
-	void writeIObject(IDeclarationWriter wr)
-	{
-		wr.addBaseType("IObject");
+	void writeIObject(IPrint wr)
+	{		
+		wr("Var opIndex(char[] key)\n");
+		wr("{\n");
+		wr.indent;
+		wr("Var res;\n");
+		wr("switch(key)\n");
+		wr("{\n");
 		
-		wr ~= "Var opIndex(char[] key)\n";
-		wr ~= "{\n";
-		wr ~= "\tVar res;\n";
-		wr ~= "\tswitch(key)\n";
-		wr ~= "\t{\n";
-		
+		wr.indent;
 		foreach(getter; getters)
 		{
-			wr ~= "\t\tcase \"" ~ getter.name ~ "\": ";
-			wr ~= "bind(res, " ~ getter.name ~ "()); ";
-			wr ~= "break;\n";
+			wr("case \"" ~ getter.name ~ "\": ");
+			wr("bind(res, " ~ getter.name ~ "()); ");
+			wr("break;\n");
 		}
 		
-		wr ~= "\t\tdefault: return Var();\n";
-		wr ~= "\t}\n";
-		wr ~= "\treturn res;\n";
+		wr("default: return Var();\n");
 		
-		wr ~= "}\n";
+		wr.dedent;
 		
-		wr ~= "int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }\n";
+		wr("}\n");
+		wr("return res;\n");
 		
-		wr ~= "void opIndexAssign(Var val, char[] key) {}\n";
+		wr.dedent;
 		
-		wr ~= "Var opCall(Var[] params, IExecContext ctxt) { return Var(); }\n";
+		wr("}\n");
 		
-		wr ~= "void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}\n";
+		wr("int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }\n");
 		
-		wr ~= "\n";
+		wr("void opIndexAssign(Var val, char[] key) {}\n");
+		
+		wr("Var opCall(Var[] params, IExecContext ctxt) { return Var(); }\n");
+		
+		wr("void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}\n");
+		
+		wr("\n");
 	}
 	
 	void writeIHttpSet(IDeclarationWriter wr)
 	{
-		wr.addBaseType("IHttpSet");
-		
 		wr ~= "void httpSet(IObject obj, Request req)\n";
 		wr ~= "{\n";
 		wr ~= "\tforeach(key, val; obj)\n";
@@ -457,6 +504,7 @@ class DataResponder : IDecoratorResponder, IDataResponder
 
 struct Getter
 {
+	char[] type;
 	char[] name;
 }
 
@@ -522,7 +570,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 				resp.schema.addColumn(col);
 				
 				if(!no_map) {
-					resp.addGetter(Getter(name));
+					resp.addGetter(Getter(type.DType, name));
 					
 					if(no_set) return new NoSetFieldResponder(type.DType, name);
 					else {
@@ -601,7 +649,7 @@ class HasOneCtxt : IStandaloneDecoratorContext
 					decorator.params[1].type == VarT.String) {
 				auto type = decorator.params[0].string_;
 				auto name = decorator.params[1].string_;
-				resp.addGetter(Getter(name));
+				resp.addGetter(Getter(type, name));
 				
 				auto col = ColumnInfo(name ~ "_id", BindType.UInt);
 				resp.schema.addColumn(col);
@@ -649,7 +697,7 @@ class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
 				name = decorator.params[0].string_;
 			}
 			
-			resp.getters ~= Getter(name);
+			resp.getters ~= Getter("uint", name);
 			
 			auto col = ColumnInfo(name, BindType.UInt);
 			col.primaryKey = true;
