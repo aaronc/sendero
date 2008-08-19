@@ -56,7 +56,8 @@ class DataContext : IDecoratorContext
 		touched = true;
 		
 		auto res = new DataResponder(decl);
-		
+		assert(res);
+		assert(res.obj !is null);
 		res.obj.initCtxt(binder);
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
@@ -74,11 +75,16 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	this(DeclarationInfo decl)
 	{
 		this.decl_ = decl;
-		schema_ = Schema.create(decl_.name);
+		this.schema_ = Schema.create(decl_.name);
 		createFieldInfo;
-		hasInterface = findInterface(decl_.name);
-		mapper_ = Mapper.create(decl_.name, this);
-		objRes_ = new ObjectResponder(this);
+		this.hasInterface = findInterface(decl_.name);
+		this.obj_ = new ObjectResponder(this);
+		this.mapper_ = Mapper.create(decl_.name, this);
+		
+		assert(decl_ !is null);
+		assert(schema_ !is null);
+		assert(mapper_ !is null);
+		assert(obj_ !is null);
 	}
 	
 	IInterface hasInterface;
@@ -87,14 +93,17 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	
 	char[] classname() { return decl.name; }
 	
+	DeclarationInfo decl() { return decl_; }
+	private DeclarationInfo decl_;
+	
 	Schema schema() { return schema_; }
 	private Schema schema_;
 	
+	ObjectResponder obj() { assert(this.obj_ !is null, classname); return this.obj_; }
+	private ObjectResponder obj_;
+	
 	Mapper mapper() { return mapper_; }
 	private Mapper mapper_;
-	
-	ObjectResponder obj() { return objRes_; }
-	private ObjectResponder objRes_;
 	
 	void init()
 	{
@@ -153,9 +162,6 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	}
 	
 	FieldInfo[char[]] fieldInfo;
-	
-	DeclarationInfo decl() { return decl_; }
-	private DeclarationInfo decl_;
 	
 	IValidationResponder[] validations;
 	

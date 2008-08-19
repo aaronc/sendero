@@ -177,6 +177,24 @@ public void destroy()
 
 bool save()
 {
+	if(id_) {
+		char[][] fields
+		if(__touched__[0]) fields ~= "id";
+		if(__touched__[1]) fields ~= "email";
+		if(__touched__[2]) fields ~= "username";
+		if(__touched__[3]) fields ~= "firstname";
+		if(__touched__[4]) fields ~= "lastname";
+		if(__touched__[5]) fields ~= "last_login";
+		auto sql = db.sqlGen.makeInsertSql("User", fields);
+		if(__touched__[0]) ;
+		if(__touched__[1]) ;
+		if(__touched__[2]) ;
+		if(__touched__[3]) ;
+		if(__touched__[4]) ;
+		if(__touched__[5]) ;
+	}}
+	else {
+	}}
 }
 
 Var opIndex(char[] key)

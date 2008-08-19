@@ -21,13 +21,14 @@ class Mapper : IMapper
 	
 	protected this(char[] className, IDataResponder res)
 	{
-		this.classname_ = className;
-		
 		assert(res);
 		assert(res.schema);
+		assert(res.obj);
 		
+		this.classname_ = className;
 		this.schema_ = res.schema;
-		this.iface = res;
+		this.obj_ = res.obj;
+		this.iface_ = res;
 	}
 	
 	alias Mapper function(char[] className, IDataResponder res) MapperCtr;
@@ -49,7 +50,7 @@ class Mapper : IMapper
 	public IObjectResponder obj() { return obj_; }
 	private IObjectResponder obj_;
 	
-	private IInterfaceWriter iface;
+	private IInterfaceWriter iface_;
 	private IMapperResponder[] responders;
 	
 	void writeDBAlias(IPrint wr)
@@ -88,11 +89,11 @@ class Mapper : IMapper
 	
 	final void addInterface(char[] interfaceName, char[][] imports = null)
 	{
-		iface.addInterface(interfaceName, imports);
+		iface_.addInterface(interfaceName, imports);
 	}
 	
 	final void addMethod(FunctionDeclaration decl)
 	{
-		iface.addMethod(decl);
+		iface_.addMethod(decl);
 	}
 }

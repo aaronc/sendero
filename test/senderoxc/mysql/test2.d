@@ -61,6 +61,22 @@ public void destroy()
 
 bool save()
 {
+	if(id_) {
+		char[][] fields
+		if(__touched__[0]) fields ~= "entry";
+		if(__touched__[1]) fields ~= "created";
+		if(__touched__[2]) fields ~= "modified";
+		if(__touched__[3]) fields ~= "title";
+		if(__touched__[4]) fields ~= "tags";
+		auto sql = db.sqlGen.makeInsertSql("BlogEntry", fields);
+		if(__touched__[0]) ;
+		if(__touched__[1]) ;
+		if(__touched__[2]) ;
+		if(__touched__[3]) ;
+		if(__touched__[4]) ;
+	}}
+	else {
+	}}
 }
 
 Var opIndex(char[] key)

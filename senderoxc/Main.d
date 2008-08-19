@@ -89,8 +89,8 @@ int main(char[][] args)
 		regression.regressFile("IUser.d");
 		
 		
-		/+version(dbi_mysql) {
-			SenderoXCCompiler.reset;
+		version(dbi_mysql) {
+			SenderoXCompiler.reset;
 			
 			Stdout.formatln("Runing Mysql tests");
 			SenderoConfig.load("test_mysql");
@@ -99,7 +99,7 @@ int main(char[][] args)
 			regression.regressFile("test1.d");
 			regression.regressFile("test2.d");
 			regression.regressFile("IUser.d");
-		}+/
+		}
 	}
 	
 	return 0;

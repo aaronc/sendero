@@ -108,6 +108,8 @@ class Field : IField
 	private FieldType type_;
 	
 	char[] name() { return name_; }
+	char[] colname() { return name_; }
+	
 	private char[] name_;
 	private bool getter_ = true;
 	private bool setter_ = true;
@@ -144,8 +146,8 @@ class Field : IField
 		return map_;
 	}
 	
-	void writeIsModifiedExpr(void delegate(char[]) wr)
+	char[] isModifiedExpr()
 	{
-		wr("__touched__[" ~ Integer.toString(index_) ~ "]");
+		return "__touched__[" ~ Integer.toString(index_) ~ "]";
 	}
 }
