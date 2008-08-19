@@ -100,6 +100,10 @@ public void destroy()
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
 }
+
+bool save()
+{
+}
 public uint id() {return id_;}
 private uint id_;
 

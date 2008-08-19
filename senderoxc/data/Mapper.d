@@ -6,6 +6,7 @@ import sendero.core.Config;
 import dbi.all;
 
 import senderoxc.data.mapper.Delete;
+import senderoxc.data.mapper.Save;
 
 class Mapper : IMapper
 {
@@ -56,9 +57,15 @@ class Mapper : IMapper
 		return new DeleteResponder(this);
 	}
 	
+	IMapperResponder getSaveResponder()
+	{
+		return new SaveResponder!()(this);
+	}
+	
 	final void init()
 	{
 		responders ~= getDeleteResponder;
+		responders ~= getSaveResponder;
 	}
 	
 	final void write(IPrint wr)

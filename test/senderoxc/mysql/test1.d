@@ -140,12 +140,6 @@ Var opIndex(char[] key)
 	Var res;
 	switch(key)
 	{
-		case "id": bind(res, id()); break;
-		case "email": bind(res, email()); break;
-		case "username": bind(res, username()); break;
-		case "firstname": bind(res, firstname()); break;
-		case "lastname": bind(res, lastname()); break;
-		case "last_login": bind(res, last_login()); break;
 		default: return Var();
 	}
 	return res;
@@ -155,7 +149,7 @@ void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
-private StaticBitArray!(1,5) __touched__;
+private StaticBitArray!(0,0) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -164,11 +158,6 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "email": email = convertParam2!(char[], Req)(val); break;
-			case "username": username = convertParam2!(char[], Req)(val); break;
-			case "firstname": firstname = convertParam2!(char[], Req)(val); break;
-			case "lastname": lastname = convertParam2!(char[], Req)(val); break;
-			case "last_login": last_login = convertParam2!(Time, Req)(val); break;
 			default: break;
 		}
 	}
@@ -213,28 +202,33 @@ public void destroy()
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
 }
-public uint id() { return id_;}
-private uint id_;
 
-public char[] email() { return email_;}
-public void email(char[] val) {__touched__[0] = true; email_ = val;}
-private char[] email_;
+bool save()
+{
+}
 
-public char[] username() { return username_;}
-public void username(char[] val) {__touched__[1] = true; username_ = val;}
-private char[] username_;
+public char[] email() { return email_; }}
+public void email(char[] val) {__touched__[0] = true; email_ = val;}}
+private char[] email;
 
-public char[] firstname() { return firstname_;}
-public void firstname(char[] val) {__touched__[2] = true; firstname_ = val;}
-private char[] firstname_;
+public char[] firstname() { return firstname_; }}
+public void firstname(char[] val) {__touched__[0] = true; firstname_ = val;}}
+private char[] firstname;
 
-public char[] lastname() { return lastname_;}
-public void lastname(char[] val) {__touched__[3] = true; lastname_ = val;}
-private char[] lastname_;
+public char[] username() { return username_; }}
+public void username(char[] val) {__touched__[0] = true; username_ = val;}}
+private char[] username;
 
-public Time last_login() { return last_login_;}
-public void last_login(Time val) {__touched__[4] = true; last_login_ = val;}
-private Time last_login_;
+public char[] lastname() { return lastname_; }}
+public void lastname(char[] val) {__touched__[0] = true; lastname_ = val;}}
+private char[] lastname;
 
+public uint id() { return id_; }}
+public void id(uint val) {__touched__[0] = true; id_ = val;}}
+private uint id;
+
+public Time last_login() { return last_login_; }}
+public void last_login(Time val) {__touched__[0] = true; last_login_ = val;}}
+private Time last_login;
 
 }

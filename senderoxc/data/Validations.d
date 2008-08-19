@@ -1,20 +1,10 @@
 module senderoxc.data.Validations;
 
-import decorated_d.core.Decoration;
-
 import Float = tango.text.convert.Float;
 
-interface IDataResponder
-{
-	void addValidation(IValidationResponder);
-}
+import senderoxc.data.IDataResponder;
+import senderoxc.data.IValidationResponder;
 
-interface IValidationResponder
-{
-	void atStaticThis(IDeclarationWriter wr);
-	void atBody(IDeclarationWriter wr);
-	void atOnValidate(IDeclarationWriter wr);
-}
 
 abstract class DataResponderCtxt : IDecoratorContext
 {

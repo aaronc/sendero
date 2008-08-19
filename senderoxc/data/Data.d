@@ -2,21 +2,22 @@ module senderoxc.data.Data;
 
 import decorated_d.core.Decoration;
 
+import senderoxc.data.Object;
 import senderoxc.data.Schema;
 import senderoxc.data.Validations;
 import senderoxc.data.Mapper;
 import senderoxc.data.IInterface;
-import sendero.util.Call;
 
 public import senderoxc.util.CodeGen;
 import Integer = tango.text.convert.Integer;
 import tango.math.Math;
 
 import tango.core.Signal;
+import sendero.util.Call;
 
 import dbi.Database;
 
-
+import senderoxc.data.IDataResponder;
 
 /*
  * TODO:
@@ -55,30 +56,8 @@ class DataContext : IDecoratorContext
 		touched = true;
 		
 		auto res = new DataResponder(decl);
-		/+binder.bindDecorator(DeclType.Field, "required", new TempInstValidCtxt(res, "ExistenceValidation"));
-		binder.bindDecorator(DeclType.Field, "minLength", new InstValidCtxt(res, "MinLengthValidation"));
-		binder.bindDecorator(DeclType.Field, "maxLength", new InstValidCtxt(res, "MaxLengthValidation"));
-		binder.bindDecorator(DeclType.Field, "regex", new InstValidCtxt(res, "FormatValidation")); // value = a string literal, class = an identifier
-		binder.bindDecorator(DeclType.Field, "minValue", new TempInstValidCtxt(res, "MinValueValidation"));
-		binder.bindDecorator(DeclType.Field, "maxValue", new TempInstValidCtxt(res, "MaxValueValidation"));+/
-		//binder.bindDecorator(DeclType.Field, "xmlEntityFilter");
-		//binder.bindDecorator(DeclType.Field, "htmlXSSFilter");
-		//binder.bindDecorator(DeclType.Field, "fixedDateTimeParser");
-		//binder.bindDecorator(DeclType.Field, "localDateTimeParser");
-		//binder.bindDecorator(DeclType.Field, "beforeSave"); // can cancel save
-		//binder.bindDecorator(DeclType.Field, "afterSave");
-		//binder.bindDecorator(DeclType.Field, "beforeConvertInput"); // can cancel convert
-		//binder.bindDecorator(DeclType.Field, "customConvertInput");
-		//binder.bindDecorator(DeclType.Field, "afterConvertInput");
-		//binder.bindDecorator(DeclType.Field, "customValidate");
-		//binder.bindDecorator(DeclType.Field, "beforeRender");
-		//binder.bindDecorator(DeclType.Field, "hideRender");
-		//binder.bindDecorator(DeclType.Field, "humanize");
 		
-		foreach(type; Schema.FieldTypes)
-		{
-			binder.bindStandaloneDecorator(type.type, new FieldCtxt(res, type));
-		}
+		res.objRes.initCtxt(binder);
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
 //		binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
@@ -94,19 +73,28 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 {
 	this(DeclarationInfo decl)
 	{
-		this.decl = decl;
-		schema = Schema.create(decl.name);
+		this.decl_ = decl;
+		schema_ = Schema.create(decl_.name);
 		createFieldInfo;
-		hasInterface = findInterface(decl.name);
-		mapper = Mapper.create(decl.name, schema, this);
+		hasInterface = findInterface(decl_.name);
+		mapper_ = Mapper.create(decl_.name, schema, this);
+		objRes_ = new ObjectResponder(this);
 	}
 	
 	IInterface hasInterface;
 	char[][] interfaces;
 	char[][] imports;
 	
-	Schema schema;
-	Mapper mapper;
+	char[] classname() { return decl.name; }
+	
+	Schema schema() { return schema_; }
+	private Schema schema_;
+	
+	Mapper mapper() { return mapper_; }
+	private Mapper mapper_;
+	
+	ObjectResponder objRes() { return objRes_; }
+	private ObjectResponder objRes_;
 	
 	void init()
 	{
@@ -166,7 +154,9 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	
 	FieldInfo[char[]] fieldInfo;
 	
-	DeclarationInfo decl;
+	DeclarationInfo decl() { return decl_; }
+	private DeclarationInfo decl_;
+	
 	IValidationResponder[] validations;
 	
 	void addValidation(IValidationResponder v)
@@ -207,6 +197,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
 		mapper.write(wr.after);
+		objRes.write(wr.after);
 		//writeCRUD_(wr); wr ~= "\n";
 		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");
@@ -527,13 +518,13 @@ struct Setter
 
 class FieldCtxt : IStandaloneDecoratorContext
 {
-	this(DataResponder resp, Schema.FieldType type)
+	this(DataResponder resp, FieldType type)
 	{
 		this.resp = resp;
 		this.type = type;
 	}
 	DataResponder resp;
-	Schema.FieldType type;
+	FieldType type;
 	
 	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
 	{

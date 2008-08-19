@@ -31,11 +31,6 @@ Var opIndex(char[] key)
 	{
 		case "id": bind(res, id()); break;
 		case "author": bind(res, author()); break;
-		case "entry": bind(res, entry()); break;
-		case "created": bind(res, created()); break;
-		case "modified": bind(res, modified()); break;
-		case "title": bind(res, title()); break;
-		case "tags": bind(res, tags()); break;
 		default: return Var();
 	}
 	return res;
@@ -45,7 +40,7 @@ void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
-private StaticBitArray!(1,6) __touched__;
+private StaticBitArray!(1,1) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -55,11 +50,6 @@ void httpSet(IObject obj, Request req)
 		switch(key)
 		{
 			case "author": author = convertParam2!(User, Req)(val); break;
-			case "entry": entry = convertParam2!(char[], Req)(val); break;
-			case "created": created = convertParam2!(Time, Req)(val); break;
-			case "modified": modified = convertParam2!(Time, Req)(val); break;
-			case "title": title = convertParam2!(char[], Req)(val); break;
-			case "tags": tags = convertParam2!(char[], Req)(val); break;
 			default: break;
 		}
 	}
@@ -100,32 +90,36 @@ public void destroy()
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
 }
+
+bool save()
+{
+}
+
+public char[] entry() { return entry_; }}
+public void entry(char[] val) {__touched__[0] = true; entry_ = val;}}
+private char[] entry;
+
+public Time created() { return created_; }}
+public void created(Time val) {__touched__[0] = true; created_ = val;}}
+private Time created;
+
+public char[] tags() { return tags_; }}
+public void tags(char[] val) {__touched__[0] = true; tags_ = val;}}
+private char[] tags;
+
+public char[] title() { return title_; }}
+public void title(char[] val) {__touched__[0] = true; title_ = val;}}
+private char[] title;
+
+public Time modified() { return modified_; }}
+public void modified(Time val) {__touched__[0] = true; modified_ = val;}}
+private Time modified;
 public uint id() {return id_;}
 private uint id_;
 
 public User author() {return author_;}
 public void author(User val) {__touched__[0] = true; author_ = val;}
 private HasOne!(User) author_.get;
-
-public char[] entry() { return entry_;}
-public void entry(char[] val) {__touched__[1] = true; entry_ = val;}
-private char[] entry_;
-
-public Time created() { return created_;}
-public void created(Time val) {__touched__[2] = true; created_ = val;}
-private Time created_;
-
-public Time modified() { return modified_;}
-public void modified(Time val) {__touched__[3] = true; modified_ = val;}
-private Time modified_;
-
-public char[] title() { return title_;}
-public void title(char[] val) {__touched__[4] = true; title_ = val;}
-private char[] title_;
-
-public char[] tags() { return tags_;}
-public void tags(char[] val) {__touched__[5] = true; tags_ = val;}
-private char[] tags_;
 
 
 }

@@ -55,6 +55,12 @@ struct StaticBitArray(size_t size, size_t len)
         return false;
     }
     
+    void clear()
+    {
+    	for(uint i = 0; i < size; ++i)
+    		bits[i] = 0;
+    }
+    
     /+bool hasFalse()
     {
     	static if(size > 1) {
@@ -114,6 +120,9 @@ unittest
 	//assert(!array.hasFalse);
 	assert(array.hasTrue);
 
+	array.clear;
+	
+	assert(!array.hasTrue);
 	
 	/+array.set!(3)(true);
 	assert(array[3] == true);
