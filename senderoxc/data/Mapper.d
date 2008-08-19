@@ -1,6 +1,7 @@
 module senderoxc.data.Mapper;
 
 import senderoxc.data.mapper.IMapper;
+import senderoxc.data.IDataResponder;
 
 import sendero.core.Config;
 import dbi.all;
@@ -10,35 +11,26 @@ import senderoxc.data.mapper.Save;
 
 class Mapper : IMapper
 {
-	static Mapper create(char[] className, Schema schema, IInterfaceWriter iface)
+	static Mapper create(char[] className, IDataResponder res)
 	{
 		auto db = getDatabaseForURL(SenderoConfig().dbUrl);
 		auto pCtr = db.type in mapperCtrs;
-		if(pCtr !is null) return (*pCtr)(className, schema, iface);
-		else return new Mapper(className, schema, iface);
+		if(pCtr !is null) return (*pCtr)(className, res);
+		else return new Mapper(className, res);
 	}
 	
-	protected this(char[] className, Schema schema, IInterfaceWriter iface)
+	protected this(char[] className, IDataResponder res)
 	{
 		this.classname_ = className;
 		
-		assert(schema);
-		assert(iface);
+		assert(res);
+		assert(res.schema);
 		
-		this.schema_ = schema;
-		this.iface = iface;
+		this.schema_ = res.schema;
+		this.iface = res;
 	}
 	
-	private const char[] classname_;
-	
-	char[] classname() { return classname_; }
-	
-	public Schema schema() { return schema_; }
-	protected Schema schema_;
-	private IInterfaceWriter iface;
-	private IMapperResponder[] responders;
-	
-	alias Mapper function(char[] className, Schema schema, IInterfaceWriter iface) MapperCtr;
+	alias Mapper function(char[] className, IDataResponder res) MapperCtr;
 	
 	protected static void registerMapperClass(char[] type, MapperCtr create)
 	{
@@ -46,6 +38,19 @@ class Mapper : IMapper
 	}
 	
 	private static MapperCtr[char[]] mapperCtrs;
+	
+	
+	char[] classname() { return classname_; }
+	private const char[] classname_;
+	
+	public Schema schema() { return schema_; }
+	private Schema schema_;
+	
+	public IObjectResponder obj() { return obj_; }
+	private IObjectResponder obj_;
+	
+	private IInterfaceWriter iface;
+	private IMapperResponder[] responders;
 	
 	void writeDBAlias(IPrint wr)
 	{

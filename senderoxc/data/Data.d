@@ -57,10 +57,10 @@ class DataContext : IDecoratorContext
 		
 		auto res = new DataResponder(decl);
 		
-		res.objRes.initCtxt(binder);
+		res.obj.initCtxt(binder);
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
-//		binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
+		//binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
 		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
 		
 		res.init;
@@ -77,7 +77,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		schema_ = Schema.create(decl_.name);
 		createFieldInfo;
 		hasInterface = findInterface(decl_.name);
-		mapper_ = Mapper.create(decl_.name, schema, this);
+		mapper_ = Mapper.create(decl_.name, this);
 		objRes_ = new ObjectResponder(this);
 	}
 	
@@ -93,7 +93,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	Mapper mapper() { return mapper_; }
 	private Mapper mapper_;
 	
-	ObjectResponder objRes() { return objRes_; }
+	ObjectResponder obj() { return objRes_; }
 	private ObjectResponder objRes_;
 	
 	void init()
@@ -190,14 +190,14 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		
 		//iobj.finish(wr); wr ~= "\n";
 //		schema.write(wr); wr ~= "\n";
-		writeIObject(wr.after); wr ~= "\n";
-		writeChangeTracking(wr); wr ~= "\n";
-		writeIHttpSet(wr); wr ~= "\n";
+		//writeIObject(wr.after); wr ~= "\n";
+		//writeChangeTracking(wr); wr ~= "\n";
+		//writeIHttpSet(wr); wr ~= "\n";
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
 		mapper.write(wr.after);
-		objRes.write(wr.after);
+		obj.write(wr.after);
 		//writeCRUD_(wr); wr ~= "\n";
 		/+writeCRUD(wr); wr ~= "\n";+/
 		/+wr.addBaseType("IBindable");

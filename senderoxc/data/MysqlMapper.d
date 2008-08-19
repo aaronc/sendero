@@ -2,6 +2,7 @@ module senderoxc.data.MysqlMapper;
 
 import senderoxc.data.Mapper;
 import senderoxc.data.mapper.mysql.IMysqlMapper;
+import senderoxc.data.IDataResponder;
 
 import senderoxc.data.mapper.mysql.Delete;
 
@@ -14,14 +15,14 @@ class MysqlMapper : Mapper, IMysqlMapper
 		Mapper.registerMapperClass("Mysql", &MysqlMapper.create);
 	}
 	
-	static Mapper create(char[] className, Schema schema, IInterfaceWriter iface)
+	static Mapper create(char[] className, IDataResponder res)
 	{
-		return new MysqlMapper(className, schema, iface);
+		return new MysqlMapper(className, res);
 	}
 	
-	protected this(char[] className, Schema schema, IInterfaceWriter iface)
+	protected this(char[] className, IDataResponder res)
 	{
-		super(className, schema, iface);
+		super(className, res);
 		db_ = cast(MysqlDatabase)getDatabaseForURL(SenderoConfig().dbUrl);
 		assert(db_, "Database is not of type Mysql");
 	}

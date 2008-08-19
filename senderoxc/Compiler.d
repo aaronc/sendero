@@ -18,7 +18,7 @@ char[] regularizeDirname(char[] dirname)
 	else return dirname;
 }
 
-class SenderoXCCompiler
+class SenderoXCompiler
 {
 	this(char[] modname, DecoratedDCompiler compiler, char[][] imports, char[] dirname = null)
 	{
@@ -28,7 +28,7 @@ class SenderoXCCompiler
 		foreach(i; imports) registerImport(i);
 	}
 	
-	static SenderoXCCompiler create(char[] modname)
+	static SenderoXCompiler create(char[] modname)
 	{
 		auto pCompiler = modname in registeredModules;
 		if(pCompiler !is null)
@@ -114,7 +114,7 @@ class SenderoXCCompiler
 		{
 			auto compiler = createDDCompiler(filename);
 			if(isSDX) {
-				auto sxcompiler = new SenderoXCCompiler(modname, compiler, imports, dirname);
+				auto sxcompiler = new SenderoXCompiler(modname, compiler, imports, dirname);
 				registeredModules[modname] = sxcompiler;
 				return sxcompiler;
 			}
@@ -132,11 +132,11 @@ class SenderoXCCompiler
 	private bool processed_ = false;
 	private bool written_ = false;
 	
-	static SenderoXCCompiler[char[]] registeredModules;
+	static SenderoXCompiler[char[]] registeredModules;
 	
 	final void registerImport(char[] modname)
 	{
-		auto compiler = SenderoXCCompiler.create(modname);
+		auto compiler = SenderoXCompiler.create(modname);
 		if(compiler !is null) imports[modname] = compiler;
 	}
 	
@@ -199,8 +199,11 @@ class SenderoXCCompiler
 			existingRes = cast(char[])existingResFile.read;
 		}
 		
-		auto res = new ArrayWriter!(char);			
+		
+		auto res = new ArrayWriter!(char);
 		compiler.finish(&res.append, outname);
+		
+		Stdout.formatln("Writing {}", outname);
 		
 		if(res.get != existingRes) {
 			if(fpath.exists) copy(outname, outname ~ ".bak");
@@ -218,7 +221,7 @@ class SenderoXCCompiler
 		
 	}
 	
-	SenderoXCCompiler[char[]] imports;
+	SenderoXCompiler[char[]] imports;
 	
 	static void reset()
 	{
@@ -227,7 +230,7 @@ class SenderoXCCompiler
 	}
 }
 
-class DModuleCompiler : SenderoXCCompiler
+class DModuleCompiler : SenderoXCompiler
 {
 	this(char[] modname, DecoratedDCompiler compiler, char[][] imports)
 	{

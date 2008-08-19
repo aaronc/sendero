@@ -37,7 +37,7 @@ int main(char[][] args)
 		
 		try
 		{
-			auto compiler = SenderoXCCompiler.create(modname);
+			auto compiler = SenderoXCompiler.create(modname);
 			assert(compiler);
 			compiler.process;
 			compiler.write(outdir);
@@ -49,6 +49,7 @@ int main(char[][] args)
 				Stdout.formatln("Stack trace");
 				Stdout(ex.info.toString).newline;
 			}
+			throw ex;
 		}
 		
 		try
@@ -61,6 +62,11 @@ int main(char[][] args)
 		catch(Exception ex)
 		{
 			Stdout.formatln("Caught exception: {}, while commiting db schema", ex.toString);
+			if(ex.info) {
+				Stdout.formatln("Stack trace");
+				Stdout(ex.info.toString).newline;
+			}
+			throw ex;
 		}
 	}
 	
@@ -83,7 +89,7 @@ int main(char[][] args)
 		regression.regressFile("IUser.d");
 		
 		
-		version(dbi_mysql) {
+		/+version(dbi_mysql) {
 			SenderoXCCompiler.reset;
 			
 			Stdout.formatln("Runing Mysql tests");
@@ -93,7 +99,7 @@ int main(char[][] args)
 			regression.regressFile("test1.d");
 			regression.regressFile("test2.d");
 			regression.regressFile("IUser.d");
-		}
+		}+/
 	}
 	
 	return 0;

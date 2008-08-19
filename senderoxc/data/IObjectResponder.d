@@ -9,11 +9,13 @@ interface IField
 	bool hasGetter();
 	bool hasSetter();
 	char[] name();
+	char[] privateName();
+	char[] dtype();
 }
 
 interface IObjectBuilder
 {
-	void addField(IField);
+	void addField(IField, out uint setterIdx);
 }
 
 interface IObjectResponder

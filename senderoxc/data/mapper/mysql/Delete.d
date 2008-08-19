@@ -18,7 +18,6 @@ class MysqlDeleteResponder : DeleteResponder
 		wr("public void destroy()\n");
 		wr("{\n");
 		wr.indent;
-		//wr("if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql(\"" ~ schema.tablename ~ "\", [\"id\"]);\n");
 		wr.fln(`const char[] deleteSql = {};`,
 			DQuoteString(mapper.db.sqlGen.makeDeleteSql(mapper.schema.tablename, mapper.schema.getPrimaryKeyCols)));
 		wr("scope st = db.prepare(deleteSql);\n");

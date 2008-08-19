@@ -24,37 +24,6 @@ import sendero.util.collection.StaticBitArray, sendero.util.Singleton;
 	
 	/+@String("tags")+/;
 
-Var opIndex(char[] key)
-{
-	Var res;
-	switch(key)
-	{
-		case "id": bind(res, id()); break;
-		case "author": bind(res, author()); break;
-		default: return Var();
-	}
-	return res;
-}
-int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
-void opIndexAssign(Var val, char[] key) {}
-Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
-void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
-
-private StaticBitArray!(1,1) __touched__;
-
-
-void httpSet(IObject obj, Request req)
-{
-	foreach(key, val; obj)
-	{
-		switch(key)
-		{
-			case "author": author = convertParam2!(User, Req)(val); break;
-			default: break;
-		}
-	}
-}
-
 
 bool validate()
 {
@@ -82,7 +51,6 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-
 alias DefaultMysqlProvider db;
 public void destroy()
 {
@@ -95,25 +63,64 @@ bool save()
 {
 }
 
+Var opIndex(char[] key)
+{
+	Var res;
+	switch(key)
+	{
+		case "entry": bind(res, entry()); break;
+		case "created": bind(res, created()); break;
+		case "modified": bind(res, modified()); break;
+		case "title": bind(res, title()); break;
+		case "tags": bind(res, tags()); break;
+		default: return Var();
+	}
+	return res;
+}
+int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
+void opIndexAssign(Var val, char[] key) {}
+Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
+void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
+
+
+private StaticBitArray!(1,5) __touched__;
+
+
+void httpSet(IObject obj, Request req)
+{
+	foreach(key, val; obj)
+	{
+		switch(key)
+		{
+			case "entry": entry_ = convertParam2!(char[], Req)(val); break;
+			case "created": created_ = convertParam2!(Time, Req)(val); break;
+			case "modified": modified_ = convertParam2!(Time, Req)(val); break;
+			case "title": title_ = convertParam2!(char[], Req)(val); break;
+			case "tags": tags_ = convertParam2!(char[], Req)(val); break;
+			default: break;
+		}
+	}
+}
+
 public char[] entry() { return entry_; }}
 public void entry(char[] val) {__touched__[0] = true; entry_ = val;}}
 private char[] entry;
 
 public Time created() { return created_; }}
-public void created(Time val) {__touched__[0] = true; created_ = val;}}
+public void created(Time val) {__touched__[1] = true; created_ = val;}}
 private Time created;
 
-public char[] tags() { return tags_; }}
-public void tags(char[] val) {__touched__[0] = true; tags_ = val;}}
-private char[] tags;
+public Time modified() { return modified_; }}
+public void modified(Time val) {__touched__[2] = true; modified_ = val;}}
+private Time modified;
 
 public char[] title() { return title_; }}
-public void title(char[] val) {__touched__[0] = true; title_ = val;}}
+public void title(char[] val) {__touched__[3] = true; title_ = val;}}
 private char[] title;
 
-public Time modified() { return modified_; }}
-public void modified(Time val) {__touched__[0] = true; modified_ = val;}}
-private Time modified;
+public char[] tags() { return tags_; }}
+public void tags(char[] val) {__touched__[4] = true; tags_ = val;}}
+private char[] tags;
 public uint id() {return id_;}
 private uint id_;
 

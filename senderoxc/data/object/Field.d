@@ -25,8 +25,8 @@ class FieldCtxt : IStandaloneDecoratorContext
 		if(resp.decl == parentDecl && decorator.params.length
 				&& decorator.params[0].type == VarT.String) {
 			auto name = decorator.params[0].string_;
-			auto f = Field.createField(type, name, resp, decorator);
-			if(f !is null) objBuilder.addField(f);
+			auto f = Field.createField(type, name, objBuilder, resp, decorator);
+			if(f !is null) objBuilder.addField(f, f.index_);
 		}
 		return null;
 	}
@@ -34,7 +34,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 
 class Field : IField
 {
-	static Field createField(FieldType type, char[] name, IDataResponder resp, StandaloneDecorator decorator)
+	static Field createField(FieldType type, char[] name, IObjectBuilder objBuilder, IDataResponder resp, StandaloneDecorator decorator)
 	{
 		bool getter = true;
 		bool setter = true;
@@ -76,12 +76,10 @@ class Field : IField
 		if(map) {
 			auto field = new Field(type, name, getter, setter);
 			
-			//resp.addGetter(Getter(type.DType, name));
 			resp.addMethod(new FunctionDeclaration(name, type.DType));
 			
 			if(setter) {
 				resp.addMethod(new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]));
-				//auto idx = resp.addSetter(Setter(type.DType, name, name));
 			}
 			
 			return field;
@@ -95,6 +93,16 @@ class Field : IField
 		this.name_ = name;
 		this.setter_ = getter;
 		this.getter_ = setter;
+	}
+	
+	char[] privateName()
+	{
+		return name_ ~ "_";
+	}
+	
+	char[] dtype()
+	{
+		return type_.DType; 
 	}
 	
 	private FieldType type_;
