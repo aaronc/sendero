@@ -15,7 +15,23 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	this(IDataResponder res)
 	{
 		dataRes_ = res;
+		objects[res.classname] = this;
 	}
+	
+	private static ObjectResponder[char[]] objects;
+	
+	public IField[] fields() { return fields_; }
+	private IField[] fields_;
+	
+	public ObjectResponder parent() { return parent_; }
+	private ObjectResponder parent_;
+	
+	public ObjectResponder[char[]] children() { return children_; }
+	private ObjectResponder[char[]] children_;
+	
+	enum InheritanceType {None, SingleTable, MultiTable };
+	public InheritanceType inheritance() { return inheritance_;}
+	private InheritanceType inheritance_;	
 	
 	IDataResponder dataRes() { return dataRes_; }
 	private IDataResponder dataRes_;
@@ -123,7 +139,5 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	}
 	
 	//private IField[char[]] fields;
-	public IField[] fields() { return fields_; }
-	private IField[] fields_;
 	private uint setterIdx_;
 }

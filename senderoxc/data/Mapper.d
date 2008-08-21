@@ -71,7 +71,7 @@ class Mapper : IMapper
 	final void init()
 	{
 		responders ~= getDeleteResponder;
-		responders ~= getSaveResponder;
+		//responders ~= getSaveResponder;
 	}
 	
 	final void write(IPrint wr)

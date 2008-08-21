@@ -150,3 +150,99 @@ FormattingFlags
 	FormattingFlags "," Identifier
 	Identifier
 -----------------
+
+
+== Sendero Controllers ==
+
+
+== Sendero Model ==
+
+Sendero model objects are created using the @data decorator.  Here is a quick example:
+
+@data class User {
+	@autoPrimaryKey("id");
+	@required @String("username", 40);
+	@required @Binary("password_hash, 256);
+	@required @Uint("salt");
+}
+
+Fields can be generated within the @data object using the following decorators, which generate the
+corresponding D types.
+
+@Byte | byte
+@UByte | ubyte
+@Short | short
+@UShort | ushort
+@Int | int
+@UInt | uint
+@Long | long
+@ULong | ulong
+@Float | float
+@Double | double
+@String(Number size = 255) | char[]
+@Text(Number size = ushort.max) | char[]
+@Binary(Number size = 255) | ubyte[]
+@Blob(Number size = ushort.max) | ubyte[]
+@Date | Date
+@DateTime | DateTime
+
+The following validator generators are available:
+
+@required
+@minLength(Number length)
+@maxLength(Number length)
+@format(String regex)
+@minValue(Number value)
+@maxValue(Number value)
+
+The following relations are available:
+
+@hasOne(String classname)
+//@hasMany(String classname)
+//@habtm(String classname)
+
+Inheritance is created using the following decorator:
+
+@inherits(String classname, String type = "table")
+
+Inheritance type can be "table" for Single Table Inheritance
+or "multi" Multi/Class Table Inheritance.
+
+
+Generated interfaces and methods:
+
+Interfaces:
+
+IObject
+IHttpSet
+
+Methods:
+
+bool validate();
+bool save(); // inserting and updating
+void destroy();
+
+Selection is done by the following decorator:
+
+@select(String classname, Array where, Object options)
+
+Where:
+
+[String sql, String... paramNames]
+
+Ex:
+["username = ?", "username"]
+
+Options:
+
+order
+group
+limit
+offset
+joins
+include
+select
+from
+readonly
+lock
+id, first, last, all

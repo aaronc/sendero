@@ -7,6 +7,13 @@ import senderoxc.data.IObjectResponder;
 
 import senderoxc.data.Validations;
 
+struct FieldAction
+{
+	enum {
+		None, SerializeColumn, CallInstanceMethod
+	}
+}
+
 class FieldCtxt : IStandaloneDecoratorContext
 {
 	this(IObjectBuilder objBuilder, IDataResponder resp, FieldType type)
@@ -111,22 +118,25 @@ class Field : IField
 	char[] colname() { return name_; }
 	
 	private char[] name_;
-	private bool getter_ = true;
-	private bool setter_ = true;
-	private bool map_ = true;
+	private bool getter_;
+	private bool setter_;
 	private uint index_;
 	
 	void writeDecl(IPrint wr)
 	{
 		if(map_) {
-			wr.fln("public {} {}() {{ return {}_; }}", type_.DType, name_, name_);
+			if(getter_) {
+				wr.fln("public {} {}() {{ return {}_; }}", type_.DType, name_, name_);
+			}
 			
 			if(setter_) {
 				wr.f("public void {}({} val) {{", name_, type_.DType);
 				wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
 				wr.fln("}}");
 			}
+			
 			wr.fln("private {} {};", type_.DType, name_);
+
 			wr.nl;
 		}
 	}
@@ -139,11 +149,6 @@ class Field : IField
 	bool hasSetter()
 	{
 		return setter_;
-	}
-	
-	bool doesMap()
-	{
-		return map_;
 	}
 	
 	char[] isModifiedExpr()
