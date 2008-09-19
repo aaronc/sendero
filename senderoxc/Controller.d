@@ -34,8 +34,9 @@ class ControllerContext : IDecoratorContext
 		
 		binder.bindDecorator(DeclType.Function, "GET", new HTTPMethodContext!(GET)(res));
 		binder.bindDecorator(DeclType.Function, "POST", new HTTPMethodContext!(POST)(res));
-		//binder.bindDecorator(DeclType.Function, "PUT");
-		//binder.bindDecorator(DeclType.Function, "DELETE");
+		binder.bindDecorator(DeclType.Function, "PUT", new HTTPMethodContext!(PUT)(res));
+		binder.bindDecorator(DeclType.Function, "DELETE", new HTTPMethodContext!(DELETE)(res));
+		binder.bindDecorator(DeclType.Function, "ALL", new HTTPMethodContext!(ALL)(res));
 		
 		//binder.bindStandalone("GET");
 		//binder.bindStandalone("POST");
@@ -104,6 +105,9 @@ class ControllerResponder : IDecoratorResponder
 			{
 			case POST: method = "POST"; break;
 			case GET: method = "GET"; break;
+			case PUT: method = "PUT"; break;
+			case DELETE: method = "DELETE"; break;
+			case ALL: method = "ALL"; break;
 			default:
 				debug assert(false, "Unknown HTTP Method");
 				continue;
@@ -127,8 +131,15 @@ class ControllerResponder : IDecoratorResponder
 			auto rname = action.func.name;
 			switch(rname)
 			{
-			case "index": rname = ""; break;
-			case "__wildcard__": rname = "*"; break;
+			case "index":
+			case "__default__":
+			case "__show__":
+			case "__this__":
+			case "_":
+				rname = "";
+				break;
+			case "__wildcard__": rname = "*";
+			break;
 			default: break;
 			}
 			
@@ -154,7 +165,7 @@ class ControllerResponder : IDecoratorResponder
 		
 		writer ~= "Res iroute(Req req)\n";
 		writer ~= "{ ";
-		writer ~= "return r.route(req);";
+		writer ~= "return r.route(req, cast(void*)this);";
 		writer ~= " }\n";
 	}
 }

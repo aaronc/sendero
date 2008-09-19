@@ -62,7 +62,7 @@ class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!
 	}
 }
 
-class FunctionWrapper2(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
+class FunctionWrapper2(T, Req, bool InstanceFunc = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 {
 	alias ParameterTupleOf!(T) P;
 	alias ReturnTypeOf!(T) Ret;
@@ -94,7 +94,7 @@ class FunctionWrapper2(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf
 		
 		convertParams2!(Req, P)(routeParams, paramNames, p);
 		
-		if(ptr !is null) {
+		static if(InstanceFunc) {
 			dg.ptr = ptr;
 			return dg(p);
 		}

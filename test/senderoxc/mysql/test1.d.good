@@ -66,7 +66,7 @@ static this()
 static Res route(Req req)
 { return r.route(req); }
 Res iroute(Req req)
-{ return r.route(req); }
+{ return r.route(req, cast(void*)this); }
 
 }
 
@@ -89,7 +89,7 @@ static this()
 static Res route(Req req)
 { return r.route(req); }
 Res iroute(Req req)
-{ return r.route(req); }
+{ return r.route(req, cast(void*)this); }
 
 }
 
@@ -119,7 +119,7 @@ static this()
 static Res route(Req req)
 { return r.route(req); }
 Res iroute(Req req)
-{ return r.route(req); }
+{ return r.route(req, cast(void*)this); }
 
 }
 

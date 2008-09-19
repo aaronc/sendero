@@ -56,6 +56,8 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 			{
 			case HttpMethod.Get: pRoutes = &getRoutes; break;
 			case HttpMethod.Post: pRoutes = &postRoutes; break;
+			case HttpMethod.Put: pRoutes = &putRoutes; break;
+			case HttpMethod.Delete: pRoutes = &deleteRoutes; break;
 			default: return error;
 			}		
 			
@@ -93,7 +95,7 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 	}
 }
 
-template TypeSafeRouterDef(ResT, ReqT)
+template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
 {
 	alias IFunctionWrapper!(ResT, ReqT) Routing;
 	
@@ -114,6 +116,8 @@ template TypeSafeRouterDef(ResT, ReqT)
 	
 	Routes getRoutes;
 	Routes postRoutes;
+	Routes putRoutes;
+	Routes deleteRoutes;
 	Routing errHandler;
 	
 	static TypeSafeRouter!(ResT, ReqT) opCall()
@@ -125,7 +129,7 @@ template TypeSafeRouterDef(ResT, ReqT)
 	void map(T)(ubyte method, char[] route, T t, char[][] paramNames)
 	{
 		Routing routing;
-		routing = new FunctionWrapper!(T, ReqT)(t, paramNames);
+		routing = new FunctionWrapper2!(T, ReqT, InstanceRouter)(t, paramNames);
 		
 		switch(method)
 		{
@@ -135,12 +139,17 @@ template TypeSafeRouterDef(ResT, ReqT)
 		case POST:
 			postRoutes.setRoute(route, routing);
 			break;
+		case PUT:
+			putRoutes.setRoute(route, routing);
+			break;
+		case DELETE:
+			deleteRoutes.setRoute(route, routing);
 		case ALL:
 			getRoutes.setRoute(route, routing);
 			postRoutes.setRoute(route, routing);
+			putRoutes.setRoute(route, routing);
+			deleteRoutes.setRoute(route, routing);
 			break;
-		case PUT:
-		case DELETE:
 		default: throw new Exception("Unknown routing method");
 		}
 	}
@@ -151,6 +160,14 @@ template TypeSafeRouterDef(ResT, ReqT)
 	}
 	
 	void mapWildcardContinue(IIRoute!(ResT, ReqT) function(ReqT) getInstance)
+	{
+		/+auto fn = function ResT(ReqT req) {
+			auto i = getInstance(req);
+			return i.iroute(req);
+		};+/
+	}
+	
+	void mapWildcardChildContinue(IIRoute!(ResT, ReqT) function(ReqT) getInstance)
 	{
 		/+auto fn = function ResT(ReqT req) {
 			auto i = getInstance(req);
@@ -172,7 +189,7 @@ struct TypeSafeRouter(ResT, ReqT)
 
 struct TypeSafeInstanceRouter(ResT, ReqT)
 {
-	mixin TypeSafeRouterDef!(ResT, ReqT);
+	mixin TypeSafeRouterDef!(ResT, ReqT, true);
 	mixin Route!(ResT, ReqT, true);
 }
 
