@@ -98,8 +98,8 @@ class Field : IField
 	{
 		this.type_ = type;
 		this.name_ = name;
-		this.setter_ = getter;
-		this.getter_ = setter;
+		this.setter_ = setter;
+		this.getter_ = getter;
 	}
 	
 	char[] privateName()
@@ -124,21 +124,21 @@ class Field : IField
 	
 	void writeDecl(IPrint wr)
 	{
-		if(map_) {
+		//if(map_) {
 			if(getter_) {
-				wr.fln("public {} {}() {{ return {}_; }}", type_.DType, name_, name_);
+				wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
 			}
 			
 			if(setter_) {
 				wr.f("public void {}({} val) {{", name_, type_.DType);
 				wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
-				wr.fln("}}");
+				wr.fln("}");
 			}
 			
-			wr.fln("private {} {};", type_.DType, name_);
+			wr.fln("private {} {}_;", type_.DType, name_);
 
 			wr.nl;
-		}
+		//}
 	}
 	
 	bool hasGetter()

@@ -60,26 +60,6 @@ public void destroy()
 	st.execute(id);
 }
 
-bool save()
-{
-	if(id_) {
-		char[][] fields
-		if(__touched__[0]) fields ~= "entry";
-		if(__touched__[1]) fields ~= "created";
-		if(__touched__[2]) fields ~= "modified";
-		if(__touched__[3]) fields ~= "title";
-		if(__touched__[4]) fields ~= "tags";
-		auto sql = db.sqlGen.makeInsertSql("BlogEntry", fields);
-		if(__touched__[0]) ;
-		if(__touched__[1]) ;
-		if(__touched__[2]) ;
-		if(__touched__[3]) ;
-		if(__touched__[4]) ;
-	}}
-	else {
-	}}
-}
-
 Var opIndex(char[] key)
 {
 	Var res;
@@ -119,25 +99,25 @@ void httpSet(IObject obj, Request req)
 	}
 }
 
-public char[] entry() { return entry_; }}
-public void entry(char[] val) {__touched__[0] = true; entry_ = val;}}
-private char[] entry;
+public char[] entry() { return entry_; }
+public void entry(char[] val) {__touched__[0] = true; entry_ = val;}
+private char[] entry_;
 
-public Time created() { return created_; }}
-public void created(Time val) {__touched__[1] = true; created_ = val;}}
-private Time created;
+public Time created() { return created_; }
+public void created(Time val) {__touched__[1] = true; created_ = val;}
+private Time created_;
 
-public Time modified() { return modified_; }}
-public void modified(Time val) {__touched__[2] = true; modified_ = val;}}
-private Time modified;
+public Time modified() { return modified_; }
+public void modified(Time val) {__touched__[2] = true; modified_ = val;}
+private Time modified_;
 
-public char[] title() { return title_; }}
-public void title(char[] val) {__touched__[3] = true; title_ = val;}}
-private char[] title;
+public char[] title() { return title_; }
+public void title(char[] val) {__touched__[3] = true; title_ = val;}
+private char[] title_;
 
-public char[] tags() { return tags_; }}
-public void tags(char[] val) {__touched__[4] = true; tags_ = val;}}
-private char[] tags;
+public char[] tags() { return tags_; }
+public void tags(char[] val) {__touched__[4] = true; tags_ = val;}
+private char[] tags_;
 public uint id() {return id_;}
 private uint id_;
 

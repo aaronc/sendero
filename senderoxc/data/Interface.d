@@ -94,7 +94,7 @@ class InterfaceResp : IInterface, IDecoratorResponder
 				params ~= decl.params[i].type;
 				if(decl.params[i].name.length)
 					params ~= " " ~ decl.params[i].name;
-				if(i < len - 1) pr(", ");
+				if(i < len - 1) params ~= ", ";
 			}
 			
 			pr.fln("{} {}({});", decl.retType, decl.name, params);

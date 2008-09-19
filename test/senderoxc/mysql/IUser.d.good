@@ -8,7 +8,6 @@ module IUser;
 interface IUser : IObject, IHttpSet
 {
 	void destroy();
-	bool save();
 	uint id();
 	char[] email();
 	void email(char[]);

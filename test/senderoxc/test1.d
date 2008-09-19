@@ -175,33 +175,12 @@ public void destroy()
 	st.execute(id);
 }
 
-bool save()
-{
-	if(id_) {
-		char[][] fields
-		if(__touched__[0]) fields ~= "id";
-		if(__touched__[1]) fields ~= "email";
-		if(__touched__[2]) fields ~= "username";
-		if(__touched__[3]) fields ~= "firstname";
-		if(__touched__[4]) fields ~= "lastname";
-		if(__touched__[5]) fields ~= "last_login";
-		auto sql = db.sqlGen.makeInsertSql("User", fields);
-		if(__touched__[0]) ;
-		if(__touched__[1]) ;
-		if(__touched__[2]) ;
-		if(__touched__[3]) ;
-		if(__touched__[4]) ;
-		if(__touched__[5]) ;
-	}}
-	else {
-	}}
-}
-
 Var opIndex(char[] key)
 {
 	Var res;
 	switch(key)
 	{
+		case "id": bind(res, id()); break;
 		case "email": bind(res, email()); break;
 		case "username": bind(res, username()); break;
 		case "firstname": bind(res, firstname()); break;
@@ -226,7 +205,6 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "id": id_ = convertParam2!(uint, Req)(val); break;
 			case "email": email_ = convertParam2!(char[], Req)(val); break;
 			case "username": username_ = convertParam2!(char[], Req)(val); break;
 			case "firstname": firstname_ = convertParam2!(char[], Req)(val); break;
@@ -237,28 +215,27 @@ void httpSet(IObject obj, Request req)
 	}
 }
 
-public uint id() { return id_; }}
-public void id(uint val) {__touched__[0] = true; id_ = val;}}
-private uint id;
+public uint id() { return id_; }
+private uint id_;
 
-public char[] email() { return email_; }}
-public void email(char[] val) {__touched__[1] = true; email_ = val;}}
-private char[] email;
+public char[] email() { return email_; }
+public void email(char[] val) {__touched__[1] = true; email_ = val;}
+private char[] email_;
 
-public char[] username() { return username_; }}
-public void username(char[] val) {__touched__[2] = true; username_ = val;}}
-private char[] username;
+public char[] username() { return username_; }
+public void username(char[] val) {__touched__[2] = true; username_ = val;}
+private char[] username_;
 
-public char[] firstname() { return firstname_; }}
-public void firstname(char[] val) {__touched__[3] = true; firstname_ = val;}}
-private char[] firstname;
+public char[] firstname() { return firstname_; }
+public void firstname(char[] val) {__touched__[3] = true; firstname_ = val;}
+private char[] firstname_;
 
-public char[] lastname() { return lastname_; }}
-public void lastname(char[] val) {__touched__[4] = true; lastname_ = val;}}
-private char[] lastname;
+public char[] lastname() { return lastname_; }
+public void lastname(char[] val) {__touched__[4] = true; lastname_ = val;}
+private char[] lastname_;
 
-public Time last_login() { return last_login_; }}
-public void last_login(Time val) {__touched__[5] = true; last_login_ = val;}}
-private Time last_login;
+public Time last_login() { return last_login_; }
+public void last_login(Time val) {__touched__[5] = true; last_login_ = val;}
+private Time last_login_;
 
 }
