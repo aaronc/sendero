@@ -5,6 +5,8 @@
 
 module sendero.db.DBProvider;
 
+debug import tango.util.log.Log;
+
 import dbi.all;
 import tango.core.Thread;
 import sendero.util.ConnectionPool;
@@ -183,6 +185,7 @@ class DBProvider(DBConnectionProvider, DatabaseT = Database)
 {
 	static this()
 	{
+		debug Log.lookup("DBProvider." ~ DBConnectionProvider.stringof ~ "." ~ DatabaseT.stringof ~ "").info("entering static this");
 		pool = new ConnectionPool!(DatabaseT, DBConnectionProvider);
 		providers_ = new ThreadLocal!(ProviderContainer!(DatabaseT, DBProvider!(DBConnectionProvider, DatabaseT), StatementContainer))(null);
 	}

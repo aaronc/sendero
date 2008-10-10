@@ -8,6 +8,14 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 
+interface IResponder
+{
+	const char[] TextHtml = "text/html; charset=utf-8";
+	void setContentType(char[] contentType);
+	void write(void[] val);
+}
+
+
 debug(SenderoRouting) {
 	import sendero.Debug;
 	
@@ -89,6 +97,27 @@ class Request
 	char[] lastToken;
 	char[][char[]] cookies;
 	char[] ip;
+	char[][char[]] headers;
+	
+	void setResponder(IResponder responder)
+	{
+		responder_ = responder;
+	}
+	
+	void delegate(void[]) getConsumer()
+	{
+		assert(responder_, "responder_ is null");
+		return &responder_.write;
+	}
+	
+	void setContentType(char[] contentType)
+	{
+		assert(responder_,  "responder_ is null");
+		responder_.setContentType(contentType);
+	}
+	
+	private:
+		IResponder responder_;
 }
 
 interface IHttpSet
