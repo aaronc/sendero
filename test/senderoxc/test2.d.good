@@ -123,7 +123,7 @@ private uint id_;
 
 public User author() {return author_;}
 public void author(User val) {__touched__[0] = true; author_ = val;}
-private HasOne!(User) author_.get;
+private HasOne!(User) author_;
 
 
 }

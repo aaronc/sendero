@@ -3,6 +3,8 @@ module test1;
 import test2;
 import IUser;
 
+import dummy;
+
 @controller class MainCtlr
 {
 	@GET

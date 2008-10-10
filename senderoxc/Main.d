@@ -41,6 +41,9 @@ int main(char[][] args)
 			assert(compiler);
 			compiler.process;
 			compiler.write(outdir);
+			version(SenderoXCBuild) {
+				compiler.compile;
+			}
 		}
 		catch(Exception ex)
 		{

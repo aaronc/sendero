@@ -13,6 +13,8 @@ import sendero.util.collection.StaticBitArray, sendero.util.Singleton;
 import test2;
 import IUser;
 
+import dummy;
+
 /+@controller+/ class MainCtlr
 {
 	/+@GET+/

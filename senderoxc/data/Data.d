@@ -691,7 +691,7 @@ class HasOneResponder : AbstractFieldResponder
 		wr ~= "public void " ~  name ~ "(" ~ type ~ " val) {";
 		wr ~= "__touched__[" ~ Integer.toString(index) ~ "] = true; " ~ name ~ "_ = val;";
 		wr ~= "}\n";
-		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_.get;\n\n";
+		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_;\n\n";
 	}
 }
 
