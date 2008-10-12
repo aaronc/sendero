@@ -16,6 +16,52 @@ debug import tango.io.Stdout;
 
 enum AtomPublishStyle { Short, Long };
 
+struct AtomText(char[] node, bool multiline = false)
+{
+	char[] value;
+	char[] type;
+	
+	bool hasContent()
+	{
+		return value.length ? true : false;
+	}
+	
+	void print(Printer printer)
+	{
+		if(!value.length)
+			return;
+		
+		if(type.length) printer.format(`<{} type="{}">`, node, type);
+		else printer.formatln("<{}>", node);
+		
+		static if(multiline) printer.newline.indent;
+		
+			if(type == "html") printer(encode(value));
+			else printer(value);
+		
+		static if(multiline) printer.newline.dedent;
+		
+		printer.formatln("</{}>", node);
+	}
+}
+
+alias AtomText!("title") AtomTitle;
+alias AtomText!("content", true) AtomContent;
+alias AtomText!("summary", true) AtomSummary;
+alias AtomText!("rights") AtomRights;
+
+struct AtomLink
+{
+	char[] href;
+	AtomOptAttr rel;
+	char[] title;
+	
+	void print(Printer printer)
+	{
+		
+	}
+}
+
 char[] getValue(Document!(char).Node node)
 {
 	if(node.rawValue.length) return node.rawValue;
@@ -28,10 +74,12 @@ char[] getValue(Document!(char).Node node)
 
 class AtomCommon
 {
-	char[] title;
+	AtomTitle title;
+	AtomRights rights;
 	char[] url;
 	Time updated;
 	AtomAuthor[] authors;
+	AtomContributor[] contributors;
 	AtomCategory[] categories;
 	
 	protected bool handleCommonElements(Document!(char).Node node, ref char[] value, ref char[] type)
@@ -52,7 +100,7 @@ class AtomCommon
 		switch(node.localName)
 		{
 		case "title":
-			this.title = value;
+			this.title = AtomTitle(value, type);
 			return true;
 		case "updated":
 			parseDateAndTime(value, this.updated); 
@@ -69,6 +117,12 @@ class AtomCommon
 		case "author":
 			authors ~= new AtomAuthor(node);
 			return true;
+		case "contributor":
+			contributors ~= new AtomContributor(node);
+			return true;
+		case "rights":
+			this.rights = AtomRights(value, type);
+			return true;
 		default:
 			return false;
 		}
@@ -76,12 +130,15 @@ class AtomCommon
 	
 	protected void printCommonElements(Printer printer)
 	{
-		printer.formatln("<title>{}</title>", encode(title));
+		//printer.formatln("<title>{}</title>", encode(title));
+		title.print(printer);
 		printer.formatln(`<id>{}</id>">`, url);
 		printer.formatln(`<link href="{}">`, url);
 		printer.formatln("<updated>{}</updated>", formatRFC3339(updated));
 		foreach(author; authors) author.print(printer);
 		foreach(category; categories) category.print(printer);
+		foreach(contributor; contributors) contributor.print(printer);
+		rights.print(printer);
 	}
 }
 
@@ -92,41 +149,23 @@ class AtomEntry : AtomCommon
 		
 	}
 	
-	char[] summary;
-	char[] content;
-	char[] contentType, summaryType;
+//	char[] summary;
+//	char[] content;
+//	char[] contentType, summaryType;
+	AtomSummary summary;
+	AtomContent content;
+	Time published;
 	
 	void print(Printer printer, AtomPublishStyle style)
-	{
-		void printContent()
-		{
-			if(contentType.length) printer.formatln(`<content type="{}">`, contentType);
-			else printer("<content>").newline;
-			printer.indent;
-			printer(encode(content)).newline;
-			printer.dedent;
-			printer("</content>").newline;
-		}
-		
-		void printSummary()
-		{
-			if(summaryType.length) printer.formatln(`<summary type="{}">`, summaryType);
-			else printer("<summary>").newline;
-			printer.indent;
-			printer(encode(summary)).newline;
-			printer.dedent;
-			printer("</summary>").newline;
-		}
-	
-		
+	{		
 		printer("<entry>").newline;
 		printer.indent;
 			printCommonElements(printer);
 			if(style == AtomPublishStyle.Long) {
-				if(content.length) printContent;
-				else if(summary.length) printSummary;
+				if(content.hasContent) content.print(printer);
+				else if(summary.hasContent) summary.print(printer);
 			}
-			else if(summary.length) printSummary;
+			else if(summary.hasContent) summary.print(printer);
 		printer.dedent;
 		printer("</entry>").newline;
 	}
@@ -150,12 +189,13 @@ class AtomEntry : AtomCommon
 			switch(node.localName)
 			{
 			case "content": 
-				this.content = value;
-				this.contentType = type;
+				this.content = AtomContent(value, type);
 				break;
 			case "summary":
-				this.summary = value;
-				this.summaryType = type;
+				this.summary = AtomSummary(value, type);
+				break;
+			case "published":
+				parseDateAndTime(value, this.published); 
 				break;
 			default:
 				break;
@@ -164,33 +204,50 @@ class AtomEntry : AtomCommon
 	}
 }
 
-class AtomAuthor
+class AtomAuthor : AtomPerson
 {
-	char[] name;
-	char[] email;
-	char[] uri;
-	
-	void print(Printer printer)
-	{
-		printer("<author>").newline;
-		printer.indent;
-			if(name.length) printer.formatln(`<name>{}</name>`, name);
-			if(email.length) printer.formatln(`<email>{}</email>`, email);
-			if(uri.length) printer.formatln(`<uri>{}</uri>`, uri);
-		printer.dedent;
-		printer("</author>").newline;
-	}
-	
 	private this(Document!(char).Node author)
 	{
 		parse_(author);
 	}
 	
-	private void parse_(Document!(char).Node author)
+	char[] personType() { return "author"; }
+}
+
+class AtomContributor : AtomPerson
+{
+	private this(Document!(char).Node contributor)
 	{
-		foreach(node; author.children)
+		parse_(contributor);
+	}
+	
+	char[] personType() { return "contributor"; }
+}
+
+abstract class AtomPerson
+{
+	char[] name;
+	char[] email;
+	char[] uri;
+	
+	abstract char[] personType();
+	
+	void print(Printer printer)
+	{
+		printer.formatln("<{}>", personType);
+		printer.indent;
+			if(name.length) printer.formatln(`<name>{}</name>`, name);
+			if(email.length) printer.formatln(`<email>{}</email>`, email);
+			if(uri.length) printer.formatln(`<uri>{}</uri>`, uri);
+		printer.dedent;
+		printer.formatln("</{}>", personType);
+	}
+	
+	protected void parse_(Document!(char).Node person)
+	{
+		foreach(node; person.children)
 		{
-			Stdout.formatln("author node.name: {}", node.name);
+			Stdout.formatln("person node.name: {}", node.name);
 			switch(node.localName)
 			{
 			case "name": this.name = getValue(node); break;
@@ -254,7 +311,8 @@ class AtomFeed : AtomCommon
 	
 	char[] subtitle;
 	AtomEntry[] entries;
-	bool error = true;
+	
+	char[] src;
 	
 	static AtomFeed parse(char[] src)
 	{
@@ -270,11 +328,11 @@ class AtomFeed : AtomCommon
 			auto page = new HttpGet(url);
 			auto res = cast(char[])page.read;
 			parse_(res);
-			error = false;
+			return true;
 		}
 		catch(Exception ex)
 		{
-			error = true;
+			return false;
 		}
 	}
 	
@@ -287,12 +345,17 @@ class AtomFeed : AtomCommon
 		printer.newline;
 		printer.indent;
 			printCommonElements(printer);
-			foreach(entry; entries) {
-				entry.print(printer, style);
-				printer.newline;
-			}
+			printEntries_(printer, style);
 		printer.dedent;
 		printer("</feed>").newline;
+	}
+	
+	protected void printEntries_(Printer printer, AtomPublishStyle style)
+	{
+		foreach(entry; entries) {
+			entry.print(printer, style);
+			printer.newline;
+		}
 	}
 	
 	private void parseFeed_(Document!(char).Node feed)
@@ -320,6 +383,8 @@ class AtomFeed : AtomCommon
 	
 	private void parse_(char[] src)
 	{
+		this.src = src;
+		
 		auto doc = new Document!(char);
 		doc.parse(src);
 		
