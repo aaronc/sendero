@@ -53,7 +53,7 @@ alias AtomText!("rights") AtomRights;
 struct AtomLink
 {
 	char[] href;
-	AtomOptAttr rel;
+	char[] rel;
 	char[] title;
 	
 	void print(Printer printer)
@@ -134,7 +134,7 @@ class AtomCommon
 		title.print(printer);
 		printer.formatln(`<id>{}</id>">`, url);
 		printer.formatln(`<link href="{}">`, url);
-		printer.formatln("<updated>{}</updated>", formatRFC3339(updated));
+		if(updated.ticks != 0) printer.formatln("<updated>{}</updated>", formatRFC3339(updated));
 		foreach(author; authors) author.print(printer);
 		foreach(category; categories) category.print(printer);
 		foreach(contributor; contributors) contributor.print(printer);
@@ -321,7 +321,7 @@ class AtomFeed : AtomCommon
 		return f;
 	}
 	
-	void get()
+	bool get()
 	{
 		try
 		{
@@ -400,11 +400,12 @@ class AtomFeed : AtomCommon
 	}
 }
 
-debug {
+debug(SenderoUnittest) {
 	
 	unittest
 	{
 		auto f = new AtomFeed("http://projects.practivist.org/news?format=atom");
+		
 		f.get;
 		f.publish((char[] val){Stdout(val);}, AtomPublishStyle.Short);
 	}
