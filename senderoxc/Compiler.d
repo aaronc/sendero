@@ -12,6 +12,8 @@ import senderoxc.Config;
 import senderoxc.Reset;
 
 import senderoxc.builder.Build;
+import senderoxc.builder.Linker;
+import senderoxc.builder.Registry;
 
 version(SenderoXCLive) {
 	import ddl.DefaultRegistry;
@@ -28,14 +30,24 @@ char[] regularizeDirname(char[] dirname)
 
 class SenderoXCompiler
 {
-	this(char[] modname, DecoratedDCompiler compiler, char[][] imports, char[] dirname = null)
+	this(char[] modname, DecoratedDCompiler compiler, char[] dirname = null)
 	{
 		this.modname = modname;
+		version(SenderoXCBuild) {
+			auto fqname = Util.substitute(modname, ".", "-");
+			version(Windows) this.objname = fqname ~ ".obj";
+			else this.objname = fqname ~ ".o"; 
+		}
 		this.compiler = compiler;
 		this.dirname = dirname;
-		foreach(i; imports) registerImport(i);
+		
 	}
 	
+	private void processImports(char[][] imports)
+	{
+		foreach(i; imports) registerImport(i);
+	}
+	 
 	static SenderoXCompiler create(char[] modname)
 	{
 		auto pCompiler = modname in registeredModules;
@@ -122,13 +134,17 @@ class SenderoXCompiler
 		{
 			auto compiler = createDDCompiler(filename);
 			if(isSDX) {
-				auto sxcompiler = new SenderoXCompiler(modname, compiler, imports, dirname);
+				auto sxcompiler = new SenderoXCompiler(modname, compiler, dirname);
+				Stdout.formatln("Registering compiler {}", modname);
 				registeredModules[modname] = sxcompiler;
+				sxcompiler.processImports(imports);
 				return sxcompiler;
 			}
 			else {
-				auto dcompiler = new DModuleCompiler(filename, modname, compiler, imports);
+				auto dcompiler = new DModuleCompiler(filename, modname, compiler);
+				Stdout.formatln("Registering compiler {}", modname);
 				registeredModules[modname] = dcompiler;
+				dcompiler.processImports(imports);
 				return dcompiler;
 			}
 		}
@@ -136,12 +152,14 @@ class SenderoXCompiler
 	}
 	
 	const char[] modname, dirname;
-	private char[] outname, objname;
+	version(SenderoXCBuild) const char[] objname;
+	private char[] outname;
 	private DecoratedDCompiler compiler;
 	private bool processed_ = false;
 	private bool written_ = false;
 	private bool compiled_ = false;
 	private bool linked_ = false;
+	private bool modified_ = false;
 	
 	static SenderoXCompiler[char[]] registeredModules;
 	
@@ -222,6 +240,7 @@ class SenderoXCompiler
 			assert(resFile);
 			resFile.write(res.get);
 			resFile.flush.close;
+			modified_ = true;
 		}
 		else Stdout.formatln("File {} is up-to-date", outname);
 	}
@@ -230,10 +249,13 @@ class SenderoXCompiler
 	
 	bool modified()
 	{
-		return written_;
+		if(modified_) return true;
+		foreach(name, i; imports)
+			if(i.modified) return true;
+		return false;
 	}
 	
-	CompileStatus compile()
+	final CompileStatus compile(bool rebuildAll)
 	{
 		if(compiled_) return CompileStatus.Ignore;
 		
@@ -241,27 +263,28 @@ class SenderoXCompiler
 		
 		Stdout.formatln("Compiling module {}", modname);
 		
-		objname = null;		
 		bool doCompile = false;
 		
 		foreach(name, child; imports) {
-			auto res = child.compile;
+			auto res = child.compile(rebuildAll);
 			if(res == CompileStatus.Error) return CompileStatus.Error;
 			else if(res == CompileStatus.Success) doCompile = true;
 		}
 		
-		if(!modified && !doCompile) return CompileStatus.Ignore;
+		if(!modified && !doCompile && !rebuildAll) return CompileStatus.Ignore;
 		else {
-			objname = compileThis;
-			return objname.length ? CompileStatus.Success : CompileStatus.Error;
+			return compileThis ? CompileStatus.Success : CompileStatus.Error;
 		}
 	}
 	
-	char[] compileThis()
+	bool compileThis()
 	in { assert(outname.length); }
 	body
 	{
-		return BuildCommand.execute(modname, outname);
+		modified_ = false;
+		auto res = BuildCommand.execute(modname, outname, objname);
+		SenderoXCRegistry.register(modname, Time(0), res);
+		return res;
 	}
 	
 	void link(SenderoXCLinker linker)
@@ -269,11 +292,11 @@ class SenderoXCompiler
 		if(linked_) return;
 		linked_ = true;
 		
+		linker.link(objname);
+		
 		foreach(name, child; imports) {
 			child.link(linker);
 		}
-		
-		linker.link(objname);
 	}
 	
 	SenderoXCompiler[char[]] imports;
@@ -287,12 +310,12 @@ class SenderoXCompiler
 
 class DModuleCompiler : SenderoXCompiler
 {
-	this(char[] filename, char[] modname, DecoratedDCompiler compiler, char[][] imports)
+	this(char[] filename, char[] modname, DecoratedDCompiler compiler)
 	{
-		this.filename = filename;
-		this.filepath = new FilePath(filename);
-		this.lastModified = filepath.modified;
-		super(modname, compiler, imports);
+		this.filename_ = filename;
+		this.filepath_ = new FilePath(filename_);
+		//this.lastModified_ = filepath_.modified;
+		super(modname, compiler);
 	}
 	
 	void processThis() {
@@ -305,18 +328,24 @@ class DModuleCompiler : SenderoXCompiler
 	
 	bool modified()
 	{
-		return lastModified == filepath.modified ? true : false;
+		if(SenderoXCRegistry.lastModified(modname) != filepath_.modified) return true;
+		foreach(name, i; imports)
+			if(i.modified) return true;
+		return false;
 	}
 	
-	char[] compileThis()
-	in { assert(filename.length); }
+	bool compileThis()
+	in { assert(filename_.length); }
 	body
 	{
-		lastModified = filepath.modified;
-		return BuildCommand.execute(modname, outname);
+		//lastModified_ = filepath_.modified;
+		//return BuildCommand.execute(modname, filename_, objname);
+		auto res = BuildCommand.execute(modname, filename_, objname);
+		SenderoXCRegistry.register(modname, filepath_.modified, res);
+		return res;
 	}
 	
-	private char[] filename;
-	private FilePath filepath;
-	private Time lastModified;
+	private char[] filename_;
+	private FilePath filepath_;
+	private Time lastModified_;
 }

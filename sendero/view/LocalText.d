@@ -29,8 +29,9 @@ else {
 	import Float = tango.text.convert.Float;
 	import tango.text.locale.Convert;
 	import tango.text.locale.Core;
-	import sendero.time.Format;
 }
+
+import sendero.time.Format;
 
 import tango.math.Math, tango.math.IEEE;
 import tango.group.time;
@@ -451,38 +452,6 @@ class Message : IMessage
 				break;
 			}
 		}
-	}
-	
-	static void uitoaFixed(uint len)(uint x, char[] res)
-	{
-		if(res.length < len)
-			throw new Exception("Insufficient buffer size");
-		
-		const char[] digits = "0123456789";
-		for(uint i = 0; i < len; ++i)
-		{
-			res[len - i - 1] = digits[ x % 10];
-			x /= 10;
-		}
-	}
-	
-	static char[] formatRFC3339(Time t)
-	{
-		char[] res = new char[20];
-		auto dt = Clock.toDate(t);
-		uitoaFixed!(4)(dt.date.year, res);
-		res[4] = '-';
-		uitoaFixed!(2)(dt.date.month, res[5 .. 7]);
-		res[7] = '-';
-		uitoaFixed!(2)(dt.date.day, res[8 .. 10]);
-		res[10] = 'T';
-		uitoaFixed!(2)(dt.time.hours, res[11..13]);
-		res[13] = ':';
-		uitoaFixed!(2)(dt.time.minutes, res[14..16]);
-		res[16] = ':';
-		uitoaFixed!(2)(dt.time.seconds, res[17..19]);
-		res[19] = 'Z';
-		return res;
 	}
 }
 

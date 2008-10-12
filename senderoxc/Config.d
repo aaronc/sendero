@@ -9,6 +9,7 @@ class SenderoXCConfig
 	char[][] includeDirs;
 	char[] modname;
 	char[] buildflags;
+	char[] target;
 	
 	static void load(char[] configName, char[] filename = "senderoxc.conf")
 	{
@@ -17,7 +18,8 @@ class SenderoXCConfig
 	
 	void serialize(Ar)(Ar ar)
 	{
-		ar (modname, "name") (includeDirs, "includeDirs") (buildflags, "buildflags");
+		ar (modname, "name") (includeDirs, "includeDirs") (buildflags, "buildflags")
+			(target, "target");
 	}
 }
 

@@ -2,6 +2,7 @@ module senderoxc.Main;
 
 import senderoxc.Process;
 
+import senderoxc.Compiler;
 import senderoxc.Config;
 import sendero.core.Config;
 

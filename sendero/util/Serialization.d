@@ -14,21 +14,27 @@ import tango.core.Traits;
 
 bool loadFromFile(T)(inout T t, char[] filename)
 {
-
-	FileConduit.Style style;
-	style.access = FileConduit.Access.Read;
-	style.open = FileConduit.Open.Exists;
-	style.share = FileConduit.Share.Read;
-	auto infile = new FileConduit(filename, style);
-	if(!infile)
+	try
+	{
+		FileConduit.Style style;
+		style.access = FileConduit.Access.Read;
+		style.open = FileConduit.Open.Exists;
+		style.share = FileConduit.Share.Read;
+		auto infile = new FileConduit(filename, style);
+		if(!infile)
+			return false;
+		
+		auto deserializer = new SimpleBinaryInArchiver(infile);
+		deserializer (t);
+		
+		infile.close;
+		
+		return true;
+	}
+	catch(Exception ex)
+	{
 		return false;
-	
-	auto deserializer = new SimpleBinaryInArchiver(infile);
-	deserializer (t);
-	
-	infile.close;
-	
-	return true;
+	}
 }
 
 bool saveToFile(T)(T t, char[] filename)
