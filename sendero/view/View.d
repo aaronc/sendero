@@ -1,7 +1,7 @@
 module sendero.view.View;
 
-import sendero.http.Request;
-import sendero.http.Response;
+public import sendero.http.Request;
+public import sendero.http.Response;
 
 import sendero.view.SenderoTemplate;
 import sendero.view.ExecContext;

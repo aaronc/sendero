@@ -1,25 +1,12 @@
 module senderoxc.Main;
 
-import tango.io.File, tango.io.FileConduit, tango.io.Path;
-import tango.io.Stdout;
-import tango.util.log.Config;
-import Util = tango.text.Util;
+import senderoxc.Process;
 
-import sendero_base.confscript.Parser;
-import sendero_base.Serialization;
-
-import senderoxc.SenderoExt;
-import senderoxc.data.Schema;
-import senderoxc.Compiler;
 import senderoxc.Config;
-
 import sendero.core.Config;
 
-import dbi.all;
+import tango.io.Stdout;
 
-version(dbi_mysql) {
-	import senderoxc.data.MysqlMapper;
-}
 
 debug(SenderoXCUnittest) {
 	import qcf.Regression;
@@ -31,52 +18,8 @@ debug(SenderoXCUnittest) {
 
 int main(char[][] args)
 {
-	void run(char[] modname, char[] outdir = null)
-	{
-		Stdout.formatln("Running SenderoXC on module {}", modname);
-		
-		try
-		{
-			auto compiler = SenderoXCompiler.create(modname);
-			assert(compiler);
-			compiler.process;
-			compiler.write(outdir);
-			version(SenderoXCBuild) {
-				compiler.compile;
-			}
-		}
-		catch(Exception ex)
-		{
-			Stdout.formatln("Caught exception: {}", ex.toString);
-			if(ex.info) {
-				Stdout.formatln("Stack trace");
-				Stdout(ex.info.toString).newline;
-			}
-			throw ex;
-		}
-		
-		try
-		{
-			Stdout.formatln("Committing db schema to {}", SenderoConfig().dbUrl);
-			auto db = getDatabaseForURL(SenderoConfig().dbUrl);
-			Schema.commit(db);
-			db.close;
-		}
-		catch(Exception ex)
-		{
-			Stdout.formatln("Caught exception: {}, while commiting db schema", ex.toString);
-			if(ex.info) {
-				Stdout.formatln("Stack trace");
-				Stdout(ex.info.toString).newline;
-			}
-			throw ex;
-		}
-	}
-	
 	if(args.length > 1) {
-		SenderoConfig.load(args[1]);
-		SenderoXCConfig.load(args[1]);
-		
+		init(args[1]);
 		run(SenderoXCConfig().modname);
 	}
 	else debug(SenderoXCUnittest) {

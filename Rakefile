@@ -10,6 +10,7 @@ TEST_SENDERO = "test_sendero.d"
 RAGEL_SRC = FileList["sendero/**/*.rl"];
 RAGEL_OUTPUT = RAGEL_SRC.ext(".d");
 APD_SRC = FileList['sendero/xml/xpath10/*.apd']
+SCRIPTS_SRC = FileList["scripts/**/*.d"]
 
 SENDEROXC_SRC = FileList["senderoxc/**/*.d", "../decorated_d/decorated_d/**/*.d", '../decorated_d/decorated_d/parser/Parser.d']
 
@@ -45,6 +46,10 @@ end
 
 task :test_senderoxc => [:senderoxc] do
   sh "senderoxc"
+end
+
+task :build_scripts => SCRIPTS_SRC do
+  sh "rebuild scripts/create_project.d -ofbin/sendero-create-project"
 end
 
 task :default => [:test, :test_senderoxc]

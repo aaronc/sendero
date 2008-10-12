@@ -48,6 +48,7 @@ import tango.core.Traits;
  *  elementFormat := "time" { "," datetimeStyle }
                       | "date" { "," datetimeStyle }
                       | "datetime" { "," datetimeStyle }
+                      | "rfc3339"
                       | "number" { "," numberStyle }
                       | "choice" "," choiceStyle
                       | "spellout"
@@ -78,6 +79,7 @@ const ubyte FORMAT_ORDINAL = 5;
 const ubyte FORMAT_DURATION = 6;
 const ubyte FORMAT_STRING = 7;
 const ubyte FORMAT_DATETIME = 8;
+const ubyte FORMAT_RFC3339 = 9;
 
 const ubyte DATE_STYLE_SHORT = 0;
 const ubyte DATE_STYLE_MEDIUM = 1;
@@ -308,6 +310,10 @@ class Message : IMessage
 			UDateFormat udf;
 			switch(p.elementFormat)
 			{
+			case FORMAT_RFC3339:
+				return formatRFC3339(t);
+				break;
+			
 			case FORMAT_DATE:
 				switch(p.secondaryFormat)
 				{
@@ -391,6 +397,10 @@ class Message : IMessage
 			char[200] res = void;
 			switch(p.elementFormat)
 			{
+			case FORMAT_RFC3339:
+				return formatRFC3339(t);
+				break;
+			
 			case FORMAT_DATE:
 				switch(p.secondaryFormat)
 				{
@@ -441,6 +451,38 @@ class Message : IMessage
 				break;
 			}
 		}
+	}
+	
+	static void uitoaFixed(uint len)(uint x, char[] res)
+	{
+		if(res.length < len)
+			throw new Exception("Insufficient buffer size");
+		
+		const char[] digits = "0123456789";
+		for(uint i = 0; i < len; ++i)
+		{
+			res[len - i - 1] = digits[ x % 10];
+			x /= 10;
+		}
+	}
+	
+	static char[] formatRFC3339(Time t)
+	{
+		char[] res = new char[20];
+		auto dt = Clock.toDate(t);
+		uitoaFixed!(4)(dt.date.year, res);
+		res[4] = '-';
+		uitoaFixed!(2)(dt.date.month, res[5 .. 7]);
+		res[7] = '-';
+		uitoaFixed!(2)(dt.date.day, res[8 .. 10]);
+		res[10] = 'T';
+		uitoaFixed!(2)(dt.time.hours, res[11..13]);
+		res[13] = ':';
+		uitoaFixed!(2)(dt.time.minutes, res[14..16]);
+		res[16] = ':';
+		uitoaFixed!(2)(dt.time.seconds, res[17..19]);
+		res[19] = 'Z';
+		return res;
 	}
 }
 
@@ -709,6 +751,13 @@ Message parseMessage(char[] msg, ExecContext ctxt)
 			if(itr[0 .. 7] == "ordinal") {
 				itr += 7;
 				p.elementFormat = FORMAT_ORDINAL;
+			}
+			else return unexpectedFormat();
+			break;
+		case 'r':
+			if(itr[0 .. 7] == "rfc3339") {
+				itr += 7;
+				p.elementFormat = FORMAT_RFC3339;
 			}
 			else return unexpectedFormat();
 			break;

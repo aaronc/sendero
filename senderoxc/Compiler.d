@@ -13,6 +13,12 @@ import senderoxc.Reset;
 
 import senderoxc.builder.Build;
 
+version(SenderoXCLive) {
+	import ddl.DefaultRegistry;
+	import ddl.Linker;
+	import ddl.DynamicLibrary;
+}
+
 char[] regularizeDirname(char[] dirname)
 {
 	if(dirname.length && (dirname[$-1] != '/' || dirname[$-1] != '\\'))
@@ -130,11 +136,12 @@ class SenderoXCompiler
 	}
 	
 	const char[] modname, dirname;
-	private char[] outname;
+	private char[] outname, objname;
 	private DecoratedDCompiler compiler;
 	private bool processed_ = false;
 	private bool written_ = false;
 	private bool compiled_ = false;
+	private bool linked_ = false;
 	
 	static SenderoXCompiler[char[]] registeredModules;
 	
@@ -234,22 +241,39 @@ class SenderoXCompiler
 		
 		Stdout.formatln("Compiling module {}", modname);
 		
+		objname = null;		
 		bool doCompile = false;
 		
 		foreach(name, child; imports) {
-			if(child.compile == CompileStatus.Success)
-				doCompile = true;
+			auto res = child.compile;
+			if(res == CompileStatus.Error) return CompileStatus.Error;
+			else if(res == CompileStatus.Success) doCompile = true;
 		}
 		
 		if(!modified && !doCompile) return CompileStatus.Ignore;
-		return compileThis ? CompileStatus.Success : CompileStatus.Error;
+		else {
+			objname = compileThis;
+			return objname.length ? CompileStatus.Success : CompileStatus.Error;
+		}
 	}
 	
-	bool compileThis()
+	char[] compileThis()
 	in { assert(outname.length); }
 	body
 	{
 		return BuildCommand.execute(modname, outname);
+	}
+	
+	void link(SenderoXCLinker linker)
+	{
+		if(linked_) return;
+		linked_ = true;
+		
+		foreach(name, child; imports) {
+			child.link(linker);
+		}
+		
+		linker.link(objname);
 	}
 	
 	SenderoXCompiler[char[]] imports;
@@ -284,7 +308,7 @@ class DModuleCompiler : SenderoXCompiler
 		return lastModified == filepath.modified ? true : false;
 	}
 	
-	bool compileThis()
+	char[] compileThis()
 	in { assert(filename.length); }
 	body
 	{

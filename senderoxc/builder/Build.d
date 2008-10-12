@@ -8,10 +8,10 @@ import tango.sys.Process;
 
 class BuildCommand
 {
-	static bool execute(char[] modname, char[] filename)
+	static char[] execute(char[] modname, char[] filename)
 	{
 		char[] cmd;
-		write(modname, filename, (char[] val) { cmd ~= val; });
+		auto objname = write(modname, filename, (char[] val) { cmd ~= val; });
 		Stdout.formatln("Running build command: {}", cmd);
 		auto p = new Process(cmd, null);
 		p.execute;
@@ -19,12 +19,12 @@ class BuildCommand
 	    auto res = p.wait;
 	    if(res.status != 0) {
 	    	Stdout.formatln("dmd exited with return code {}", res.status);
-	    	return false;
+	    	return null;
 	    }
-	    return true;
+	    return objname;
 	}
 	
-	static void write(char[] modname, char[] filename, void delegate(char[]) wr)
+	static char[] write(char[] modname, char[] filename, void delegate(char[]) wr)
 	{
 		wr("dmd -c ");
 		BuildFlags.write(wr);
@@ -33,5 +33,7 @@ class BuildCommand
 		wr(fqname);
 		wr(".obj ");
 		wr(filename);
+		
+		return "senderoxc_objs/" ~ fqname ~ ".obj";
 	}
 }
