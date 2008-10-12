@@ -16,6 +16,16 @@ debug import tango.io.Stdout;
 
 enum AtomPublishStyle { Short, Long };
 
+char[] getValue(Document!(char).Node node)
+{
+	if(node.rawValue.length) return node.rawValue;
+	else if(node.firstChild && (
+			node.firstChild.type == XmlNodeType.Data ||
+			node.firstChild.type == XmlNodeType.CData)) {
+		return node.firstChild.rawValue;
+	}
+}
+
 class AtomCommon
 {
 	char[] title;
@@ -112,7 +122,7 @@ class AtomEntry : AtomCommon
 		printer("<entry>").newline;
 		printer.indent;
 			printCommonElements(printer);
-			if(AtomPublishStyle.Long) {
+			if(style == AtomPublishStyle.Long) {
 				if(content.length) printContent;
 				else if(summary.length) printSummary;
 			}
@@ -162,7 +172,13 @@ class AtomAuthor
 	
 	void print(Printer printer)
 	{
-	
+		printer("<author>").newline;
+		printer.indent;
+			if(name.length) printer.formatln(`<name>{}</name>`, name);
+			if(email.length) printer.formatln(`<email>{}</email>`, email);
+			if(uri.length) printer.formatln(`<uri>{}</uri>`, uri);
+		printer.dedent;
+		printer("</author>").newline;
 	}
 	
 	private this(Document!(char).Node author)
@@ -177,9 +193,9 @@ class AtomAuthor
 			Stdout.formatln("author node.name: {}", node.name);
 			switch(node.localName)
 			{
-			case "name": this.name = node.rawValue; break;
-			case "uri": this.uri = node.rawValue; break;
-			case "email": this.email = node.rawValue; break;
+			case "name": this.name = getValue(node); break;
+			case "uri": this.uri = getValue(node); break;
+			case "email": this.email = getValue(node); break;
 			default:
 				break;
 			}
@@ -195,7 +211,11 @@ class AtomCategory
 	
 	void print(Printer printer)
 	{
-		
+		printer("<category ");
+		if(term.length) printer.format(`term="{}" `,term);
+		if(scheme.length) printer.format(`scheme="{}" `,scheme);
+		if(label.length) printer.format(`label="{}" `,label);
+		printer("/>").newline;
 	}
 	
 	private this(Document!(char).Node category)
