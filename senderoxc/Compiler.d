@@ -33,11 +33,9 @@ class SenderoXCompiler
 	this(char[] modname, DecoratedDCompiler compiler, char[] dirname = null)
 	{
 		this.modname = modname;
-		version(SenderoXCBuild) {
-			auto fqname = Util.substitute(modname, ".", "-");
-			version(Windows) this.objname = fqname ~ ".obj";
-			else this.objname = fqname ~ ".o"; 
-		}
+		auto fqname = Util.substitute(modname, ".", "-");
+		version(Windows) this.objname = fqname ~ ".obj";
+		else this.objname = fqname ~ ".o"; 
 		this.compiler = compiler;
 		this.dirname = dirname;
 		
@@ -152,7 +150,7 @@ class SenderoXCompiler
 	}
 	
 	const char[] modname, dirname;
-	version(SenderoXCBuild) const char[] objname;
+	const char[] objname;
 	private char[] outname;
 	private DecoratedDCompiler compiler;
 	private bool processed_ = false;

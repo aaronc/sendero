@@ -14,16 +14,30 @@ class SenderoXCRegistry
 {
 	static this()
 	{
-		if(!loadFromFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data"))
-			inst_ = new SenderoXCRegistry;
-		assert(inst_ !is null);
-		log.trace("Loaded senderoxc registry");
+		try
+		{
+			if(!loadFromFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data"))
+				inst_ = new SenderoXCRegistry;
+			assert(inst_ !is null);
+			log.trace("Loaded senderoxc registry");
+		}
+		catch(Exception ex)
+		{
+			log.error("Error loading build registry: {}", ex.toString);
+		}
 	}
 	
 	static ~this()
 	{
-		assert(inst_ !is null);
-		saveToFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data");
+		try
+		{
+			assert(inst_ !is null);
+			saveToFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data");
+		}
+		catch(Exception ex)
+		{
+			log.error("Error saving build registry: {}", ex.toString);
+		}
 	}
 	
 	private static class Entry

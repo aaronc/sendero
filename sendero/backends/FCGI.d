@@ -81,9 +81,13 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 		auto fcgiRequest = new FastCGIRequest;
 		//auto output = new FastCGIOutputBuffer(fcgiRequest);
 		auto session = SessionT.cur;
+		auto res = new Responder;
+
+		auto request = session.req;
+		request.setResponder(res);
 
 		while ( fcgiRequest.accept () )
-		{			
+		{
 			try
 			{
 				version(SenderoBenchmark) {
@@ -94,6 +98,7 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				// Begin processing request
 				
 				session.reset;
+				res.reset;
 				
 				// Extract request info from FastCGI args
 				
@@ -130,7 +135,6 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 					}
 				}
 				
-				auto request = session.req;
 				request.parse(method, url, rawGet, rawPost);
 				
 				auto c = ("HTTP_COOKIE" in fcgiRequest.args);
@@ -141,7 +145,7 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				
 				// Run appMain
 				
-				auto res = appMain(request);
+				appMain(request);
 				
 				// Begin sending output client
 				
@@ -152,7 +156,12 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				foreach(cookie; session.cookies)
  					cookie.produce(cast(void delegate(void[]))&output.write);
 				
-				res.render(cast(void delegate(void[]))&output.write);
+				//res.render(cast(void delegate(void[]))&output.write);
+				
+				output.write("Content-type: ");
+				output.write(res.contentType);
+				output.write("\r\n\r\n");
+				output.write(res.res);
 				
 				output.flush;
 				
@@ -192,9 +201,9 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 						{
 							stdout.write(" Error tracing exception:" ~ ex2.toString); 
 						}
-					}
-					
+					}					
 					else stdout.write("Error");
+					
 					debug(SenderoDebugFCGIVars) {
 						stdout.write("<br /><br /><h1>FCGI Variables:</h1>");
 						foreach(k, v; fcgiRequest.args)
@@ -207,8 +216,9 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				if(errorHandler) {
 					try
 					{
-						auto res = errorHandler();
-						res.render(cast(void delegate(void[]))&stdout.write);
+						errorHandler(request);
+						stdout.write("Content-type: text/html\r\n\r\n");
+						stdout.write(res.res);
 					}
 					catch(Exception ex2)
 					{

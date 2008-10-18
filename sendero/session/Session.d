@@ -38,19 +38,26 @@ class BasicSessionData
 		cookies ~= cookie;
 	}
 	
-	void reset(Request req)
+	void reset()
 	{
 		cookies.length = 0;
-		this.req = req;
 		version(SenderoSessionGC)
 		{
 			SessionGC.reset;
 		}
 	}
+	
+	void reset(Request req)
+	{
+		reset;
+		this.req = req;
+	}
 }
 
 class SessionGlobal(SessionImpT)
 {
+	alias SessionImpT.RequestT RequestT;
+	
 	static ThreadLocal!(SessionImpT) data;
 	static this()
 	{

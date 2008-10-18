@@ -8,26 +8,7 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
-public import tango.net.http.HttpCookies;
-
-struct ContentType
-{
-	const char[] TextHtml = "text/html; charset=utf-8";
-	const char[] TextXml = "text/xml";
-	const char[] TextJSON = "text/json";
-	const char[] AppJS = "application/javascript";
-	
-}
-alias ContentType Mime;
-
-interface IResponder
-{
-	void setContentType(char[] contentType);
-	void write(void[] val);
-	void setCookie(char[] name, char[] value);
-	void setCookie(Cookie cookie);
-}
-
+public import sendero.http.Response;
 
 debug(SenderoRouting) {
 	import sendero.Debug;
@@ -41,29 +22,8 @@ debug(SenderoRouting) {
 
 enum HttpMethod { Get, Post, Put, Delete };
 
-class Request
+final class Request
 {
-	/+this(HttpMethod method, UrlStack url, Param[char[]] params)
-	{
-		this.params = params;
-		this.method = method;
-		this.url = url;
-	}
-	
-	static Request parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
-	{
-		if(method == HttpMethod.Get) {
-			return new Request(method, UrlStack.parseUrl(url), parseParams(getParams));
-		}
-		else if(method == HttpMethod.Post) {
-			auto params = parseParams(postParams);
-			auto _get_ = parseParams(getParams);
-			params["_get_"] = Param();
-			params["_get_"].obj = _get_;
-			return new Request(method, UrlStack.parseUrl(url), params);
-		}
-	}+/
-	
 	this()
 	{
 		
@@ -96,7 +56,7 @@ class Request
 	
 	void reset()
 	{
-		params = null;
+ 		params = null;
 		url = null;
 		lastToken = null;
 		cookies = null;
@@ -173,5 +133,3 @@ interface IHttpSet
 {
 	void httpSet(IObject param, Request req);
 }
-
-alias Request Req;
