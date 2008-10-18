@@ -192,8 +192,6 @@ class SenderoXCompiler
 		
 		written_ = true;
 		
-		Stdout.formatln("Writing module {}", modname);
-		
 		foreach(name, child; imports)
 			child.write(outdir);
 		

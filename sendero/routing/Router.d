@@ -21,13 +21,13 @@ const ubyte PUT = 2;
 const ubyte DELETE = 3;
 const ubyte ALL = 4;
 
-template Route(ResT, ReqT, bool UseDelegates = false)
+template Route(ReqT, bool UseDelegates = false)
 {
-	ResT route(ReqT routeParams, void* ptr = null)
+	void route(ReqT req, void* ptr = null)
 	in
 	{
-		assert(routeParams !is null);
-		assert(routeParams.url !is null);
+		assert(req !is null);
+		assert(req.url !is null);
 		static if(UseDelegates)
 		{
 			assert(ptr !is null);
@@ -37,9 +37,9 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 	{	
 		debug(SenderoRuntime) mixin(FailTrace!("Route.route"));
 		
-		ResT error(char[] msg = "")
+		void error(char[] msg = "")
 		{
-			if(errHandler) return errHandler.exec(routeParams, ptr);
+			if(errHandler) return errHandler.exec(req, ptr);
 			else throw new Exception("Routing error: " ~ msg);
 		}
 		
@@ -47,12 +47,12 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 		{
 			debug(SenderoRuntime) log.trace(MName ~ " BEGIN TRY");
 			
-			auto token = routeParams.url.top;
+			auto token = req.url.top;
 			
 			debug(SenderoRuntime) log.trace(MName ~ " token = {}", token);
 			
 			Routes* pRoutes;
-			switch(routeParams.method)
+			switch(req.method)
 			{
 			case HttpMethod.Get: pRoutes = &getRoutes; break;
 			case HttpMethod.Post: pRoutes = &postRoutes; break;
@@ -66,10 +66,10 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 					return error;
 				}
 				
-				return pRoutes.defRoute.exec(routeParams, ptr);
+				return pRoutes.defRoute.exec(req, ptr);
 			}
 			
-			routeParams.url.pop;
+			req.url.pop;
 			
 			auto routing = token in pRoutes.routes;
 			if(!routing) {
@@ -77,15 +77,15 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 					return error(token);
 				}
 				
-				routeParams.lastToken = token;
-				routeParams.params.addParam(["__wildcard__"], token);
+				req.lastToken = token;
+				req.params.addParam(["__wildcard__"], token);
 				
-				return pRoutes.starRoute.exec(routeParams, ptr);
+				return pRoutes.starRoute.exec(req, ptr);
 			}
 			
-			routeParams.lastToken = token;
+			req.lastToken = token;
 			
-			return routing.exec(routeParams, ptr);
+			return routing.exec(req, ptr);
 		}
 		catch(Exception ex)
 		{
@@ -95,9 +95,9 @@ template Route(ResT, ReqT, bool UseDelegates = false)
 	}
 }
 
-template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
+template TypeSafeRouterDef(ReqT, bool InstanceRouter = false)
 {
-	alias IFunctionWrapper!(ResT, ReqT) Routing;
+	alias IFunctionWrapper!(ReqT) Routing;
 	
 	private struct Routes
 	{
@@ -120,9 +120,9 @@ template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
 	Routes deleteRoutes;
 	Routing errHandler;
 	
-	static TypeSafeRouter!(ResT, ReqT) opCall()
+	static TypeSafeRouter!(ReqT) opCall()
 	{
-		TypeSafeRouter!(ResT, ReqT) router;
+		TypeSafeRouter!(ReqT) router;
 		return router;
 	}
 	
@@ -154,12 +154,12 @@ template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
 		}
 	}
 	
-	void mapContinue(char[] route, ResT function(ReqT) routeFn)
+	void mapContinue(char[] route, void function(ReqT) routeFn)
 	{
 		
 	}
 	
-	void mapWildcardContinue(IIRoute!(ResT, ReqT) function(ReqT) getInstance)
+	void mapWildcardContinue(IIRoute!(ReqT) function(ReqT) getInstance)
 	{
 		/+auto fn = function ResT(ReqT req) {
 			auto i = getInstance(req);
@@ -167,7 +167,7 @@ template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
 		};+/
 	}
 	
-	void mapWildcardChildContinue(IIRoute!(ResT, ReqT) function(ReqT) getInstance)
+	void mapWildcardChildContinue(IIRoute!(ReqT) function(ReqT) getInstance)
 	{
 		/+auto fn = function ResT(ReqT req) {
 			auto i = getInstance(req);
@@ -181,16 +181,16 @@ template TypeSafeRouterDef(ResT, ReqT, bool InstanceRouter = false)
 	}
 }
 
-struct TypeSafeRouter(ResT, ReqT)
+struct TypeSafeRouter(ReqT)
 {
-	mixin TypeSafeRouterDef!(ResT, ReqT);
-	mixin Route!(ResT, ReqT);
+	mixin TypeSafeRouterDef!(ReqT);
+	mixin Route!(ReqT);
 }
 
-struct TypeSafeInstanceRouter(ResT, ReqT)
+struct TypeSafeInstanceRouter(ReqT)
 {
-	mixin TypeSafeRouterDef!(ResT, ReqT, true);
-	mixin Route!(ResT, ReqT, true);
+	mixin TypeSafeRouterDef!(ReqT, true);
+	mixin Route!(ReqT, true);
 }
 
 
@@ -211,9 +211,9 @@ class Ctlr
 	
 	static const Router r;
 	
-	static char[] route(Request routeParams)
+	static char[] route(Request req)
 	{
-		return r.route(routeParams);
+		return r.route(req);
 	}
 	
 	static char[] main(char[] param)

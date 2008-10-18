@@ -20,7 +20,7 @@ class ControllerContext : IDecoratorContext
 	void writeImports(IDeclarationWriter wr)
 	{
 		if(touched) {
-			wr.prepend("import sendero.routing.Router, sendero.http.Response, sendero.http.Request, sendero.routing.IRoute, sendero.view.View;\n");
+			wr.prepend("import sendero.routing.Router, sendero.http.Request, sendero.routing.IRoute, sendero.view.View;\n");
 		}
 	}
 	
@@ -92,11 +92,11 @@ class ControllerResponder : IDecoratorResponder
 	
 	void finish(IDeclarationWriter writer)
 	{
-		writer ~= "static const TypeSafeRouter!(Res,Req) r, ir;\n";
+		writer ~= "static const TypeSafeRouter!(Req) r, ir;\n";
 		writer ~= "static this()\n";
 		writer ~= "{\n";
-		writer ~= "\tr = TypeSafeRouter!(Response,Request)();\n";
-		writer ~= "\tir = TypeSafeRouter!(Response,Request)();\n";
+		writer ~= "\tr = TypeSafeRouter!(Req)();\n";
+		writer ~= "\tir = TypeSafeRouter!(Req)();\n";
 		
 		foreach(action; actions)
 		{
@@ -158,12 +158,12 @@ class ControllerResponder : IDecoratorResponder
 		writer ~= "}\n\n";
 		
 		
-		writer ~= "static Res route(Req req)\n";
+		writer ~= "static void route(Req req)\n";
 		writer ~= "{ ";
 		writer ~= "return r.route(req);";
 		writer ~= " }\n";
 		
-		writer ~= "Res iroute(Req req)\n";
+		writer ~= "void iroute(Req req)\n";
 		writer ~= "{ ";
 		writer ~= "return r.route(req, cast(void*)this);";
 		writer ~= " }\n";

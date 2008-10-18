@@ -129,6 +129,8 @@ final class Request
 		IResponder responder_;
 }
 
+alias Request Req;
+
 interface IHttpSet
 {
 	void httpSet(IObject param, Request req);
