@@ -66,9 +66,9 @@ class ConsoleRedirect : OutputStream
  * Sendero backend for FCGI (uses <a href="http://www.dsource.org/projects/fastcgi4d">FastCGI4D</a> 
  * 
  */
-class FCGIRunner(SessionT, RequestT = Request, ResponseT = Response) : AbstractBackend!(SessionT, RequestT, ResponseT)
+class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, RequestT)
 {
-	this(ResponseT function(RequestT) appMain)
+	this(void function(RequestT) appMain)
 	{
 		super(appMain);
 	}

@@ -7,12 +7,25 @@ module sendero.http.Request;
 
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
+public import sendero.http.IRenderable;
+public import tango.net.http.HttpCookies;
+
+struct ContentType
+{
+	const char[] TextHtml = "text/html; charset=utf-8";
+	const char[] TextXml = "text/xml";
+	const char[] TextJSON = "text/json";
+	const char[] AppJS = "application/javascript";
+	
+}
+alias ContentType Mime;
 
 interface IResponder
 {
-	const char[] TextHtml = "text/html; charset=utf-8";
 	void setContentType(char[] contentType);
 	void write(void[] val);
+	void setCookie(char[] name, char[] value);
+	void setCookie(Cookie cookie);
 }
 
 
@@ -115,6 +128,42 @@ class Request
 		assert(responder_,  "responder_ is null");
 		responder_.setContentType(contentType);
 	}
+	
+	void respond(IRenderable r)
+	{
+		responder_.setContentType(r.getContentType);
+		r.render(&responder_.write);
+	}
+	
+	void respond(IStream s, char[] contentType = ContentType.TextHtml)
+	{
+		responder_.setContentType(contentType);
+		s.render(&responder_.write);
+	}
+	
+	void respond(void delegate(void delegate(void[])) stream, char[] contentType = ContentType.TextHtml)
+	{
+		responder_.setContentType(contentType);
+		stream(&responder_.write);
+	}
+	
+	void respond(char[] content, char[] contentType = ContentType.TextHtml)
+	{
+		responder_.setContentType(contentType);
+		responder_.write(content);
+	}
+	
+	void setCookie(char[] name, char[] value)
+	{
+		responder_.setCookie(name, value);
+	}
+	
+	void setCookie(Cookie cookie)
+	{
+		responder_.setCookie(cookie);
+	}
+	
+	alias respond render;
 	
 	private:
 		IResponder responder_;

@@ -22,6 +22,8 @@ class BasicSessionData
 		req = new Request;
 	}
 	
+	alias Request RequestT;
+	
 	Request req;
 	
 	Cookie[] cookies;
@@ -36,10 +38,10 @@ class BasicSessionData
 		cookies ~= cookie;
 	}
 	
-	void reset()
+	void reset(Request req)
 	{
 		cookies.length = 0;
-		req.reset;
+		this.req = req;
 		version(SenderoSessionGC)
 		{
 			SessionGC.reset;

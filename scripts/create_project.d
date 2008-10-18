@@ -1,7 +1,16 @@
 module scripts.create_project;
 
 import tango.io.Stdout;
+import tango.text.convert.Layout;
+import tango.io.stream.FileStream;
 import tango.io.Path;
+
+static this()
+{
+	layout = new Layout!(char);
+}
+
+Layout!(char) layout;
 
 void createFolder_(char[] name)
 {
@@ -19,6 +28,17 @@ void createFile_(char[] name)
 	}
 }
 
+void writeFile_(char[] templname)(char[] outputname, ...)
+{
+	if(!exists(outputname)) {
+		Stdout.formatln("Creating file {}", outputname);
+		auto output = new FileOutput(outputname);
+		layout((char[] data) { return output.write(data);}
+			, _arguments, _argptr, import(templname));
+		output.flush.close;
+	}
+}
+
 int create_project(char[][] args)
 {
 	if(args.length < 2) {
@@ -30,12 +50,7 @@ int create_project(char[][] args)
 	
 	Stdout.formatln("Creating project {}", projName);
 	
-	createFile_("dsss.conf");
-	createFile_("sendero.conf");
-	createFile_("senderoxc.conf");
-	createFile_("Rakefile");
 	createFolder_(projName);
-	createFile_(projName ~ "/Session.d");
 	createFolder_(projName ~ "/ctlr");
 	createFolder_(projName ~ "/model");
 	createFolder_("public");
@@ -44,6 +59,15 @@ int create_project(char[][] args)
 	createFolder_("public/js");	
 	createFolder_("view");
 	createFolder_("test");
+	
+	createFile_("dsss.conf");
+	createFile_("sendero.conf");
+	createFile_("senderoxc.conf");
+	writeFile_!("Rakefile.template")("Rakefile", projName, projName, projName, projName);
+	writeFile_!("Session.d.template")(projName ~ "/Session.d", projName);
+	writeFile_!("_app.d.template")(projName ~ "_app.d", projName, projName, projName);
+	writeFile_!("Main.d.template")(projName ~ "/Main.d", projName, projName, projName);
+	
 	
 	return 0;
 }

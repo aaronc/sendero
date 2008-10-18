@@ -7,7 +7,6 @@ module sendero.backends.Base;
 
 import sendero.core.Config;
 
-public import sendero.http.Response;
 public import sendero.http.Request;
 
 version(SenderoLog)
@@ -30,7 +29,7 @@ version(SenderoBenchmark)
  * The base class for implementing a backend in Sendero
  *
  */
-abstract class AbstractBackend(SessionT, RequestT = Request, ResponseT = Response)
+abstract class AbstractBackend(SessionT, RequestT = Request)
 {
 	static this()
 	{
@@ -58,19 +57,19 @@ abstract class AbstractBackend(SessionT, RequestT = Request, ResponseT = Respons
 		}
 	}
 		
-	this(ResponseT function(RequestT) appMain)
+	this(void function(RequestT) appMain)
 	{
 		if(appMain is null) throw new Exception("Sendero application has no main function");
 		this.appMain = appMain;
 	}
 	
-	void setDefaultErrorHandler(ResponseT function() errorHandler)
+	void setDefaultErrorHandler(void function(RequestT) errorHandler)
 	{
 		this.errorHandler = errorHandler;
 	}
 	
-	protected ResponseT function(RequestT) appMain;
-	protected ResponseT function() errorHandler;
+	protected void function(RequestT) appMain;
+	protected void function(RequestT) errorHandler;
 	
 	/**
 	 * Begins execution of the Sendero application

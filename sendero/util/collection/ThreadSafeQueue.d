@@ -6,7 +6,7 @@
 module sendero.util.collection.ThreadSafeQueue;
 
 import tango.core.Atomic;
-import tango.util.log.Log;
+debug import tango.util.log.Log;
 
 /**
  * Thread-Safe Queue class that uses synchronization and some atomic(non-locking) operations.
@@ -104,4 +104,76 @@ class ThreadSafeQueue(T)
 	{
 		return atomicLoad(size);
 	}
+}
+
+/**
+ * A new simpler - possibly less performant, but reliable ThreadSafeQueue.
+ */
+class ThreadSafeQueue2(T)
+{
+	debug {
+		static Logger log;
+
+		static this()
+		{
+			log = Log.lookup("sendero.util.collection.ThreadSafeQueue2!(" ~ T.stringof ~ ")");
+		}
+	}
+	
+	void push(T t)
+	{
+		assert(t !is null);
+		doPushPop(t);
+	}
+	
+	T pop()
+	{
+		return doPushPop;
+	}
+	
+private:
+	synchronized T doPushPop(T t = null)
+	{
+		debug log.info("Doing push pop");
+		if(t !is null) {
+			debug log.info("Doing push");
+			if(tail !is null) {
+				debug log.info("Non-null tail");
+				tail.next = new Node(t);
+			}
+			else {
+				debug log.info("Null tail");
+				assert(head is null);
+				head = new Node(t);
+				tail = head;
+				debug log.info("Done adding head");
+			}
+		}
+		else if(head !is null) {
+			debug log.info("Doing pop");
+			t = head.t;
+			if(head == tail) {
+				head = null;
+				tail = null;
+			}
+			else {
+				head = head.next;
+			}
+			return t;
+		}
+		return null;
+	}
+	
+	class Node
+	{
+		this(T t)
+		{
+			this.t = t;
+		}
+		
+		T t;
+		Node next = null;
+	}
+	Node head = null;
+	Node tail = null;
 }
