@@ -55,11 +55,12 @@ import dummy;
 		
 	}
 
-static const TypeSafeRouter!(Req) r, ir;
+static const TypeSafeRouter!(Req) r;
+static const TypeSafeInstanceRouter!(Req) ir;
 static this()
 {
 	r = TypeSafeRouter!(Req)();
-	ir = TypeSafeRouter!(Req)();
+	ir = TypeSafeInstanceRouter!(Req)();
 	r.map!(Res function())(GET,"", &MainCtlr.index, []);
 	r.map!(Res function(char[],char[]))(POST,"login", &MainCtlr.login, ["username", "password"]);
 	r.map!(Res function())(GET,"logout", &MainCtlr.logout, []);
@@ -70,7 +71,7 @@ static this()
 static void route(Req req)
 { return r.route(req); }
 void iroute(Req req)
-{ return r.route(req, cast(void*)this); }
+{ return ir.route(req, cast(void*)this); }
 
 }
 
@@ -84,18 +85,19 @@ void iroute(Req req)
 	
 	}
 
-static const TypeSafeRouter!(Req) r, ir;
+static const TypeSafeRouter!(Req) r;
+static const TypeSafeInstanceRouter!(Req) ir;
 static this()
 {
 	r = TypeSafeRouter!(Req)();
-	ir = TypeSafeRouter!(Req)();
+	ir = TypeSafeInstanceRouter!(Req)();
 	ir.map!(Res function(char[],char[],char[]))(POST,"changePswd", &UserCtlr.changePswd, ["curPswd", "newPswd", "newPswdConfirm"]);
 }
 
 static void route(Req req)
 { return r.route(req); }
 void iroute(Req req)
-{ return r.route(req, cast(void*)this); }
+{ return ir.route(req, cast(void*)this); }
 
 }
 
@@ -115,11 +117,12 @@ void iroute(Req req)
 	
 	}
 
-static const TypeSafeRouter!(Req) r, ir;
+static const TypeSafeRouter!(Req) r;
+static const TypeSafeInstanceRouter!(Req) ir;
 static this()
 {
 	r = TypeSafeRouter!(Req)();
-	ir = TypeSafeRouter!(Req)();
+	ir = TypeSafeInstanceRouter!(Req)();
 	r.map!(Res function())(GET,"create", &GroupCtlr.create, []);
 	r.map!(Res function())(POST,"create", &GroupCtlr.create, []);
 }
@@ -127,7 +130,7 @@ static this()
 static void route(Req req)
 { return r.route(req); }
 void iroute(Req req)
-{ return r.route(req, cast(void*)this); }
+{ return ir.route(req, cast(void*)this); }
 
 }
 

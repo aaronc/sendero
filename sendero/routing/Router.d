@@ -120,12 +120,6 @@ template TypeSafeRouterDef(ReqT, bool InstanceRouter = false)
 	Routes deleteRoutes;
 	Routing errHandler;
 	
-	static TypeSafeRouter!(ReqT) opCall()
-	{
-		TypeSafeRouter!(ReqT) router;
-		return router;
-	}
-	
 	void map(T)(ubyte method, char[] route, T t, char[][] paramNames)
 	{
 		Routing routing;
@@ -185,12 +179,24 @@ struct TypeSafeRouter(ReqT)
 {
 	mixin TypeSafeRouterDef!(ReqT);
 	mixin Route!(ReqT);
+	
+	static TypeSafeRouter!(ReqT) opCall()
+	{
+		TypeSafeRouter!(ReqT) router;
+		return router;
+	}
 }
 
 struct TypeSafeInstanceRouter(ReqT)
 {
 	mixin TypeSafeRouterDef!(ReqT, true);
 	mixin Route!(ReqT, true);
+	
+	static TypeSafeInstanceRouter!(ReqT) opCall()
+	{
+		TypeSafeInstanceRouter!(ReqT) router;
+		return router;
+	}
 }
 
 

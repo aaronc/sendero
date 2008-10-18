@@ -144,11 +144,12 @@ class ControllerResponder : IDecoratorResponder
 	{
 		writer.addBaseType("IIController");
 		
-		writer ~= "static const TypeSafeRouter!(Req) r, ir;\n";
+		writer ~= "static const TypeSafeRouter!(Req) r;\n";
+		writer ~= "static const TypeSafeInstanceRouter!(Req) ir;\n";
 		writer ~= "static this()\n";
 		writer ~= "{\n";
 		writer ~= "\tr = TypeSafeRouter!(Req)();\n";
-		writer ~= "\tir = TypeSafeRouter!(Req)();\n";
+		writer ~= "\tir = TypeSafeInstanceRouter!(Req)();\n";
 		
 		foreach(action; actions)
 		{
@@ -184,6 +185,7 @@ class ControllerResponder : IDecoratorResponder
 			switch(rname)
 			{
 			case "index":
+			case "__index__":
 			case "__default__":
 			case "__show__":
 			case "__this__":
@@ -235,7 +237,7 @@ class ControllerResponder : IDecoratorResponder
 		
 		writer ~= "void iroute(Req req)\n";
 		writer ~= "{ ";
-		writer ~= "return r.route(req, cast(void*)this);";
+		writer ~= "return ir.route(req, cast(void*)this);";
 		writer ~= " }\n";
 	}
 }
