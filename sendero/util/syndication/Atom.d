@@ -12,6 +12,8 @@ import sendero_base.util.IndentingPrinter;
 alias IndentingPrinter Printer;
 alias encodeBuiltinEntities encode;
 
+import sendero.http.IRenderable;
+
 debug import tango.io.Stdout;
 
 enum AtomPublishStyle { Short, Long };
@@ -297,7 +299,7 @@ class AtomCategory
 	}
 }
 
-class AtomFeed : AtomCommon
+class AtomFeed : AtomCommon, IRenderable
 {
 	private this()
 	{
@@ -348,6 +350,16 @@ class AtomFeed : AtomCommon
 			printEntries_(printer, style);
 		printer.dedent;
 		printer("</feed>").newline;
+	}
+	
+	void render(void delegate(void[]) write)
+	{
+		publish(cast(void delegate(char[]))write, AtomPublishStyle.Long);
+	}
+	
+	char[] contentType()
+	{
+		return "application/atom+xml";
 	}
 	
 	protected void printEntries_(Printer printer, AtomPublishStyle style)

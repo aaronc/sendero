@@ -74,5 +74,5 @@ abstract class AbstractBackend(SessionT, RequestT = Request)
 	/**
 	 * Begins execution of the Sendero application
 	 */
-	abstract void run();
+	abstract void run(char[][] args);
 }

@@ -6,6 +6,7 @@
 module sendero.http.Response;
 
 public import tango.net.http.HttpCookies;
+public import sendero.http.ContentType;
 
 interface IResponder
 {
@@ -14,17 +15,6 @@ interface IResponder
 	void setCookie(char[] name, char[] value);
 	void setCookie(Cookie cookie);
 }
-
-struct ContentType
-{
-	const char[] TextHtml = "text/html; charset=utf-8";
-	const char[] TextXml = "text/xml";
-	const char[] TextJSON = "text/json";
-	const char[] AppJS = "application/javascript";
-	
-}
-alias ContentType Mime;
-
 
 class Responder : IResponder
 {

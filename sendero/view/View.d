@@ -1,7 +1,8 @@
 module sendero.view.View;
 
-public import sendero.http.Request;
+//public import sendero.http.Request;
 public import sendero.http.Response;
+import sendero.http.IRenderable;
 
 import sendero.view.SenderoTemplate;
 import sendero.view.ExecContext;
@@ -15,7 +16,7 @@ debug(SenderoRuntime) {
 	static this() { log = Log.lookup("debug.SenderoRuntime"); }
 	Logger log;
 }
-
+/+
 class View
 {
 	static this()
@@ -115,3 +116,4 @@ Res renderJson(IObject obj)
 	return res;
 }
 
++/

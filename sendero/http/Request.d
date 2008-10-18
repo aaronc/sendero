@@ -91,7 +91,7 @@ final class Request
 	
 	void respond(IRenderable r)
 	{
-		responder_.setContentType(r.getContentType);
+		responder_.setContentType(r.contentType);
 		r.render(&responder_.write);
 	}
 	

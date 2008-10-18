@@ -50,7 +50,7 @@ import sendero.routing.Common;
 
 static this()
 {
-	//Cout.output = new ConsoleRedirect;
+	Cout.output = new ConsoleRedirect;
 }
 
 class ConsoleRedirect : OutputStream
@@ -73,12 +73,18 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 		super(appMain);
 	}
 	
-	void run()
+	void run(char[][] args)
 	{
 		version(SenderoLog) auto log = Log.getLogger("sendero.backends.FCGI");		
 	
-		//FastCGIRequest fcgiRequest = new FastCGIRequest(new FastCGIConnection("localhost:9000", "9000"));
-		auto fcgiRequest = new FastCGIRequest;
+		FastCGIRequest fcgiRequest;
+		if(args.length < 2) {
+			fcgiRequest = new FastCGIRequest;
+		}
+		else {
+			fcgiRequest = new FastCGIRequest(new FastCGIConnection("localhost:9000", "9000"));
+		}
+		
 		//auto output = new FastCGIOutputBuffer(fcgiRequest);
 		auto session = SessionT.cur;
 		auto res = new Responder;

@@ -97,7 +97,7 @@ template Route(ReqT, bool UseDelegates = false)
 
 template TypeSafeRouterDef(ReqT, bool InstanceRouter = false)
 {
-	alias IFunctionWrapper!(ReqT) Routing;
+	alias IFunctionWrapper!(void, ReqT) Routing;
 	
 	private struct Routes
 	{
