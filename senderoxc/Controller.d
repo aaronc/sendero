@@ -44,6 +44,8 @@ class ControllerContext : IDecoratorContext
 		//binder.bindStandalone("DELETE");
 		//binder.bindStandalone("pass");
 		
+		binder.bindStandaloneDecorator("pass", new HTTPContinueContext(res));
+		
 		return res;
 	}
 }
@@ -60,6 +62,38 @@ class HTTPMethodContext(ubyte Method) : IDecoratorContext
 	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
 	{
 		resp.addAction(Method, decl);
+		return null;
+	}
+}
+
+class HTTPContinueContext : IStandaloneDecoratorContext
+{
+	this(ControllerResponder resp)
+	{
+		this.resp = resp;
+	}
+	
+	ControllerResponder resp;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
+	{
+		if(resp.decl != parentDecl)
+			return null;
+		
+		if(!decorator.params.length >= 2
+				|| decorator.params[0].type != VarT.String
+				|| decorator.params[1].type != VarT.String)
+			return null;
+		
+		auto name = decorator.params[0].string_;
+		auto clsName = decorator.params[1].string_;
+			
+		auto continueDecls = parentDecl.findSymbol(clsName);
+		if(!continueDecls.length || continueDecls[0].type != DeclType.Class)
+			return null;
+				
+		resp.addContinue(name, continueDecls[0]);					
+		
 		return null;
 	}
 }
@@ -82,16 +116,34 @@ class ControllerResponder : IDecoratorResponder
 		actions ~= Action(method, func);
 	}
 	
+	void addContinue(char[] name, DeclarationInfo cDecl)
+	{
+		auto cls = cast(ClassDeclaration)cDecl;
+		if(!cls)
+			return;
+		
+		continues ~= Continue(name, cls);
+	}
+	
 	struct Action
 	{
 		ubyte method;
 		FunctionDeclaration func;
 	}
 	
+	struct Continue
+	{
+		char[] name;
+		ClassDeclaration cls; 
+	}
+	
 	Action[] actions;
+	Continue[] continues;
 	
 	void finish(IDeclarationWriter writer)
 	{
+		writer.addBaseType("IIController");
+		
 		writer ~= "static const TypeSafeRouter!(Req) r, ir;\n";
 		writer ~= "static this()\n";
 		writer ~= "{\n";
@@ -154,6 +206,24 @@ class ControllerResponder : IDecoratorResponder
 			}
 			writer ~= "]);\n";
 		}
+		
+		auto print = writer.after;
+		
+		print.indent;
+			foreach(cont; continues)
+			{
+				print.fln(`r.mapContinue("{}",&{}.route);`, cont.name, cont.cls.name);
+			}
+		
+		
+			auto getInstance = decl.findSymbol("getInstance");
+			if(getInstance.length &&
+				getInstance[0].type == DeclType.Class &&
+				getInstance[0].isStatic) {
+				print.fln(`r.mapWildcardContinue(&getInstance);`);
+			}
+		
+		print.dedent;
 		
 		writer ~= "}\n\n";
 		

@@ -16,6 +16,8 @@ import IUser;
 import dummy;
 
 /+@controller+/ class MainCtlr
+: IIController
+
 {
 	/+@GET+/
 	static Res index()
@@ -73,6 +75,8 @@ void iroute(Req req)
 }
 
 /+@controller+/ class UserCtlr
+: IIController
+
 {
 	/+@POST+/
 	Res changePswd(char[] curPswd, char[] newPswd, char[] newPswdConfirm)
@@ -96,6 +100,8 @@ void iroute(Req req)
 }
 
 /+@controller+/ class GroupCtlr
+: IIController
+
 {
 	/+@GET+/
 	static Res create()

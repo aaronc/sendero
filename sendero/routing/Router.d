@@ -156,7 +156,7 @@ template TypeSafeRouterDef(ReqT, bool InstanceRouter = false)
 	
 	void mapContinue(char[] route, void function(ReqT) routeFn)
 	{
-		
+		map(ALL, route, routeFn, null);
 	}
 	
 	void mapWildcardContinue(IIRoute!(ReqT) function(ReqT) getInstance)

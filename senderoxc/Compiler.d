@@ -163,8 +163,11 @@ class SenderoXCompiler
 	
 	final void registerImport(char[] modname)
 	{
-		auto compiler = SenderoXCompiler.create(modname);
-		if(compiler !is null) imports[modname] = compiler;
+		auto cmp = SenderoXCompiler.create(modname);
+		if(cmp !is null) {
+			imports ~= cmp;
+			//compiler.getModule.registerImport(cmp.compiler.getModule);
+		}
 	}
 	
 	final void process()
@@ -175,7 +178,7 @@ class SenderoXCompiler
 		
 		Stdout.formatln("Processing module {}", modname);
 		
-		foreach(name, child; imports)
+		foreach(child; imports)
 			child.process;
 		
 		processThis;
@@ -192,7 +195,7 @@ class SenderoXCompiler
 		
 		written_ = true;
 		
-		foreach(name, child; imports)
+		foreach(child; imports)
 			child.write(outdir);
 		
 		writeThis(outdir);
@@ -246,7 +249,7 @@ class SenderoXCompiler
 	bool modified()
 	{
 		if(modified_) return true;
-		foreach(name, i; imports)
+		foreach(i; imports)
 			if(i.modified) return true;
 		return false;
 	}
@@ -261,7 +264,7 @@ class SenderoXCompiler
 		
 		bool doCompile = false;
 		
-		foreach(name, child; imports) {
+		foreach(child; imports) {
 			auto res = child.compile(rebuildAll);
 			if(res == CompileStatus.Error) return CompileStatus.Error;
 			else if(res == CompileStatus.Success) doCompile = true;
@@ -290,12 +293,12 @@ class SenderoXCompiler
 		
 		linker.link(objname);
 		
-		foreach(name, child; imports) {
+		foreach(child; imports) {
 			child.link(linker);
 		}
 	}
 	
-	SenderoXCompiler[char[]] imports;
+	SenderoXCompiler[] imports;
 	
 	static void reset()
 	{
@@ -325,7 +328,7 @@ class DModuleCompiler : SenderoXCompiler
 	bool modified()
 	{
 		if(SenderoXCRegistry.lastModified(modname) != filepath_.modified) return true;
-		foreach(name, i; imports)
+		foreach(i; imports)
 			if(i.modified) return true;
 		return false;
 	}

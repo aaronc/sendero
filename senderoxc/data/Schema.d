@@ -40,12 +40,18 @@ class Schema
 		if(pCol) throw new Exception("Column " ~ i.name ~ " already exists in schema for table " ~ tablename);
 		
 		columns[i.name] = i;
+		
+		if(i.primaryKey) {
+			primaryKeyCols_[i.name] = i;
+		}
 	}
 	
 	char[][] getPrimaryKeyCols()
 	{
-		return ["id"];
+		return primaryKeyCols_.keys;
 	}
+	
+	private ColumnInfo[char[]] primaryKeyCols_;
 	
 	static ColumnInfo prepColumnInfo(FieldType type)
 	{
