@@ -37,6 +37,7 @@ import tango.core.Thread;
 import tango.io.model.IConduit;
 import tango.io.Console;
 import tango.core.Exception;
+import Int = tango.text.convert.Integer;
 
 import fcgi.Request;
 import fcgi.Connection;
@@ -189,7 +190,10 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 					stdout.write("Content-type: text/html\r\n\r\n");		
 					//debug stdout.write("Sendero error: " ~ ex.toString ~ "\n" ~ ex.info.toString);
 					debug {
-						stdout.write("Sendero error: " ~ ex.toString);
+						stdout.write("Sendero error: " ~ ex.toString ~ "\n");
+						if(ex.file.length) {
+							stdout.write("File: " ~ ex.file ~ " Line: " ~Int.toString(ex.line));
+						}
 						try
 						{
 							if(ex.info !is null) stdout.write("\nTrace: " ~ ex.info.toString);

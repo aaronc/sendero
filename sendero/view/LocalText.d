@@ -211,9 +211,6 @@ class Message : IMessage
 			
 			char[] renderDefault()
 			{
-				//auto i = trunc(x);
-				//if(feqrel(i, x) >= real.mant_dig/2) return Integer.toString(rndlong(x));
-				//else return Float.toString(x);
 				return Float.toString(x, 0);
 			}
 			
@@ -239,71 +236,6 @@ class Message : IMessage
 			
 		}
 	}
-	
-/+	static char[] renderLong(long x, inout Param p, Locale lcl)
-	{
-		version(ICU) {
-			UNumberFormat fmt;
-			
-			switch(p.elementFormat)
-			{
-			case FORMAT_SPELLOUT:
-				fmt = new USpelloutFormat(lcl);
-				break;
-			case FORMAT_ORDINAL:
-				fmt = new UNumberFormat(UNumberFormat.Style.Ordinal, null, lcl);
-				break;
-			case FORMAT_DURATION:
-				fmt = new UDurationFormat(lcl);
-				break;
-			case FORMAT_NUMBER:
-				switch(p.secondaryFormat)
-				{
-				case NUMBER_STYLE_PERCENT:
-					fmt = new UPercentFormat(lcl);
-					break;
-				case NUMBER_STYLE_SCIENTIFIC:
-					fmt = new UScientificFormat(lcl);
-					break;
-				case NUMBER_STYLE_INTEGER:
-					fmt = new UDecimalFormat(lcl);
-					break;
-				}
-				break;
-			default:
-				fmt = new UDecimalFormat(lcl);
-				break;
-			}
-			
-			auto dst = new UString(100);
-			fmt.format(dst, x);
-			return dst.toString;
-		}
-		else {
-			return Integer.toString(x);
-		}
-	}
-	
-	static char[] renderDouble(double x, inout Param p, Locale lcl)
-	{
-		version(ICU) {
-			UNumberFormat fmt;
-			
-			if(p.secondaryFormat == NUMBER_STYLE_SCIENTIFIC) {
-				fmt = new UScientificFormat(lcl);
-			}
-			else {
-				fmt = new UDecimalFormat(lcl);
-			}
-			
-			auto dst = new UString(100);
-			fmt.format(dst, x);
-			return dst.toString;
-		}
-		else {
-			return Float.toString(x);
-		}
-	}+/
 	
 	static char[] renderDateTime(inout Time t, inout Param p, Locale lcl, Timezone tz)
 	{
@@ -387,14 +319,11 @@ class Message : IMessage
 			}
 			
 			auto dst = new UString(100);
-			//UCalendar.UDate udat = cast(UCalendar.UDate)((t.ticks - 621355788e9) / 1e4);
 			UCalendar.UDate udat = cast(UCalendar.UDate)((t.ticks - Time.epoch1970) / 1e4);
 			udf.format(dst, udat);
 			return dst.toString;
 		}
 		else {
-			//char[] res;
-			//res.length = 100;
 			char[200] res = void;
 			switch(p.elementFormat)
 			{
@@ -455,22 +384,6 @@ class Message : IMessage
 	}
 }
 
-/+package class PluralMessage : IMessage
-{
-	Message[] pluralForms;
-	char[] pluralVariable;
-	bool plural() {return true;}
-	
-	char[] exec(IObject ctxt)
-	{
-		auto v = ctxt.getVar(pluralVariable);
-		
-		assert(false, "PluralMessage not implemented yet");
-		
-		return null;
-	}
-}+/
-
 class MessageParserException : Exception
 {
 	this(char[] msg)
@@ -517,123 +430,6 @@ const ubyte lookupT[256] =
          0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // E
          0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   // F
     ];
-/+
-public void parseExpression(char[] msg, inout Expression expression, FunctionBindingContext ctxt)
-{
-	scope itr = new StringCharIterator!(char)(msg);
-	
-	void parseExpr(inout Expression expr)
-	{
-		void parseFunction()
-		{
-			void parseFuncParams()
-			{				
-				bool parseParam()
-				{
-					itr.eatSpace;
-					if(itr[0] == ')') return false;
-					
-					Expression p;
-					parseExpr(p);
-					expr.func.params ~= p;
-					switch(itr[0])
-					{
-					case ',':
-						++itr;
-						return true;
-					case ')':
-						++itr;
-						return false;
-					default:
-						debug new MessageParserException("expected ',' or ')' in function parameters");
-						return false;
-					}
-				}
-				
-				expr.func.params.length = 0;
-				while(parseParam) {};			
-			}
-			
-			uint i = itr.location;
-			if(!itr.forwardLocate('(')) throw new MessageParserException("Expected ( after function name in \'" ~ msg ~ "\'");
-			uint j = itr.location;
-			char[] name = itr.randomAccessSlice(i, j);
-			auto fn = ctxt.getFunction(name);
-			if(!fn) {
-				fn = new LateBindingFunction(name);
-				//new MessageParserException("Unable to find definition of function " ~ name); 
-			}
-			expr.func.func = fn;
-			++itr;
-			parseFuncParams();
-			expr.type = ExpressionT.FuncCall;
-		}
-		
-		void parseBinaryExpr()
-		{
-			++itr;
-			if(itr[0] != '=') return;
-			++itr;
-			itr.eatSpace;
-			Expression expr1 = expr;
-			Expression expr2;
-			parseExpr(expr2);
-			expr.type = ExpressionT.Binary;
-			expr.binaryExpr.type = OperatorT.Eq;
-			expr.binaryExpr.expr[0] = expr1;
-			expr.binaryExpr.expr[1] = expr2;
-		}
-		
-		//while(itr.good) {
-			auto x = lookupT[itr[0]];
-			switch(itr[0])
-			{
-			case '$':
-				++itr;
-				char[] var;
-				while(itr.good) {
-					if(itr[0] == ',' || itr[0] == ')' || itr[' '])
-						break;
-					var ~= itr[0];
-					++itr;
-				}
-				expr.var = VarPath(var);
-				expr.type = ExpressionT.Var;
-				return;
-			case '\"', '\'':
-				char quote = itr[0];
-				char[] str;
-				++itr;
-				while(itr.good) {
-					if(itr[0] == '\\') {
-						str ~= itr[1];
-						itr += 2;
-					}
-					else if(itr[0] == quote) {
-						++itr;
-						break;
-					}
-					else {
-						str ~= itr[0];
-						++itr;
-					}
-				}
-				expr.type = ExpressionT.Value;
-				expr.val.set(str);
-				break;
-		/*	case '=':
-				parseBinaryExpr();
-				break;*/
-			default:
-				parseFunction();
-				return;
-			}
-			itr.eatSpace;
-		//}
-	}
-	
-	parseExpr(expression);
-}+/
 
 Message parseMessage(char[] msg, ExecContext ctxt)
 {
@@ -656,7 +452,6 @@ Message parseMessage(char[] msg, ExecContext ctxt)
 		j = Text.locate(exprTxt, ';');
 		
 		compileXPath10(exprTxt[0 .. j], p.expr, ctxt);
-//		parseExpression(exprTxt[0 .. j], p.expr, ctxt);
 		itr.seek(i + j);	
 		
 		if(!itr.good)
@@ -860,16 +655,6 @@ Message parseMessage(char[] msg, ExecContext ctxt)
 	{
 		switch(itr[0])
 		{
-/*		case '{':
-			if(itr[1] == '{') {
-				itr += 2;
-				res ~= '{';
-			}
-			else {
-				++itr;
-				auto p = parseParam(res.length);
-				params ~= p;
-			}*/
 		case '_':
 			if(itr[1] == '{') {
 				if(itr[2] == '{') {
