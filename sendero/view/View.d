@@ -6,7 +6,7 @@ import sendero.http.IRenderable;
 
 import sendero.view.SenderoTemplate;
 import sendero.view.ExecContext;
-import sendero.vm.bind.Bind;
+import sendero.vm.Bind;
 
 import sendero_base.util.ArrayWriter;
 import sendero_base.json.Printer;
@@ -77,8 +77,8 @@ class View : IRenderable
 		return res;
 	}+/
 }
-/+
-class JsonView
+
+class JsonView : IRenderable
 {
 	this()
 	{
@@ -99,7 +99,7 @@ class JsonView
 		ctxt.addVarAsRoot(t);
 	}
 	
-	Res renderJson()
+	/+Res renderJson()
 	{
 		Response res;
 		res.contentType = Res.TextJSON;
@@ -109,9 +109,17 @@ class JsonView
 		return res;
 	}
 	
-	alias renderJson render;
+	alias renderJson render;+/
+	
+	public char[] contentType() { return Mime.TextJson; }
+	
+	void render(void delegate(void[]) consumer)
+	{
+		printObj(ctxt, cast(void delegate(char[]))consumer);
+	}
+	
 }
-
+/+
 Res renderJson(IObject obj)
 {
 	Response res;

@@ -1,4 +1,4 @@
-module sendero.vm.bind.Bind;
+module sendero.vm.Bind;
 
 import sendero_base.Core;
 import sendero_base.Set;

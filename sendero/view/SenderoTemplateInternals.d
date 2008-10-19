@@ -8,7 +8,7 @@ module sendero.view.SenderoTemplateInternals;
 import sendero.view.TemplateEngine;
 import sendero_base.xml.XmlNode;
 import sendero_base.Set;
-import sendero.vm.bind.Bind;
+import sendero.vm.Bind;
 import sendero.vm.Expression;
 public import sendero.view.LocalText;
 import sendero.xml.XPath;

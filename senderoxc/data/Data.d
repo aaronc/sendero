@@ -43,7 +43,7 @@ class DataContext : IDecoratorContext
 	void writeImports(IDeclarationWriter wr)
 	{
 		if(touched) {
-			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.bind.Bind, sendero.validation.Validations;\n");
+			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.Bind, sendero.validation.Validations;\n");
 			wr.prepend("import sendero.db.DBProvider;\n");
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
