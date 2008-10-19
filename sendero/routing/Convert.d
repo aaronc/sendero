@@ -305,7 +305,7 @@ T convertParam2(T, Req)(Var param, Req req)
 		case VarT.String:
 			parseDateAndTime(param.string_, val);
 			break;
-		default: val = t.init; break;
+		default: val = T.init; break;
 		}
 	}
 	else static if(is(T == DateTime))

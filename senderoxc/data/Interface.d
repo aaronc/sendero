@@ -32,6 +32,13 @@ class InterfaceCtxt : IStandaloneDecoratorContext
 		return null;
 	}
 	
+	private static char[] convertType(char[] type)
+	{
+		auto iface = find(type);
+		if(iface) return iface.iname;
+		return type;
+	}
+	
 	static InterfaceResp[char[]] interfaces;
 	
 	static void reset()
@@ -88,20 +95,61 @@ class InterfaceResp : IInterface, IDecoratorResponder
 		
 		foreach(decl; decls)
 		{
+			if(decl.isStatic) continue;
+			
 			char[] params;
 			len = decl.params.length;
 			for(uint i = 0; i < len; ++i) {
-				params ~= decl.params[i].type;
+				params ~= InterfaceCtxt.convertType(decl.params[i].type);
 				if(decl.params[i].name.length)
 					params ~= " " ~ decl.params[i].name;
 				if(i < len - 1) params ~= ", ";
 			}
 			
-			pr.fln("{} {}({});", decl.retType, decl.name, params);
+			//if(decl.isStatic) pr("static ");
+			pr.fln("{} {}({});", InterfaceCtxt.convertType(decl.retType), decl.name, params);
 		}
 		
 		pr.dedent;
 		pr("}").nl;
 		pr.fln("alias Construct!({}).create construct{};", iname, name);
+		
+	}
+	
+	void writeCallRegisters(IDeclarationWriter wr)
+	{
+		auto pr = wr.after;
+		
+		wr ~= "static this()\n";
+		wr ~= "{\n";
+		wr ~= "\tConstruct!(";
+		wr ~= iname;
+		wr ~= ").register(&create);\n";
+		pr.indent;
+		/+foreach(child; decls)
+		{
+			if(!child.isStatic) continue;
+			
+			pr.f(`Call!("{}", {}`, child.name, InterfaceCtxt.convertType(child.retType));
+			auto nParams = child.params.length;
+			foreach(p; child.params)
+			{
+				pr(", ");
+				pr(InterfaceCtxt.convertType(p.type));
+			}
+			pr.fln(").register(&{});", child.name);
+			
+		}+/
+		pr.dedent;
+		wr ~= "}\n";
+		
+		wr ~= "static ";
+		wr ~= iname;
+		wr ~= " create()\n";
+		wr ~= "{\n";
+		wr ~= "\treturn new ";
+		wr ~= name;
+		wr ~= ";\n}\n";
+		
 	}
 }

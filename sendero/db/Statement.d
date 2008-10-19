@@ -128,8 +128,10 @@ class Statement
 		{
 			static if (is(Type == BindInfo))
 				ptrs ~= info.ptrs;
-			static if(is(Type == class) || is(Type == struct)) {
-				t[Index] = new Type;
+			static if(is(Type == class) || is(Type == struct) 
+					&& !is(Type == DateTime) && !is(Type == Time)) {
+				static if(is(Type == class))
+					t[Index] = new Type;
 				ptrs ~= bindClassStruct(t[Index]);
 			}
 			else ptrs ~= &t[Index];
@@ -163,7 +165,8 @@ class Statement
 		{
 			static if(is(typeof(x) == BindInfo))
 				types ~= t.types;
-			else static if(is(typeof(x) == class) || is(typeof(x) == struct))
+			else static if(is(typeof(x) == class) || is(typeof(x) == struct)
+					&& !is(typeof(x) == DateTime) && !is(typeof(x) == Time))
 				types ~= getClassStructTypes!(typeof(x))();
 			else
 				types ~= getBindType!(typeof(x))();

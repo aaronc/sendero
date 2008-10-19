@@ -113,8 +113,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		
 		foreach(child;decl.declarations)
 		{
-			if(child.type == DeclType.Function &&
-					!child.isStatic && child.protection == Protection.Public)
+			if(child.type == DeclType.Function && child.protection == Protection.Public)
 			{
 				auto fdecl = cast(FunctionDeclaration)child;
 				assert(fdecl);
@@ -202,20 +201,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		//writeIHttpSet(wr); wr ~= "\n";
 		
 		if(hasInterface) {
-			wr ~= "static this()\n";
-			wr ~= "{\n";
-			wr ~= "\tConstruct!(";
-			wr ~= hasInterface.iname;
-			wr ~= ").register(&create);\n";
-			wr ~= "}\n";
-			
-			wr ~= "static ";
-			wr ~= hasInterface.iname;
-			wr ~= " create()\n";
-			wr ~= "{\n";
-			wr ~= "\treturn new ";
-			wr ~= classname;
-			wr ~= ";\n}\n";
+			hasInterface.writeCallRegisters(wr);
 		}
 		
 		writeValidations(wr);  wr ~= "\n";

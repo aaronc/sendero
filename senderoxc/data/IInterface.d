@@ -2,6 +2,7 @@ module senderoxc.data.IInterface;
 
 public import sendero.util.Call;
 
+import decorated_d.core.Decoration;
 import decorated_d.core.Declarations;
 
 alias Call!("Interface.find", IInterface, char[]).call findInterface; 
@@ -15,4 +16,5 @@ interface IInterfaceWriter
 interface IInterface : IInterfaceWriter
 {
 	char[] iname();
+	void writeCallRegisters(IDeclarationWriter wr);
 }

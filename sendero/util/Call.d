@@ -12,6 +12,8 @@ struct Construct(T, Params...)
 		return create_(params);
 	}
 	else alias create_ create;
+	
+	alias create opCall;
 }
 
 debug(SenderoUnittest)
