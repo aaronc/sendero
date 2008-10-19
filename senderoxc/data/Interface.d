@@ -102,5 +102,6 @@ class InterfaceResp : IInterface, IDecoratorResponder
 		
 		pr.dedent;
 		pr("}").nl;
+		pr.fln("alias Construct!({}).create construct{};", iname, name);
 	}
 }

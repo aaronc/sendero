@@ -20,3 +20,4 @@ interface IUser : IObject, IHttpSet
 	Time last_login();
 	void last_login(Time);
 }
+alias Construct!(IUser).create constructUser;

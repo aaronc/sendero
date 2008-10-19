@@ -146,6 +146,14 @@ void iroute(Req req)
 	/+@String("lastname")+/;
 	/+@Time("last_login")+/;
 
+static this()
+{
+	Construct!(IUser).register(&create);
+}
+static IUser create()
+{
+	return new User;
+}
 private static MinLengthValidation username_MinLengthValidation;
 private static MaxLengthValidation username_MaxLengthValidation;
 

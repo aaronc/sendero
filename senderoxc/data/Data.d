@@ -48,6 +48,7 @@ class DataContext : IDecoratorContext
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
 			wr.prepend("import sendero.util.collection.StaticBitArray, sendero.util.Singleton;\n");
+			//wr.prepend("import sendero.util.Call;");
 		}
 	}
 	
@@ -199,6 +200,24 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		//writeIObject(wr.after); wr ~= "\n";
 		//writeChangeTracking(wr); wr ~= "\n";
 		//writeIHttpSet(wr); wr ~= "\n";
+		
+		if(hasInterface) {
+			wr ~= "static this()\n";
+			wr ~= "{\n";
+			wr ~= "\tConstruct!(";
+			wr ~= hasInterface.iname;
+			wr ~= ").register(&create);\n";
+			wr ~= "}\n";
+			
+			wr ~= "static ";
+			wr ~= hasInterface.iname;
+			wr ~= " create()\n";
+			wr ~= "{\n";
+			wr ~= "\treturn new ";
+			wr ~= classname;
+			wr ~= ";\n}\n";
+		}
+		
 		writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
 		writeErrorSource(wr); wr ~= "\n";
