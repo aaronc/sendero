@@ -5,10 +5,8 @@
 
 module sendero.backends.FCGI;
 
-version(SenderoLog)
-{
-	public import tango.util.log.Log;
-}
+public import tango.util.log.Log;
+import tango.io.FileSystem;
 
 version(SenderoBenchmark)
 {
@@ -75,7 +73,8 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 	
 	void run(char[][] args)
 	{
-		version(SenderoLog) auto log = Log.getLogger("sendero.backends.FCGI");		
+		auto log = Log.getLogger("sendero.backends.FCGI");
+		log.info("Working in directory {}", FileSystem.getDirectory);
 	
 		FastCGIRequest fcgiRequest;
 		if(args.length < 2) {
@@ -177,8 +176,8 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				
 				version(SenderoBenchmark) {
 					auto renderTime = st.stop;
-					version(SenderoLog) log.format("Sendero Render Time:{}ms Url:{}", renderTime * 1000, url);
-					else benchmarkOut.formatln("Sendero Render Time:{}ms, Url:{}, Method:{}", renderTime * 1000, url, *rm);
+					log.format("Sendero Render Time:{}ms Url:{}", renderTime * 1000, url);
+					//benchmarkOut.formatln("Sendero Render Time:{}ms, Url:{}, Method:{}", renderTime * 1000, url, *rm);
 				}
 			}
 			catch(Exception ex)
@@ -234,7 +233,7 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 				else {
 					defaultErrorMsg(ex);
 				}
-				version(SenderoLog) log.error ("Exception caught" ~ ex.toString);
+				log.error ("Exception caught" ~ ex.toString);
 				fcgiRequest.exitStatus = 0;
 			}
 		}

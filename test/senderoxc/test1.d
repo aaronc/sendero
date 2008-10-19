@@ -216,11 +216,11 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "email": email_ = convertParam2!(char[], Req)(val); break;
-			case "username": username_ = convertParam2!(char[], Req)(val); break;
-			case "firstname": firstname_ = convertParam2!(char[], Req)(val); break;
-			case "lastname": lastname_ = convertParam2!(char[], Req)(val); break;
-			case "last_login": last_login_ = convertParam2!(Time, Req)(val); break;
+			case "email": email_ = convertParam2!(char[], Req)(val, req); break;
+			case "username": username_ = convertParam2!(char[], Req)(val, req); break;
+			case "firstname": firstname_ = convertParam2!(char[], Req)(val, req); break;
+			case "lastname": lastname_ = convertParam2!(char[], Req)(val, req); break;
+			case "last_login": last_login_ = convertParam2!(Time, Req)(val, req); break;
 			default: break;
 		}
 	}

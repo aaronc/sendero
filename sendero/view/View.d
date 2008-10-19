@@ -16,33 +16,39 @@ debug(SenderoRuntime) {
 	static this() { log = Log.lookup("debug.SenderoRuntime"); }
 	Logger log;
 }
-/+
-class View
+
+class View : IRenderable
 {
 	static this()
 	{
-		SenderoTemplate.setSearchPath("../view/");
+		SenderoTemplate.setSearchPath("view/");
 	}
 	
 	this(SenderoTemplateContext t, char[] contentType)
 	{
-		this.contentType = contentType;
+		this.contentType_ = contentType;
 		ctxt = t;
 	}
 
 	protected SenderoTemplateContext ctxt;
 	
-	protected char[] contentType;
+	public char[] contentType() { return contentType_; }
+	protected char[] contentType_;
 	
-	Response render()
+	/+Response render()
 	{
 		Response res;
 		res.contentType = contentType;
 		res.contentDelegate = &ctxt.render;
 		return res;
+	}+/
+	
+	void render(void delegate(void[]) consumer)
+	{
+		ctxt.render(consumer);
 	}
 
-	static View get(char[] name, char[] type = Res.TextHtml)
+	static View get(char[] name, char[] type = Mime.TextHtml)
 	{
 		debug(SenderoRuntime) mixin(FailTrace!("View.get"));
 		debug(SenderoRuntime) log.trace(MName ~ "({}, {})", name, type);
@@ -61,7 +67,7 @@ class View
 		ctxt.use(t);
 	}
 	
-	Res renderJson()
+	/+Res renderJson()
 	{
 		Response res;
 		res.contentType = Res.TextJSON;
@@ -69,9 +75,9 @@ class View
 			printObj(ctxt.execCtxt, cast(void delegate(char[]))write);
 		};
 		return res;
-	}
+	}+/
 }
-
+/+
 class JsonView
 {
 	this()
@@ -114,6 +120,4 @@ Res renderJson(IObject obj)
 		printObj(obj, cast(void delegate(char[]))write);
 	};
 	return res;
-}
-
-+/
+}+/

@@ -46,7 +46,7 @@ template Config(T)
 		if(cfg.type == VarT.Object) {
 			deserialize(newInst, cfg.obj_);
 		}
-		else throw new SenderoException("Unable to find configuration " ~ configName ~ " in " ~ filename);
+		//else throw new SenderoException("Unable to find configuration " ~ configName ~ " in " ~ filename);
 		
 		inst = newInst;
 	}

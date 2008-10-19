@@ -95,7 +95,7 @@ final class Request
 		r.render(&responder_.write);
 	}
 	
-	void respond(IStream s, char[] contentType = ContentType.TextHtml)
+	void respond(IStream s, char[] contentType)
 	{
 		responder_.setContentType(contentType);
 		s.render(&responder_.write);

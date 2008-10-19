@@ -89,11 +89,11 @@ void httpSet(IObject obj, Request req)
 	{
 		switch(key)
 		{
-			case "entry": entry_ = convertParam2!(char[], Req)(val); break;
-			case "created": created_ = convertParam2!(Time, Req)(val); break;
-			case "modified": modified_ = convertParam2!(Time, Req)(val); break;
-			case "title": title_ = convertParam2!(char[], Req)(val); break;
-			case "tags": tags_ = convertParam2!(char[], Req)(val); break;
+			case "entry": entry_ = convertParam2!(char[], Req)(val, req); break;
+			case "created": created_ = convertParam2!(Time, Req)(val, req); break;
+			case "modified": modified_ = convertParam2!(Time, Req)(val, req); break;
+			case "title": title_ = convertParam2!(char[], Req)(val, req); break;
+			case "tags": tags_ = convertParam2!(char[], Req)(val, req); break;
 			default: break;
 		}
 	}

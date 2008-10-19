@@ -5,7 +5,9 @@
 
 module sendero.routing.Convert;
 
-import tango.group.time;
+import tango.time.Time;
+import tango.time.Clock;
+import tango.time.ISO8601;
 
 import sendero.routing.Common;
 import sendero.conversion.Convert;
@@ -207,7 +209,7 @@ template ConvertParam(char[] n) {
 	"}";
 }
 
-T convertParam2(T, Req)(Var param)
+T convertParam2(T, Req)(Var param, Req req)
 {
 	T val;
 	static if(is(T == char[]))
@@ -235,9 +237,9 @@ T convertParam2(T, Req)(Var param)
 				val = false; break;
 			}
 			break;
-		case VarT.Number: param.number_ > 0 ? val = true : val = false;
+		case VarT.Number: val = param.number_ > 0 ? true : false;
 		case VarT.Bool: val = param.bool_; break;
-		case VarT.Array: param.array_.length > 0 ? val = true : val = false; break;
+		case VarT.Array: val = param.array_.length > 0 ? true : false; break;
 		case VarT.Object: val = true; break;
 		default: val = false; break;
 		}  
@@ -259,7 +261,7 @@ T convertParam2(T, Req)(Var param)
 		case VarT.String: val = Float.parse(param.string_);
 		case VarT.Number: val = cast(T)param.number_;
 		case VarT.Bool: if(param.bool_) val = 1; else val = 0; break;
-		default: val = t.init; break;
+		default: val = T.init; break;
 		}
 	}
 	else static if(is(typeof(val.convert)))
@@ -269,8 +271,13 @@ T convertParam2(T, Req)(Var param)
 	else static if(is(T : IHttpSet))
 	{
 		if(param.type == VarT.Object) {
-			val.httpSet(param.obj_);
+			val.httpSet(param.obj_, req);
 		}
+	}
+	else static if(is(T == IObject))
+	{
+		if(param.type == VarT.Object) val = param.obj_;
+		else val = null;
 	}
 	else static if(is(T == char[][]))
 	{
@@ -290,6 +297,52 @@ T convertParam2(T, Req)(Var param)
 			val ~= str;
 			break;
 		}		
+	}
+	else static if(is(T == Time))
+	{
+		switch(param.type)
+		{
+		case VarT.String:
+			parseDateAndTime(param.string_, val);
+			break;
+		default: val = t.init; break;
+		}
+	}
+	else static if(is(T == DateTime))
+	{
+		switch(param.type)
+		{
+		case VarT.String:
+			Time time;
+			parseDateAndTime(param.string_, time);
+			val = Clock.toDate;
+			break;
+		default: val = T.init; break;
+		}
+	}
+	else static if(is(T == Date))
+	{
+		switch(param.type)
+		{
+		case VarT.String:
+			Time time;
+			parseDate(param.string_, time);
+			val = Clock.toDate.date;
+			break;
+		default: val = T.init; break;
+		}
+	}
+	else static if(is(T == TimeOfDay))
+	{
+		switch(param.type)
+		{
+		case VarT.String:
+			Time time;
+			parseDate(param.string_, time);
+			val = Clock.toDate.time;
+			break;
+		default: val = T.init; break;
+		}
 	}
 	else static assert(false, "Unhandled conversion type " ~ T.stringof);
 	
@@ -389,7 +442,7 @@ void convertParams2(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p
 		else {
 			if(Index < paramNames.length) {
 				auto param = params[paramNames[Index]];
-				p[Index] = convertParam2!(Type, Req)(param);
+				p[Index] = convertParam2!(Type, Req)(param, req);
 			}
 		}
 	}
