@@ -97,7 +97,19 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		
 		wr("}\n");
 		
-		wr("int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }\n");
+		wr("int opApply (int delegate (inout char[] key, inout Var val) dg)\n");
+		wr("{\n");
+		wr.indent;
+			wr("int res; char[] key; Var val;").nl;
+			foreach(f; fields)
+			{
+				if(!f.hasGetter) continue;
+				wr.f(`key = "{0}"; bind(val, {0}()); `, f.name);
+				wr(`if((res = dg(key, val)) != 0) return res;`).nl;
+			}
+			wr("return res;").nl;
+		wr.dedent;
+		wr("}\n");
 		
 		wr("void opIndexAssign(Var val, char[] key) {}\n");
 		

@@ -74,7 +74,16 @@ Var opIndex(char[] key)
 	}
 	return res;
 }
-int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
+int opApply (int delegate (inout char[] key, inout Var val) dg)
+{
+	int res; char[] key; Var val;
+	key = "entry"; bind(val, entry()); if((res = dg(key, val)) != 0) return res;
+	key = "created"; bind(val, created()); if((res = dg(key, val)) != 0) return res;
+	key = "modified"; bind(val, modified()); if((res = dg(key, val)) != 0) return res;
+	key = "title"; bind(val, title()); if((res = dg(key, val)) != 0) return res;
+	key = "tags"; bind(val, tags()); if((res = dg(key, val)) != 0) return res;
+	return res;
+}
 void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}

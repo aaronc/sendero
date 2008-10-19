@@ -209,7 +209,17 @@ Var opIndex(char[] key)
 	}
 	return res;
 }
-int opApply (int delegate (inout char[] key, inout Var val) dg) { return 0; }
+int opApply (int delegate (inout char[] key, inout Var val) dg)
+{
+	int res; char[] key; Var val;
+	key = "id"; bind(val, id()); if((res = dg(key, val)) != 0) return res;
+	key = "email"; bind(val, email()); if((res = dg(key, val)) != 0) return res;
+	key = "username"; bind(val, username()); if((res = dg(key, val)) != 0) return res;
+	key = "firstname"; bind(val, firstname()); if((res = dg(key, val)) != 0) return res;
+	key = "lastname"; bind(val, lastname()); if((res = dg(key, val)) != 0) return res;
+	key = "last_login"; bind(val, last_login()); if((res = dg(key, val)) != 0) return res;
+	return res;
+}
 void opIndexAssign(Var val, char[] key) {}
 Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
