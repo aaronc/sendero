@@ -5,7 +5,7 @@ import senderoxc.Reset;
 
 public import senderoxc.data.FieldTypes;
 
-debug import tango.io.Stdout;
+import tango.io.Stdout;
 
 class Schema
 {
