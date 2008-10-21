@@ -1,6 +1,6 @@
 module sendero.util.syndication.Atom;
 
-import tango.text.xml.Document;
+import sendero.util.syndication.Common;
 import tango.net.http.HttpGet;
 import tango.time.Time, tango.time.ISO8601;
 
@@ -34,7 +34,7 @@ struct AtomText(char[] node, bool multiline = false)
 			return;
 		
 		if(type.length) printer.format(`<{} type="{}">`, node, type);
-		else printer.formatln("<{}>", node);
+		else printer.format("<{}>", node);
 		
 		static if(multiline) printer.newline.indent;
 		
@@ -64,7 +64,7 @@ struct AtomLink
 	}
 }
 
-char[] getValue(Document!(char).Node node)
+char[] getValue(XmlDocument.Node node)
 {
 	if(node.rawValue.length) return node.rawValue;
 	else if(node.firstChild && (
@@ -84,7 +84,7 @@ class AtomCommon
 	AtomContributor[] contributors;
 	AtomCategory[] categories;
 	
-	protected bool handleCommonElements(Document!(char).Node node, ref char[] value, ref char[] type)
+	protected bool handleCommonElements(XmlDocument.Node node, ref char[] value, ref char[] type)
 	{
 		if(node.rawValue.length) value = node.rawValue;
 		else if(node.firstChild && (
@@ -151,9 +151,6 @@ class AtomEntry : AtomCommon
 		
 	}
 	
-//	char[] summary;
-//	char[] content;
-//	char[] contentType, summaryType;
 	AtomSummary summary;
 	AtomContent content;
 	Time published;
@@ -172,12 +169,12 @@ class AtomEntry : AtomCommon
 		printer("</entry>").newline;
 	}
 	
-	private this(Document!(char).Node entry)
+	private this(XmlDocument.Node entry)
 	{
 		parse_(entry);
 	}
 	
-	private void parse_(Document!(char).Node entry)
+	private void parse_(XmlDocument.Node entry)
 	{
 		foreach(node; entry.children)
 		{
@@ -208,7 +205,7 @@ class AtomEntry : AtomCommon
 
 class AtomAuthor : AtomPerson
 {
-	private this(Document!(char).Node author)
+	private this(XmlDocument.Node author)
 	{
 		parse_(author);
 	}
@@ -218,7 +215,7 @@ class AtomAuthor : AtomPerson
 
 class AtomContributor : AtomPerson
 {
-	private this(Document!(char).Node contributor)
+	private this(XmlDocument.Node contributor)
 	{
 		parse_(contributor);
 	}
@@ -245,7 +242,7 @@ abstract class AtomPerson
 		printer.formatln("</{}>", personType);
 	}
 	
-	protected void parse_(Document!(char).Node person)
+	protected void parse_(XmlDocument.Node person)
 	{
 		foreach(node; person.children)
 		{
@@ -277,12 +274,17 @@ class AtomCategory
 		printer("/>").newline;
 	}
 	
-	private this(Document!(char).Node category)
+	this(char[] term)
+	{
+		this.term = term;
+	}
+	
+	private this(XmlDocument.Node category)
 	{
 		parse_(category);
 	}
 	
-	private void parse_(Document!(char).Node category)
+	private void parse_(XmlDocument.Node category)
 	{
 		foreach(node; category.attributes)
 		{
@@ -301,7 +303,7 @@ class AtomCategory
 
 class AtomFeed : AtomCommon, IRenderable
 {
-	private this()
+	package this()
 	{
 		
 	}
@@ -370,11 +372,11 @@ class AtomFeed : AtomCommon, IRenderable
 		}
 	}
 	
-	private void parseFeed_(Document!(char).Node feed)
+	package void parseFeed_(XmlDocument.Node feed)
 	{
 		foreach(node; feed.children)
 		{
-			Stdout.formatln("node.name: {}", node.name);
+			debug Stdout.formatln("node.name: {}", node.name);
 			
 			char[] value, type;
 			
@@ -397,10 +399,10 @@ class AtomFeed : AtomCommon, IRenderable
 	{
 		this.src = src;
 		
-		auto doc = new Document!(char);
+		auto doc = new XmlDocument;
 		doc.parse(src);
 		
-		Stdout(src).newline;
+		debug Stdout(src).newline;
 		
 		foreach(n; doc.root.children)
 		{

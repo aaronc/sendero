@@ -285,16 +285,17 @@ T convertParam2(T, Req)(Var param, Req req)
 		switch(param.type)
 		{
 		case VarT.Array:
-			val = null;
+			val = new char[][param.array_.length];
+			val.length = 0;
 			foreach(v; param.array_)
 			{
-				convertParam2!(char[], Req)(str, v);
-				val ~= str;
+				val ~= convertParam2!(char[], Req)(v, req);
 			}
 			break;
+		case VarT.String:
+			val = [param.string_];
 		default:
-			convertParam2!(char[], Req)(str, param);
-			val ~= str;
+			val = null;
 			break;
 		}		
 	}
