@@ -234,8 +234,6 @@ class Rss10Feed : IRenderable
 	{
 		foreach(node; RDF.children)
 		{
-			Stdout.formatln("node.name: {}", node.name);
-
 			switch(node.name)
 			{
 			case "channel":
@@ -256,8 +254,6 @@ class Rss10Feed : IRenderable
 		
 		auto doc = new XmlDocument;
 		doc.parse(src);
-		
-		Stdout(src).newline;
 		
 		foreach(n; doc.root.children)
 		{

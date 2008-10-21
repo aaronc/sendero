@@ -178,8 +178,6 @@ class AtomEntry : AtomCommon
 	{
 		foreach(node; entry.children)
 		{
-			Stdout.formatln("entry node.name: {}", node.name);
-			
 			char[] value, type;
 			
 			if(handleCommonElements(node, value, type))
@@ -246,7 +244,6 @@ abstract class AtomPerson
 	{
 		foreach(node; person.children)
 		{
-			Stdout.formatln("person node.name: {}", node.name);
 			switch(node.localName)
 			{
 			case "name": this.name = getValue(node); break;
@@ -288,7 +285,6 @@ class AtomCategory
 	{
 		foreach(node; category.attributes)
 		{
-			Stdout.formatln("category attr.name: {}", node.name);
 			switch(node.localName)
 			{
 			case "term": this.term = node.rawValue; break;
@@ -376,8 +372,6 @@ class AtomFeed : AtomCommon, IRenderable
 	{
 		foreach(node; feed.children)
 		{
-			debug Stdout.formatln("node.name: {}", node.name);
-			
 			char[] value, type;
 			
 			if(handleCommonElements(node, value, type))
@@ -401,8 +395,6 @@ class AtomFeed : AtomCommon, IRenderable
 		
 		auto doc = new XmlDocument;
 		doc.parse(src);
-		
-		debug Stdout(src).newline;
 		
 		foreach(n; doc.root.children)
 		{

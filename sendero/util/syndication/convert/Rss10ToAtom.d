@@ -13,7 +13,6 @@ AtomFeed[] convertRss10ToAtom(Rss10Feed rss10Feed)
 	res.length = 0;
 	foreach(channel; rss10Feed.channels)
 	{
-		debug Stdout.formatln("Converting rss channel {}", channel.title);
 		auto atomFeed = new AtomFeed(channel.link);
 		atomFeed.title = AtomTitle(channel.title);
 		atomFeed.updated = channel.dcDate;
