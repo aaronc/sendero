@@ -6,12 +6,13 @@ struct Construct(T, Params...)
 	{ create_ = constructor; }
 	static T function(Params) create_;
 	
-	static debug T create(Params params)
+//	static debug T create(Params params)
+	static T create(Params params)
 	{
-		assert(create_);
+		debug assert(create_ !is null);
 		return create_(params);
 	}
-	else alias create_ create;
+//	else alias create_ create;
 	
 	alias create opCall;
 }

@@ -1,6 +1,6 @@
 module sendero.core.Main;
 
-import sendero.core.config;
+import sendero.core.Config;
 import sendero.http.Request;
 
 version(SenderoFCGI) {
