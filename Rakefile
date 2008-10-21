@@ -36,6 +36,10 @@ task :senderoxc => SENDEROXC_SRC do
   sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofbin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP -g"
 end
 
+task :senderoxc_posix => SENDEROXC_SRC do
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofbin/senderoxc -L-lsqlite3_4_1 -L-ldl"
+end
+
 task :build => ["test_sendero.exe"]
 
 task :test_files => TEST_FILES
