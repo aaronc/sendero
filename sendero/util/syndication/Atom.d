@@ -34,7 +34,7 @@ struct AtomText(char[] node, bool multiline = false)
 			return;
 		
 		if(type.length) printer.format(`<{} type="{}">`, node, type);
-		else printer.format("<{}>", node);
+		else printer.format(`<{} type="text">`, node);
 		
 		static if(multiline) printer.newline.indent;
 		
@@ -134,8 +134,8 @@ class AtomCommon
 	{
 		//printer.formatln("<title>{}</title>", encode(title));
 		title.print(printer);
-		printer.formatln(`<id>{}</id>">`, url);
-		printer.formatln(`<link href="{}">`, url);
+		printer.formatln(`<id>{}</id>`, url);
+		printer.formatln(`<link href="{}" />`, url);
 		if(updated.ticks != 0) printer.formatln("<updated>{}</updated>", formatRFC3339(updated));
 		foreach(author; authors) author.print(printer);
 		foreach(category; categories) category.print(printer);
@@ -340,8 +340,8 @@ class AtomFeed : AtomCommon, IRenderable
 	{
 		auto printer = new IndentingPrinter(consumer);
 		
-		printer("<?xml version='1.0' encoding='utf-8'?>").newline;
-		printer("<feed xmlns='http://www.w3.org/2005/Atom'>").newline;
+		printer(`<?xml version="1.0" encoding="UTF-8"?>`).newline;
+		printer(`<feed xmlns="http://www.w3.org/2005/Atom">`).newline;
 		printer.newline;
 		printer.indent;
 			printCommonElements(printer);
@@ -357,7 +357,8 @@ class AtomFeed : AtomCommon, IRenderable
 	
 	char[] contentType()
 	{
-		return "application/atom+xml";
+	//	return "application/atom+xml";
+		return "text/xml";
 	}
 	
 	protected void printEntries_(Printer printer, AtomPublishStyle style)
