@@ -45,11 +45,21 @@ class Feed
 	private Type type_ = Type.Null;
 	private AtomFeed[] atomFeeds_;
 	private Rss10Feed rss10Feed_;
+	
+	char[] src() { return src_; }
+	char[] url() { return url_; }
+	
 	private char[] src_, url_;
 	
 	this(char[] url)
 	{
 		this.url_ = url;
+	}
+	
+	void parse(char[] src)
+	{
+		this.src_ = src;
+		parse_;
 	}
 	
 	bool get()
