@@ -21,6 +21,7 @@ version(SenderoBenchmark)
 }
 
 debug(SenderoRuntime) {
+	//import qcf.Debug;
 	import sendero.Debug;
 	Logger log;
 	static this()
@@ -204,7 +205,7 @@ class FCGIRunner(SessionT, RequestT = Request): AbstractBackend!(SessionT, Reque
 								next = next.next; 
 							}
 							
-							debug(SenderoRuntime) stdout.write(dumpAddresses);
+							//debug(SenderoRuntime) stdout.write(dumpAddresses);
 						}
 						catch(Exception ex2)
 						{
