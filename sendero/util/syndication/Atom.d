@@ -321,6 +321,11 @@ class AtomFeed : AtomCommon, IRenderable
 		return f;
 	}
 	
+	void parse()
+	{
+		parse_(src);
+	}
+	
 	bool get()
 	{
 		try
