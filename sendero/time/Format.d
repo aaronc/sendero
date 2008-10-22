@@ -1,7 +1,9 @@
 module sendero.time.Format;
 
 import sendero.time.LocalTime;
-import tango.time.Clock;
+import sendero_base.util.TimeConvert;
+//import tango.time.Clock;
+import tango.time.chrono.Gregorian;
 import tango.time.Time;
 import Int = tango.text.convert.Integer;
 
@@ -23,18 +25,21 @@ void uitoaFixed(uint len)(uint x, char[] res)
 char[] formatRFC3339(Time t)
 {
 	char[] res = new char[20];
-	auto dt = Clock.toDate(t);
-	uitoaFixed!(4)(dt.date.year, res);
+	//auto dt = Clock.toDate(t);
+	uint yr, mo, day, doy, dow, era;
+	Gregorian.generic.split(t, yr, mo, day, doy, dow, era);
+	auto time = t.time;
+	uitoaFixed!(4)(yr, res);
 	res[4] = '-';
-	uitoaFixed!(2)(dt.date.month, res[5 .. 7]);
+	uitoaFixed!(2)(mo, res[5 .. 7]);
 	res[7] = '-';
-	uitoaFixed!(2)(dt.date.day, res[8 .. 10]);
+	uitoaFixed!(2)(day, res[8 .. 10]);
 	res[10] = 'T';
-	uitoaFixed!(2)(dt.time.hours, res[11..13]);
+	uitoaFixed!(2)(time.hours, res[11..13]);
 	res[13] = ':';
-	uitoaFixed!(2)(dt.time.minutes, res[14..16]);
+	uitoaFixed!(2)(time.minutes, res[14..16]);
 	res[16] = ':';
-	uitoaFixed!(2)(dt.time.seconds, res[17..19]);
+	uitoaFixed!(2)(time.seconds, res[17..19]);
 	res[19] = 'Z';
 	return res;
 }
@@ -133,7 +138,8 @@ char[] formatDateTime_(Time t, Format pattern)
 
 char[] formatDateTime_(Time t)
 {
-	auto dt = Clock.toDate(t);
+	//auto dt = Clock.toDate(t);
+	auto dt = toDate(t);
 	char[] ampm = "AM";
 	if(dt.time.hours > 12) {
 		dt.time.hours = dt.time.hours - 12;
