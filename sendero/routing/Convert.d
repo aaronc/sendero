@@ -29,7 +29,7 @@ debug(SenderoRouting) {
 	}
 }
 
-T convertParam2(T, Req)(Var param, Req req)
+T convertParam(T, Req)(Var param, Req req)
 {
 	T val;
 	static if(is(T == char[]))
@@ -118,7 +118,7 @@ T convertParam2(T, Req)(Var param, Req req)
 			val.length = 0;
 			foreach(v; param.array_)
 			{
-				val ~= convertParam2!(char[], Req)(v, req);
+				val ~= convertParam!(char[], Req)(v, req);
 			}
 			break;
 		case VarT.String:
@@ -188,10 +188,10 @@ void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
 	if(!res.empty) Msg.post(name, res);
 }
 
-void convertParams2(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
+void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 {
 	debug(SenderoRouting) {
-		mixin(FailTrace!("convertParams2"));
+		mixin(FailTrace!("convertParams"));
 	}
 	
 	debug Stdout("Start conversion:")(paramNames)(" ")(ParamT.stringof).newline;
@@ -205,7 +205,7 @@ void convertParams2(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p
 		else {
 			if(Index < paramNames.length) {
 				auto param = params[paramNames[Index]];
-				p[Index] = convertParam2!(Type, Req)(param, req);
+				p[Index] = convertParam!(Type, Req)(param, req);
 			}
 		}
 	}

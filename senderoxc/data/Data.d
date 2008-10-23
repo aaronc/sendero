@@ -272,7 +272,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 		foreach(setter; setters)
 		{
 			wr ~= "\t\t\tcase \"" ~ setter.name ~ "\": ";
-			wr ~= setter.name ~ " = convertParam2!(" ~ setter.type ~ ", Req)(val); ";
+			wr ~= setter.name ~ " = convertParam!(" ~ setter.type ~ ", Req)(val); ";
 			wr ~= "break;\n";
 		}
 		wr ~= "\t\t\tdefault: break;\n";

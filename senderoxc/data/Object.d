@@ -132,7 +132,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		{
 			if(!f.hasSetter) continue;
 			wr("\t\t\tcase \"" ~ f.name ~ "\": ");
-			wr(f.privateName ~ " = convertParam2!(" ~ f.dtype ~ ", Req)(val, req); ");
+			wr(f.privateName ~ " = convertParam!(" ~ f.dtype ~ ", Req)(val, req); ");
 			wr("break;\n");
 		}
 		wr("\t\t\tdefault: break;\n");

@@ -20,48 +20,6 @@ debug(SenderoRouting) {
 	}
 }
 
-class FunctionWrapper(T, Req, bool dg = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
-{
-	alias ParameterTupleOf!(T) P;
-	alias ReturnTypeOf!(T) Ret;
-	
-	alias Ret function(P) FnT;
-	alias Ret delegate(P) DgT;
-	
-	this(FnT fn, char[][] paramNames)
-	{
-		this.fn = fn;
-		this.dg.funcptr = fn;
-		this.paramNames = paramNames;
-	}
-	
-	private FnT fn;
-	private DgT dg;
-	private char[][] paramNames;
-	
-	Ret exec(Req routeParams, void* ptr)
-	{
-		debug(SenderoRouting) {
-			mixin(FailTrace!(typeof(this).stringof ~ ".exec"));
-			log.trace(MName ~ " paramNames: {}", paramNames);
-		}
-		
-		debug assert(routeParams);
-		
-		P p;
-		
-		convertParams!(Req, P)(routeParams, paramNames, p);
-		
-		if(ptr !is null) {
-			dg.ptr = ptr;
-			return dg(p);
-		}
-		else {
-			return fn(p);
-		}
-	}
-}
-
 class FunctionWrapper2(T, Req, bool InstanceFunc = false) : IFunctionWrapper!(ReturnTypeOf!(T), Req)
 {
 	alias ParameterTupleOf!(T) P;
@@ -92,7 +50,7 @@ class FunctionWrapper2(T, Req, bool InstanceFunc = false) : IFunctionWrapper!(Re
 		
 		P p;
 		
-		convertParams2!(Req, P)(routeParams, paramNames, p);
+		convertParams!(Req, P)(routeParams, paramNames, p);
 		
 		static if(InstanceFunc) {
 			dg.ptr = ptr;
