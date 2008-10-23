@@ -55,9 +55,12 @@ static this()
 
 class ConsoleRedirect : OutputStream
 {
+	this()
+	{ this.log = Log.lookup("console"); }
+	Logger log;
 	IConduit conduit () { return null; }
 	void close() {}
-	uint write(void[] src) { return src.length; }
+	uint write(void[] src) { this.log.trace(cast(char[])src); return src.length; }
 	OutputStream copy (InputStream src) { return this; }
 	OutputStream flush () { return this; }
 }
