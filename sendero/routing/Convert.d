@@ -257,8 +257,8 @@ T convertParam2(T, Req)(Var param, Req req)
 	{
 		switch(param.type)
 		{
-		case VarT.String: val = Integer.parse(param.string_);
-		case VarT.Number: val = cast(T)param.number_;
+		case VarT.String: val = Integer.parse(param.string_); break;
+		case VarT.Number: val = cast(T)param.number_; break;
 		case VarT.Bool: if(param.bool_) val = 1; else val = 0; break;
 		default: val = T.init; break;
 		}
@@ -267,8 +267,8 @@ T convertParam2(T, Req)(Var param, Req req)
 	{
 		switch(param.type)
 		{
-		case VarT.String: val = Float.parse(param.string_);
-		case VarT.Number: val = cast(T)param.number_;
+		case VarT.String: val = Float.parse(param.string_); break;
+		case VarT.Number: val = cast(T)param.number_; break;
 		case VarT.Bool: if(param.bool_) val = 1; else val = 0; break;
 		default: val = T.init; break;
 		}
@@ -303,6 +303,7 @@ T convertParam2(T, Req)(Var param, Req req)
 			break;
 		case VarT.String:
 			val = [param.string_];
+			break;
 		default:
 			val = null;
 			break;
