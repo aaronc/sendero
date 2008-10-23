@@ -190,6 +190,15 @@ class DBProvider(DBConnectionProvider, DatabaseT = Database)
 		providers_ = new ThreadLocal!(ProviderContainer!(DatabaseT, DBProvider!(DBConnectionProvider, DatabaseT), StatementContainer))(null);
 	}
 	
+	/+static ~this()
+	{
+		auto conn = pool.getConnection;
+		while(conn !is null) {
+			conn.close;
+			conn = pool.getConnection;
+		}
+	}+/
+	
 	private static ConnectionPool!(Database, DBConnectionProvider) pool;
 	private static ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)) providers_;
 	

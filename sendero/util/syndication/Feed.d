@@ -8,6 +8,13 @@ import tango.net.http.HttpGet;
 
 import sendero.util.syndication.convert.Rss10ToAtom;
 
+import tango.util.log.Log;
+Logger log;
+static this()
+{
+	log = Log.lookup("sendero.util.syndication.Feed");
+}
+
 class Feed
 {
 	enum Type { Null, Atom, Rss10 };
@@ -74,6 +81,7 @@ class Feed
 		}
 		catch(Exception ex)
 		{
+			log.error(ex.toString);
 			return false;
 		}
 	}

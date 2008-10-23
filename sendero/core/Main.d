@@ -12,6 +12,7 @@ version(SenderoFCGI) {
 		FileSystem.setDirectory("..");
 		version(Production) SenderoConfig.load("production");
 		else SenderoConfig.load("dev");
+		static if(is(typeof(AppMain.init))) AppMain.init;
 		auto fcgiRunner = new FCGIRunner!(Session, Session.RequestT)(&AppMain.main);
 		fcgiRunner.run(args);
 		return 0;
