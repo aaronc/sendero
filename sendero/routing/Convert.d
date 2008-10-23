@@ -222,6 +222,15 @@ T convertParam2(T, Req)(Var param, Req req)
 		default: val = T.init; break;
 		}
 	}
+	else static if(is(T == void[]) || is(T == ubyte[]))
+	{
+		switch(param.type)
+		{
+		case VarT.String: val = cast(T)param.string_; break;
+		case VarT.Void: val = *cast(T*)param.void_; break;
+		default: val = T.init; break;
+		}
+	}
 	else static if(is(T == bool))
 	{
 		switch(param.type)
