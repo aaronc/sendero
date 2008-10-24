@@ -2,11 +2,13 @@ module sendero.util.syndication.Feed;
 
 import sendero.util.syndication.Rss10;
 import sendero.util.syndication.Atom;
+import sendero.util.syndication.Rss20;
 
 import sendero.util.syndication.Common;
 import tango.net.http.HttpGet;
 
 import sendero.util.syndication.convert.Rss10ToAtom;
+import sendero.util.syndication.convert.Rss20ToAtom;
 
 import tango.util.log.Log;
 Logger log;
@@ -17,7 +19,7 @@ static this()
 
 class Feed
 {
-	enum Type { Null, Atom, Rss10 };
+	enum Type { Null, Atom, Rss10, Rss20 };
 	Type nativeType()
 	{
 		return type_;
@@ -30,12 +32,17 @@ class Feed
 				atomFeeds_ = convertRss10ToAtom(rss10Feed_);
 			}
 		}
+		else if(type_ == Type.Rss20) {
+			if(rss20Feed_ !is null) {
+				atomFeeds_ = [convertRss20ToAtom(rss20Feed_)];
+			}
+		}
 	}
 	
 	AtomFeed[] getAtomFeeds()
 	{
 		if(type_ == Type.Atom) return atomFeeds_;
-		else if(type_ == Type.Rss10) {
+		else if(type_ == Type.Rss10 || type_ == Type.Rss20) {
 			if(!atomFeeds_.length) refreshConversions;
 			return atomFeeds_;
 		}
@@ -52,6 +59,7 @@ class Feed
 	private Type type_ = Type.Null;
 	private AtomFeed[] atomFeeds_;
 	private Rss10Feed rss10Feed_;
+	private Rss20Feed rss20Feed_;
 	
 	char[] src() { return src_; }
 	char[] url() { return url_; }
@@ -107,6 +115,16 @@ class Feed
 				rss10Feed_ = new Rss10Feed(url_);
 				rss10Feed_.src = src_;
 				rss10Feed_.parseRDF_(node);
+				return;
+			case "rss":
+				foreach(m; node.children) {
+					if(m.name != "channel") continue;
+					type_ = Type.Rss20;
+					rss20Feed_ = new Rss20Feed(url_);
+					rss20Feed_.src = src_;
+					rss20Feed_.parseChannel_(m);
+					break;
+				} 
 				return;
 			default:
 				break;
