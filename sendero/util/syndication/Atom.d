@@ -56,11 +56,15 @@ struct AtomLink
 {
 	char[] href;
 	char[] rel;
-	char[] title;
+	char[] type;
 	
 	void print(Printer printer)
 	{
-		
+		printer(`<link`);
+		if(rel.length) printer.format(` rel="{}"`, rel);
+		if(type.length) printer.format(` type="{}"`, type);
+		printer.format(` href="{}" />`, href);
+		printer.newline;
 	}
 }
 
@@ -78,7 +82,8 @@ class AtomCommon
 {
 	AtomTitle title;
 	AtomRights rights;
-	char[] url;
+	char[] id;
+	AtomLink[] links;
 	Time updated;
 	AtomAuthor[] authors;
 	AtomContributor[] contributors;
@@ -108,10 +113,22 @@ class AtomCommon
 			parseDateAndTime(value, this.updated); 
 			return true;
 		case "link":
+			AtomLink link;
 			auto href = node.getAttribute("href");
 			if(href) {
-				this.url = href.rawValue;
+				link.href = href.rawValue;
 			}
+			auto rel = node.getAttribute("rel");
+			if(rel) {
+				link.rel = rel.rawValue;
+			}
+			if(type) {
+				link.type = type;
+			}
+			links ~= link;
+			return true;
+		case "id":
+			this.id = value;
 			return true;
 		case "category":
 			categories ~= new AtomCategory(node);
@@ -134,8 +151,9 @@ class AtomCommon
 	{
 		//printer.formatln("<title>{}</title>", encode(title));
 		title.print(printer);
-		printer.formatln(`<id>{}</id>`, url);
-		printer.formatln(`<link href="{}" />`, url);
+		printer.formatln(`<id>{}</id>`, id);
+		//printer.formatln(`<link href="{}" />`, url);
+		foreach(link; links) link.print(printer);
 		if(updated.ticks != 0) printer.formatln("<updated>{}</updated>", formatRFC3339(updated));
 		foreach(author; authors) author.print(printer);
 		foreach(category; categories) category.print(printer);
@@ -312,6 +330,7 @@ class AtomFeed : AtomCommon, IRenderable
 	char[] subtitle;
 	AtomEntry[] entries;
 	
+	char[] url;
 	char[] src;
 	
 	static AtomFeed parse(char[] src)

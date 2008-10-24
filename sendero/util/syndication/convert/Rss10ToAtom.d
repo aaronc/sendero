@@ -21,7 +21,8 @@ AtomFeed[] convertRss10ToAtom(Rss10Feed rss10Feed)
 		{
 			auto entry = new AtomEntry;
 			entry.title  = AtomTitle(item.title);
-			entry.url = item.link;
+			AtomLink link; link.href = item.link;
+			entry.links ~= link;
 			if(item.dcSubject.length) {
 				entry.categories ~= new AtomCategory(item.dcSubject);
 			}
