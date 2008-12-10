@@ -32,6 +32,11 @@ void bind(T)(ref Var var, T val)
 		var.type = VarT.Object;
 		var.obj_ = new ClassBinding!(T)(val);
 	}
+	else static if(is(typeof(*val) == struct))
+	{
+		var.type = VarT.Object;
+		var.obj_ = new ClassBinding!(T, true)(val);
+	}
 	else static assert(false, "Unable to bind variable of type " ~ T.stringof);
 }
 
@@ -76,7 +81,10 @@ class ArrayVar(T) : IArray, IDynArrayBinding
 	{
 		if(i > t.length) return Var();
 		Var var;
-		bind(var, t[i]);
+		static if(is(T == struct))
+			bind(var, cast(T*)&t[i]);
+		else
+			bind(var, t[i]);
 		return var;
 	}
 	
@@ -212,13 +220,17 @@ ClassVarT getClassVarT(X)()
 	{
 		return ClassVarT.Time;
 	}
-	else static if(is(X == JSONObject!(char)))
+	/+else static if(is(X == JSONObject!(char)))
 	{
 		return ClassVarT.JSONObject;
-	}
+	}+/
 	else static if(is(X == class))
 	{
-		return ClassVarT.ClassStruct;
+		return ClassVarT.Class;
+	}
+	else static if(is(X == struct))
+	{
+		return ClassVarT.Struct;
 	}
 	else return ClassVarT.Null;
 }
@@ -235,6 +247,9 @@ class VarBindingVisitor
 		static if(is(T == class)) {
 			info.clsBinding = new ClassBinding!(T);
 		}
+		else static if(is(T == struct)) {
+			info.clsBinding = new ClassBinding!(T, true);
+		}
 		else static if(isDynamicArrayType!(T) && !is(T == char[])) {
 			info.arrayBinding = new ArrayVar!(T);
 		}
@@ -245,14 +260,15 @@ class VarBindingVisitor
 	}
 }
 
-enum ClassVarT : ubyte {  Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, String, DateTime, Time, ClassStruct, Array, AssocArray, Null };
+enum ClassVarT : ubyte {  Bool, Byte, Short, Int, Long, UByte, UShort, UInt, ULong, Float, Double, String, DateTime, Time, Class, Struct, Array, AssocArray, Null };
 
-class ClassBinding(T) : IObject, IClassBinding
+class ClassBinding(T, bool isStruct = false) : IObject, IClassBinding
 {
 	static void init()
 	{
 		auto v = new VarBindingVisitor;
-		auto t = new T;
+		T t;
+		static if(!isStruct) t = new T;
 		ReflectionOf!(T).visitTuple(t, v);
 		auto fields = ReflectionOf!(T).fields;
 		foreach(f; fields)
@@ -284,12 +300,13 @@ class ClassBinding(T) : IObject, IClassBinding
 	
 	IObject createInstance(void* ptr)
 	{
-		return new ClassBinding!(T)(ptr);
+		return new ClassBinding!(T, isStruct)(ptr);
 	}
 	
 	private void getVar(inout VarInfo varInfo, inout Var var)
 	{
-		if(!t) { var.type = VarT.Null; return;}
+		static if(!isStruct)
+			if(t is null) { var.type = VarT.Null; return;}
 		
 		void* ptr = cast(void*)t + varInfo.offset;
 		switch(varInfo.type)
@@ -336,9 +353,13 @@ class ClassBinding(T) : IObject, IClassBinding
 		case(ClassVarT.Time):
 			set(var, *cast(Time*)ptr);
 			break;
-		case(ClassVarT.ClassStruct):
+		case(ClassVarT.Class):
 			var.type = VarT.Object;
 			var.obj_ = varInfo.clsBinding.createInstance(*cast(void**)ptr);
+			break;
+		case(ClassVarT.Struct):
+			var.type = VarT.Object;
+			var.obj_ = varInfo.clsBinding.createInstance(ptr);
 			break;
 		case(ClassVarT.Array):
 			var.type = VarT.Array;
