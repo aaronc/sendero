@@ -359,7 +359,7 @@ _match:
 #line 54 "sendero/server/Http11.rl"
 	{ 
       log.info("query_string:{}", query_start[0.. p - query_start]);
-      getStr = mark[0.. p - mark];
+      getStr = query_start[0.. p - query_start];
   }
 	break;
 	case 11:

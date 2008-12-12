@@ -17,9 +17,7 @@ import tango.core.Traits;
 import Integer = tango.text.convert.Integer;
 import Float = tango.text.convert.Float;
 
-debug import tango.io.Stdout; 
-
-debug(SenderoRouting) {
+debug {
 	import sendero.Debug;
 	
 	Logger log;
@@ -194,17 +192,22 @@ void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 		mixin(FailTrace!("convertParams"));
 	}
 	
-	debug Stdout("Start conversion:")(paramNames)(" ")(ParamT.stringof).newline;
+	debug log.trace("Start conversion:{} {}",paramNames,ParamT.stringof);
 	
 	auto params = req.params2;
 	
 	foreach(Index, Type; ParamT)
 	{
-		static if(is(Type == Req))
+		static if(is(Type == Req)) {
+			debug log.trace("Converting Req param, index {}", Index);
 			p[Index] = req;
+		}
 		else {
 			if(Index < paramNames.length) {
+				debug log.trace("Converting param {}, index {}", paramNames[Index], Index);
 				auto param = params[paramNames[Index]];
+				debug if(param.type == VarT.Null)
+					log.info("Param {}, index {} is null", paramNames[Index], Index);
 				p[Index] = convertParam!(Type, Req)(param, req);
 			}
 		}

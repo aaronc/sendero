@@ -5705,7 +5705,7 @@ class ParserException : Exception
 bool parse(string filename, string input, out SyntaxTree* root, bool detailed=false, bool recover=false, uint tab_width=4)
 {
     GLRParser   g, w;
-    static if ( is(typeof(WhitespaceGrammar) : GLRParser) )
+    static if ( is(WhitespaceGrammar : GLRParser) )
         w = new WhitespaceGrammar;
     g = new MainGrammar(w, tab_width);
     bool succ = g.parse(filename, input, &root, detailed, recover);
@@ -6763,7 +6763,7 @@ class MainGrammar : public GLRParser
                 match = lookahead;
                 match_ws = lookahead_ws;
                 lookahead_ws = input;
-                static if ( is(typeof(WhitespaceGrammar) : GLRParser) )
+                static if ( is(WhitespaceGrammar : GLRParser) )
                     ws_parser.parseWS(input);
                 version(Tango)
                     debug(lexer) Stdout.format("WS: '{}'\n", lookahead_ws[0 .. $-input.length]);

@@ -3,6 +3,7 @@ module sendero.server.SimpleTest;
 import sendero.server.WorkerPool;
 import sendero.server.Http11;
 import sendero.server.Packet;
+import sendero.util.collection.ThreadSafeQueue;
 
 import tango.io.Stdout;
 import tango.net.InternetAddress;
@@ -50,10 +51,10 @@ private:
 
 class SimpleService
 {
-	this(void function(Request req) appMain, ISelector selector)
+	this(void function(Request req) appMain, ThreadSafeQueue2!(Packet) responseQueue)
 	{
-		this.selector = selector;
 		this.appMain = appMain;
+		this.responseQueue = responseQueue;
 	}
 	
 	void run(Packet p)
@@ -73,17 +74,19 @@ class SimpleService
 			
 			if(status.code < 300) {
 				log.info("Ready to write");
-				p.cond.write("HTTP/1.x 200 OK\r\n");
-				p.cond.write("Content-Type: "~ res.contentType_ ~"\r\n");
-				p.cond.write("Content-Length: " ~ Int.toString(res.res.length) ~ "\r\n");
-				p.cond.write("\r\n");
-				p.cond.write(res.res);
+				p.write("HTTP/1.x 200 OK\r\n");
+				p.write("Content-Type: "~ res.contentType_ ~"\r\n");
+				p.write("Content-Length: " ~ Int.toString(res.res.length) ~ "\r\n");
+				p.write("\r\n");
+				p.write(res.res);
 				log.info("Done writing");
 			}
 			else {
-				p.cond.write("HTTP/1.x " ~ Int.toString(status.code) ~ " " ~ status.name ~ "\r\n");
-				p.cond.write("\r\n");
+				p.write("HTTP/1.x " ~ Int.toString(status.code) ~ " " ~ status.name ~ "\r\n");
+				p.write("\r\n");
 			}
+			
+			responseQueue.push(p);
 		}
 		catch(Exception ex)
 		{
@@ -93,12 +96,33 @@ class SimpleService
 			else {
 				log.error("Exception caught:{}", ex.toString);
 			}
+			
+			p.write("HTTP/1.x 400 Bad Request\r\n");
+			p.write("Content-Type: text/html\r\n");
+			
+			char[] err = "<h1>Bad request</h1>\r\n";
+			
+			debug {
+				
+				err ~= "<h2>Exception caught</h2><p>" ~ ex.toString ~ ".</p>";
+				if(ex.info !is null) {
+					err ~= "<p> Trace: " ~ ex.info.toString ~ "</p>";
+				}
+				
+				err ~= "<p><em>Sendero Server</em></p>";
+			}
+			
+			p.write("Content-Length: " ~ Int.toString(err.length) ~ "\r\n");
+			p.write("\r\n");
+			p.write(err);
+			
+			responseQueue.push(p);
 		}
 	}
 	
 private:
-	ISelector selector;
 	void function(Request req) appMain;
+	ThreadSafeQueue2!(Packet) responseQueue;
 }
 
 void run(void function(Request req) appMain)
@@ -117,7 +141,8 @@ void run(void function(Request req) appMain)
 	selector.open(100, 10);
 	selector.register(serverSock, Event.Read);
 	
-	auto service = new SimpleService(appMain, selector);
+	auto responseQueue = new ThreadSafeQueue2!(Packet);
+	auto service = new SimpleService(appMain, responseQueue);
 	auto workerPool = new WorkerPool!(Packet)(&service.run);
 	
 	auto readBuffer = new char[8192];
@@ -148,7 +173,6 @@ void run(void function(Request req) appMain)
 							if(read != IConduit.Eof) {
 								auto p = new Packet(cond, readBuffer[0 .. read]);
 								workerPool.pushJob(p);
-								
 							}
 							else {
 								if(!cond.isAlive) {
@@ -160,10 +184,25 @@ void run(void function(Request req) appMain)
 							}
 							//selector.unregister(cond);
 						}
+						else if(key.isWritable)
+						{
+							serverLog.info("Writing response");
+							auto packet = cast(Packet)key.attachment;
+							assert(packet !is null);
+							packet.cond.write(packet.res);
+							selector.reregister(packet.cond, Event.Read, null);
+						}
 						
 						assert(!key.isError);
 					}
 				}
+			}
+			
+			auto response = responseQueue.pop;
+			while(response !is null) {
+				serverLog.info("Pushing response object");
+				selector.reregister(response.cond, Event.Write, response);
+				response = responseQueue.pop;
 			}
 		}
 		catch(Exception ex)

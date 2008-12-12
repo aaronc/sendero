@@ -1,0 +1,13 @@
+module {}.Session;
+
+import sendero.session.Session;
+
+class SessionData : BasicSessionData
+{{
+	void reset(Request req)
+	{{
+		super.reset(req);
+	}
+}
+
+alias SessionGlobal!(SessionData) Session;

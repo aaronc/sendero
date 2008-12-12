@@ -1,0 +1,9 @@
+module {}_app;
+
+import sendero.core.Main;
+import {}.Main;
+
+int main(char[][] args)
+{{
+	return senderoMain!({}AppMain)(args);
+}

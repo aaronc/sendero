@@ -12,6 +12,17 @@ import tango.io.Conduit, tango.io.Buffer;
 import tango.io.FileConduit;
 import tango.core.Traits;
 
+debug import tango.util.log.Log;
+
+debug {
+	static Logger log;
+
+	static this()
+	{
+		log = Log.lookup("sendero.util.Serialization");
+	}
+}
+
 bool loadFromFile(T)(inout T t, char[] filename)
 {
 	try
@@ -33,24 +44,35 @@ bool loadFromFile(T)(inout T t, char[] filename)
 	}
 	catch(Exception ex)
 	{
+		debug log.error("While loading file {}, caught exception: {}", filename, ex.toString);
+		debug if(ex.info !is null) log.error("Stacktrace:{}", ex.info.toString);
 		return false;
 	}
 }
 
 bool saveToFile(T)(T t, char[] filename)
 {
-	auto outfile = new FileConduit(filename, FileConduit.WriteCreate);
-	if(!outfile)
+	try
+	{
+		auto outfile = new FileConduit(filename, FileConduit.WriteCreate);
+		if(!outfile)
+			return false;
+		
+		auto serializer = new SimpleBinaryOutArchiver(outfile);
+		serializer (t);
+		
+		serializer.flush;
+		outfile.flush;
+		outfile.close;
+		
+		return true;
+	}
+	catch(Exception ex)
+	{
+		debug log.error("While saving file {}, caught exception: {}", filename, ex.toString);
+		debug if(ex.info !is null) log.error("Stacktrace:{}", ex.info.toString);
 		return false;
-	
-	auto serializer = new SimpleBinaryOutArchiver(outfile);
-	serializer (t);
-	
-	serializer.flush;
-	outfile.flush;
-	outfile.close;
-	
-	return true;
+	}
 }
 
 

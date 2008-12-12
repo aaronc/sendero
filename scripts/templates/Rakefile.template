@@ -1,0 +1,15 @@
+D_SRC = "*.d"
+
+SRC = FileList[D_SRC]
+
+file "{}.exe" => SRC do
+  sh "dsss build {}_app.d"
+end
+
+task :build => ["{}.exe"]
+
+task :test => [:build] do
+  sh "{}"
+end
+
+task :default => [:test]

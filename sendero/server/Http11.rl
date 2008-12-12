@@ -53,7 +53,7 @@ import tango.util.log.Log;
   action start_query {query_start = fpc; }
   action query_string { 
       log.info("query_string:{}", query_start[0.. fpc - query_start]);
-      getStr = mark[0.. fpc - mark];
+      getStr = query_start[0.. fpc - query_start];
   }
 
   action http_version {	

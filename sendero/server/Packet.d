@@ -10,6 +10,14 @@ class Packet
 		this.data = data;
 	}
 	
+	
+	void write(void[] val)
+	{
+		res ~= val;
+	}
+	
+	void[] res;
+	
 	SocketConduit cond;
 	char[] data;
 }

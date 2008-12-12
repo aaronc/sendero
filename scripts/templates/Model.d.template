@@ -1,0 +1,7 @@
+module {}.model.Model
+	
+public import {}.App;
+	
+alias DatabaseProvider!(App) DefaultDatabaseProvider;
+	
+	

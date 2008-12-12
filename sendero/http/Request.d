@@ -10,7 +10,7 @@ public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
 public import sendero.http.Response;
 
-debug(SenderoRouting) {
+debug {
 	import sendero.Debug;
 	
 	Logger log;
@@ -32,14 +32,14 @@ final class Request
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
 	{
 		if(method == HttpMethod.Get) {
-			debug(SenderoRouting) log.trace("Req.parse url:{}, getParams:{}", url, getParams);
+			debug log.trace("Req.parse url:{}, getParams:{}", url, getParams);
 			this.method = method;
 			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(getParams);
 			this.params2 = parseParams2(getParams);
 		}
 		else if(method == HttpMethod.Post) {
-			debug(SenderoRouting) log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
+			debug log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
 			this.method = method;
 			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(postParams);

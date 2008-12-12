@@ -1,0 +1,14 @@
+module {}.Main;
+
+import sendero.http.Request;
+
+import {}.Session;
+
+class {}AppMain
+{{
+	static void main(Request req)
+	{{
+		Session().reset(req);
+		req.respond("Hello world");
+	}
+}
