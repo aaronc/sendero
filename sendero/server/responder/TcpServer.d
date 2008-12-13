@@ -170,20 +170,22 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		}
     }
     
-    void handleDisconnect(ISyncEventDispatcher)
+    void handleDisconnect(ISyncEventDispatcher dispatcher)
     {
-    	
+    	debug log.info("Socket {} disconnected", toString);
+    	dispatcher.unregister(socket_);
     }
     
-    void handleError(ISyncEventDispatcher)
+    void handleError(ISyncEventDispatcher dispatcher)
     {
-    	
+    	log.info("Error in socket {}", toString);
+    	dispatcher.unregister(socket_);
     }
     
     void keepReading()
     {
-    	dispatcher_.postTask((ISyncEventDispatcher d){
-    		d.register(socket_,Event.Read,this);
+    	dispatcher_.postTask((ISyncEventDispatcher dispatcher){
+    		dispatcher.register(socket_,Event.Read,this);
     	});
     }
     
