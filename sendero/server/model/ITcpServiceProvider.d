@@ -5,6 +5,12 @@ interface ITcpServiceProvider
 	ITcpRequestHandler getRequestHandler();
 }
 
+class SyncTcpResponse
+{
+	void[][] data;
+	bool keepAlive = true;
+}
+
 interface ITcpRequestHandler
 {
 	void handleData(void[][] data);
@@ -17,7 +23,7 @@ interface ITcpRequestHandler
 	 * response data for synchronous handling, or null to indicate that
 	 * response will be sent asynchonously
 	 */
-	void[][] processRequest(ITcpCompletionPort completionPort);
+	SyncTcpResponse processRequest(ITcpCompletionPort completionPort);
 	
 	void cleanup();
 }

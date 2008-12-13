@@ -1,7 +1,8 @@
 module sendero.server.responder.TcpServer;
 
+public import sendero.server.model.ITcpServiceProvider;
+
 import sendero.server.model.IEventDispatcher;
-import sendero.server.model.ITcpServiceProvider;
 import sendero.util.BufferProvider;
 import sendero.util.collection.ThreadSafeQueue;
 
@@ -67,7 +68,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     			handleRead(dispatcher);
     		}
     		else {
-    			curReqHandler_.processRequest(this);
+    			checkForSyncResponse(curReqHandler_.processRequest(this));
     		}
     	}
     	else if(readLen == 0) {
@@ -82,7 +83,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		{
     		case EAGAIN:
     		//case EWOULDBLOCK:
-    			curReqHandler_.processRequest(this);
+    			checkForSyncResponse(curReqHandler_.processRequest(this));
     			return;
     		case EINTR:
     			handleRead(dispatcher);
@@ -93,6 +94,14 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     			return;
     		}
     	}
+	}
+	
+	private void checkForSyncResponse(SyncTcpResponse res)
+	{
+		if(res !is null) {
+			sendResponseData(res.data);
+			endResponse(res.keepAlive);
+		}
 	}
     
     void handleWrite(ISyncEventDispatcher dispatcher)

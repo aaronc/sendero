@@ -1,6 +1,7 @@
 module sendero.server.EventDispatcher;
 
-import sendero.server.model.IEventDispatcher;
+public import sendero.server.model.IEventDispatcher;
+
 import sendero.util.collection.ThreadSafeQueue;
 
 import tango.io.selector.Selector;
@@ -31,7 +32,6 @@ class EventDispatcher : ISyncEventDispatcher
 	
 	private bool running_ = false;
 	debug private Thread loopThread_;
-	
 	
 	void postTask(EventTaskDg task)
 	{

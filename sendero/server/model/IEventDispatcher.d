@@ -7,7 +7,7 @@ interface IEventDispatcher {
     void postTask(EventTaskDg);
 }
 
-interface ISyncEventDispatcher {
+interface ISyncEventDispatcher : IEventDispatcher {
 	void register(ISelectable,Event,EventResponder);
 	void unregister(ISelectable);
 }
