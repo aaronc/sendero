@@ -1,10 +1,13 @@
 module sendero.server.responder.TcpServer;
 
 import sendero.server.model.IEventDispatcher;
-import sendero.server.model.Provider;
+import sendero.server.model.ITcpServiceProvider;
+import sendero.util.BufferProvider;
 
+import tango.net.Socket;
 import tango.net.SocketConduit;
 import tango.net.InternetAddress;
+import tango.stdc.errno;
 
 import tango.util.log.Log;
 Logger log;
@@ -14,43 +17,73 @@ static this()
 	log = Log.lookup("sendero.server.provider.TcpServer");
 }
 
-interface ITcpServiceProvider
+class TcpConnection : EventResponder, ITcpCompletionPort
 {
-	void handleRequest(void[] data, TcpConnection connection);
-}
-
-interface ITcpConnection
-{
-	void respond(void[][] response);
-}
-
-class SyncTcpConnection : ITaskResponder
-{
-	
-}
-
-class AsyncTcpConnection : ITaskResponder
-{
-	this(SocketConduit socket, ITcpServer server /* or IEventDispatcher??? */, ITcpServiceProvider serviceProvider)
+	this(SocketConduit socket, TcpServer server, IEventDispatcher dispatcher, ITcpServiceProvider serviceProvider)
 	{
-		this.socket = socket;
-		//this.server = server;
-		this.serviceProvider = serviceProvider;
+		assert(socket !is null);
+		assert(server !is null);
+		assert(dispatcher !is null);
+		assert(serviceProvider !is null);
+		this.socket_ = socket;
+		this.server_ = server;
+		this.dispatcher_ = dispatcher;
+		this.serviceProvider_ = serviceProvider;
 	}
-	private SocketConduit socket;
-	//private ITcpServer server;
-	private ITcpServiceProvider serviceProvider;
+	private SocketConduit socket_;
+	private TcpServer server_;
+	private IEventDispatcher dispatcher_;
+	private ITcpServiceProvider serviceProvider_;
+	private ITcpRequestHandler curReqHandler_ = null;
+	private bool awatingWrite_ = false;
+	private void[][] curResData_ = null;
 	
 	char[] toString()
 	{
-		
+		return "TcpConnection";
 	}
 	
-    void handleRead(ISyncEventDispatcher)
-    {
-    	//get read data
-    	//serviceProvider.handleRequest(data, connection);
-    }
+	void handleRead(ISyncEventDispatcher d)
+	{
+		if(curReqHandler_ is null)
+			curReqHandler_ = serviceProvider_.getRequestHandler;
+		
+		auto buf = server_.bufferProvider.get;
+    	uint readLen = socket_.socket.receive(buf);
+    	if(readLen > 0) {
+    		//Data Read
+    		curReqHandler_.handleData([buf[0..readLen]]);
+    		if(readLen == buf.length) {
+    			//Probably have more data
+    			//TODO use readv
+    			handleRead(d);
+    		}
+    		else {
+    			curReqHandler_.processRequest(this);
+    		}
+    	}
+    	else if(readLen == 0) {
+    		//Socket Disconnected
+    		log.info("Socket {} disconnected on read", toString);
+    		d.unregister(socket_);
+    	}
+    	else /* readLen < 0 */ {
+    		//Socket Error
+    		auto err = lastError;
+    		switch(err)
+    		{
+    		case EAGAIN:
+    		//case EWOULDBLOCK:
+    			curReqHandler_.processRequest(this);
+    			break;
+    		default:
+    			log.info("Socket error {} on read for socket {}", err, toString);
+    			d.unregister(socket_);
+    			break;
+    		}
+    	}
+	}
+    
     void handleWrite(ISyncEventDispatcher)
     {
     	// send response data
@@ -68,87 +101,92 @@ class AsyncTcpConnection : ITaskResponder
     	
     }
     
-    void respond(void[][] response)
+    void keepReading()
     {
-    	// store response data
-    	// post task for checking for write event
+    	dispatcher_.postTask((ISyncEventDispatcher d){
+    		d.register(socket_,Event.Read,this);
+    	});
     }
-}
-
-interface ITcpServer
-{
-	void postTask(EventTaskDg taskDg);
-}
-
-private class SyncTcpServer :  TcpServer, ITaskResponder
-{
-	void handleRead(ISyncEventDispatcher dispatcher)
+    
+	void sendResponseData(void[][] data)
 	{
-		auto newCond = new SocketConduit;
-		serverSock.socket.accept(newCond.socket);
-		auto responder = new SyncTcpConnection(newCond);
-		dispatcher.register(newCond, Event.Read, responder);
-	}
-}
-
-private class AsyncTcpServer : TcpServer, ITaskResponder
-{
-	void handleRead(ISyncEventDispatcher dispatcher)
-	{
-		auto newCond = new SocketConduit;
-		serverSock.socket.accept(newCond.socket);
-		newCond.socket.blocking = false;
-		auto responder = new AsyncTcpConnection(newCond);
-		dispatcher.register(newCond, Event.Read, responder);
-	}
-}
-
-abstract class TcpServer : ITcpServer
-{
-	static TcpServer create(IAsyncServiceProvider)
-	{
-		
+		curReqHandler_ = null;
+		curResData_ ~= data;
+		if(!awatingWrite_) {
+			dispatcher_.postTask((ISyncEventDispatcher d){
+	    		d.register(socket_,Event.Write,this);
+	    	});
+			awatingWrite_ = true;
+		}
 	}
 	
-	static TcpServer create(ISyncServiceProvider)
+	void endResponse(bool keepAlive = true)
 	{
-		
+		if(keepAlive) {
+			dispatcher_.postTask((ISyncEventDispatcher d){
+	    		d.register(socket_,Event.Read,this);
+	    	});
+		}
+		else {
+			dispatcher_.postTask((ISyncEventDispatcher d){
+	    		d.unregister(socket_);
+	    	});
+		}
 	}
-	
+}
+
+class TcpServer : EventResponder
+{
 	this(ITcpServiceProvider serviceProvider, InternetAddress bindAddr = null, uint listen = 1000)
 	{
-		this.provider = serviceProvider;
-		this.bindAddr = bindAddr;
-		if(this.bindAddr is null)
-			this.bindAddr = new InternetAddress("127.0.0.1", 8081);
-		this.listen = 1000;
+		this.serviceProvider_ = serviceProvider;
+		this.bindAddr_ = bindAddr;
+		if(this.bindAddr_ is null)
+			this.bindAddr_ = new InternetAddress("127.0.0.1", 8081);
+		this.listen_ = 1000;
+		bufferProvider_ = new BufferProvider;
 	}
 	
-	private ITcpServiceProvider serviceProvider;
-	private SocketConduit serverSock;
-	private InternetAddress bindAddr;
-	private uint listen;
-	private IEventDispatcher dispatcher;
+	private ITcpServiceProvider serviceProvider_;
+	private SocketConduit serverSock_;
+	private InternetAddress bindAddr_;
+	private uint listen_;
+	private IEventDispatcher dispatcher_;
+	private BufferProvider bufferProvider_;
+	
+	BufferProvider bufferProvider() { return bufferProvider_; }
 	
 	void start(IEventDispatcher dispatcher)
 	{
-		this.dispatcher = dispatcher;
-		dispatcher.postTask(&startDg);
+		this.dispatcher_ = dispatcher;
+		dispatcher_.postTask(&startDg);
 	}
 	
 	private void startDg(ISyncEventDispatcher dispatcher)
 	{
-		serverSock = new SocketConduit;
-		serverSock.socket.setAddressReuse(true);
-		serverSock.socket.blocking = false;
-		serverSock.bind(bindAddr);
-		serverSock.socket.listen(n);
-		serverLog.info("Listening on {}:{}", bindAddr.toAddrString, bindAddr.toPortString);
+		serverSock_ = new SocketConduit;
+		serverSock_.socket.setAddressReuse(true);
+		serverSock_.socket.blocking = false;
+		serverSock_.bind(bindAddr_);
+		serverSock_.socket.listen(listen_);
+		log.info("Listening on {}:{}", bindAddr_.toAddrString, bindAddr_.toPortString);
 		
-		dispatcher.register(serverSock,Event.Read,this);
+		dispatcher.register(serverSock_,Event.Read,this);
 	}
 	
-	abstract void handleRead(ISyncEventDispatcher);
+	char[] toString()
+	{
+		return "TcpServer";
+	}
+	
+	void handleRead(ISyncEventDispatcher dispatcher)
+	{
+		auto newSock = new SocketConduit;
+		serverSock_.socket.accept(newSock.socket);
+		newSock.socket.blocking = false;
+		auto responder = new TcpConnection(newSock, this, dispatcher_, serviceProvider_);
+		dispatcher.register(newSock, Event.Read, responder);
+	}
 	
     void handleWrite(ISyncEventDispatcher)
     {
@@ -163,11 +201,5 @@ abstract class TcpServer : ITcpServer
     void handleError(ISyncEventDispatcher)
     {
     	//TODO
-    }
-    
-    void respond(EventTaskDg responseDg)
-    {
-    	debug assert(dispatcher !is null);
-    	dispatcher.postTask(responseDg);
     }
 }

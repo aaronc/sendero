@@ -6,7 +6,7 @@ import tango.core.Atomic;
 
 class BufferProvider
 {
-	this(defaultBufferSize = 16384)
+	this(uint defaultBufferSize = 16384)
 	{
 		this.defaultBufferSize_ = defaultBufferSize;
 	}
@@ -24,7 +24,7 @@ class BufferProvider
 			atomicDecrement(cacheSize_);
 			return buf;
 		}
-		else return new void[sz];
+		else return new void[defaultBufferSize_];
 	}
 	
 	void release(void[] buf)
@@ -33,6 +33,7 @@ class BufferProvider
 			bufferPool_.push(buf);
 			atomicIncrement(cacheSize_);
 		}
+		else delete buf;
 	}
 	
 	uint cacheSize()
