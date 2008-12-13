@@ -8,8 +8,8 @@ module sendero.util.Serialization;
 import tango.io.protocol.Writer, tango.io.protocol.Reader;
 import tango.io.protocol.model.IProtocol;
 import tango.io.protocol.EndianProtocol;
-import tango.io.Conduit, tango.io.Buffer;
-import tango.io.FileConduit;
+import tango.io.device.Conduit, tango.io.Buffer;
+import tango.io.device.FileConduit;
 import tango.core.Traits;
 
 debug import tango.util.log.Log;

@@ -37,7 +37,7 @@ task :senderoxc => SENDEROXC_SRC do
 end
 
 task :senderoxc_posix => SENDEROXC_SRC do
-  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofbin/senderoxc -L-lsqlite3_4_1 -L-ldl"
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofbin/senderoxc -L-lsqlite3 -L-ldl -debug -debug=SenderoXCUnittest"
 end
 
 task :senderoimp => SENDEROXC_SRC do

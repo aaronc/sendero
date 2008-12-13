@@ -7,6 +7,8 @@ import senderoxc.data.IObjectResponder;
 
 import senderoxc.data.Validations;
 
+import Integer = tango.text.convert.Integer;
+
 struct FieldAction
 {
 	enum {

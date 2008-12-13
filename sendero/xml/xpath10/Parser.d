@@ -6665,7 +6665,7 @@ class MainGrammar : public GLRParser
     override bool parse(string input)
     {
         debug(parser) indent ~= " ";
-        scope(exit) debug(parser) indent = indent[0..$-1];
+        //scope(exit) debug(parser) indent = indent[0..$-1];
 
         bool    fatal_errors = true;
         uint    line = 1,
@@ -7063,7 +7063,7 @@ class WhitespaceGrammar : public GLRParser
         stack ~= LRState(0, 1, 1);
 
         debug(parser) indent ~= " ";
-        scope(exit) debug(parser) indent = indent[0..$-1];
+        //scope(exit) debug(parser) indent = indent[0..$-1];
 
         bool    fatal_errors = true;
         uint    line = 1,

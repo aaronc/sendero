@@ -14,7 +14,7 @@ debug(SenderoXCUnittest) {
 	import qcf.TestRunner;
 	import qcf.StackTrace;
 	import tango.util.log.Config;
-	static this() { initOptlinkMap("senderoxc.map"); }
+	version(Windows) static this() { initOptlinkMap("senderoxc.map"); }
 }
 
 int main(char[][] args)

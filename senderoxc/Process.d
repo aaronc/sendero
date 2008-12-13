@@ -1,6 +1,6 @@
 module senderoxc.Process;
 
-import tango.io.File, tango.io.FileConduit, tango.io.Path;
+import tango.io.File, tango.io.device.FileConduit, tango.io.Path;
 import tango.io.Stdout;
 import tango.util.log.Config;
 import Util = tango.text.Util;
