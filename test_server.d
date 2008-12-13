@@ -22,13 +22,13 @@ class TestRequestHandler : ITcpRequestHandler
 	SyncTcpResponse processRequest(ITcpCompletionPort completionPort)
 	{
 		auto res = new SyncTcpResponse;
-		char[] txt = "Hello Sendero Server World!\n";
+		char[] txt = "Hello Sendero Server World!\r\n";
 		char[] resTxt = "HTTP/1.x 200 OK\r\n";
 		resTxt ~= "Content-Type: text/html\r\n";
 		resTxt ~= "Content-Length: " ~ Int.toString(txt.length) ~ "\r\n";
 		resTxt ~= "\r\n";
 		resTxt ~= txt;
-		res.data ~= txt;
+		res.data ~= resTxt;
 		return res;
 	}
 	

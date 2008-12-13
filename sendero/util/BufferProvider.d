@@ -8,6 +8,7 @@ class BufferProvider
 {
 	this(uint defaultBufferSize = 16384)
 	{
+		this.bufferPool_ = new ThreadSafeQueue2!(void[]);
 		this.defaultBufferSize_ = defaultBufferSize;
 	}
 	

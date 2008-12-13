@@ -39,6 +39,8 @@ class EventDispatcher : ISyncEventDispatcher
 		taskQueue.push(task);
 	}
 	
+	static ISelectable[ISelectable] registered;
+	
 	/**
 	 * Must be called synchronously!
 	 * 
@@ -48,7 +50,12 @@ class EventDispatcher : ISyncEventDispatcher
 	{
 		debug log.trace("Registering {} for events {}", attachment, events);
 		debug assert(Thread.getThis == loopThread_, "register should only be called from the event loop thread");
-		selector.register(conduit, events, attachment);
+		if(conduit in registered)
+			selector.reregister(conduit, events, attachment);
+		else {
+			selector.register(conduit, events, attachment);
+			registered[conduit] = conduit;
+		}
 	}
 	
 	/**
