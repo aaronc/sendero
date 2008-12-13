@@ -5,7 +5,6 @@ import tango.core.sync.Semaphore, tango.core.sync.Mutex;
 
 import sendero.util.collection.ThreadSafeQueue;
 
-debug {
 import tango.util.log.Log;
 	
 static Logger log;
@@ -14,9 +13,8 @@ static this()
 {
 	log = Log.lookup("sendero.server.WorkerPool");
 }
-}
 
-class WorkerPool(JobType)
+class WorkerPool(JobType,ThreadType = Thread)
 {
 public:
 	alias void delegate(JobType) DgT;
@@ -30,7 +28,7 @@ public:
 		jobQueue_ = new ThreadSafeQueue2!(JobType);
 		threads_ = new ThreadGroup;
 		for(uint i = 0; i < startThreads; ++i) {
-			auto t = new Thread(&proc);
+			auto t = new ThreadType(&proc);
 			threads_.add(t);
 			t.start;
 		}
@@ -56,11 +54,11 @@ private:
 	
 	void proc()
 	{
-		debug log.info("Starting thread");
+		debug log.trace("Starting thread");
 		while(running_) {
 			try
 			{
-				debug log.info("Waiting for traffic");
+				debug log.trace("Waiting for traffic");
 				greenLight_.wait;
 				debug log.info("Got notified");
 				auto job = jobQueue_.pop;
@@ -70,10 +68,10 @@ private:
 			catch(Exception ex)
 			{
 				if(ex.info !is null) {
-					debug log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
+					log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
 				}
 				else {
-					debug log.error("Exception caught:{}", ex.toString);
+					log.error("Exception caught:{}", ex.toString);
 				}
 			}
 		}
