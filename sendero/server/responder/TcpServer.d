@@ -152,6 +152,9 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	debug assert(!curResData_.pop.length && !unsentBuffer_.length,
     	             "Response being finished before all data is sent");
     	
+    	curReqHandler_.cleanup;
+    	curReqHandler_ = null;
+    	
     	foreach(buf; readBuffers_)
 		{
 			server_.bufferProvider.release(buf);
@@ -191,7 +194,6 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     
 	void sendResponseData(void[][] data)
 	{
-		curReqHandler_ = null;
 		foreach(buf;data)
 			curResData_.push(buf);
 		if(!awatingWrite_) {

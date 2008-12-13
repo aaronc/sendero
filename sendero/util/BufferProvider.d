@@ -22,6 +22,7 @@ class BufferProvider
 		auto buf = bufferPool_.pop;
 		if(buf.length) {
 			atomicDecrement(cacheSize_);
+			bufferPtrMap_.remove(buf.ptr);
 			return buf;
 		}
 		else return new void[defaultBufferSize_];
@@ -30,7 +31,12 @@ class BufferProvider
 	void release(void[] buf)
 	{
 		if(atomicLoad(cacheSize_) < maxCacheSize_) {
+			auto pBuf = buf.ptr in bufferPtrMap_;
+			if(pBuf) {
+				throw new Exception("Trying to place buffer in the pool a second time");
+			}
 			bufferPool_.push(buf);
+			bufferPtrMap_[buf.ptr] = buf.ptr;
 			atomicIncrement(cacheSize_);
 		}
 		else delete buf;
@@ -42,6 +48,7 @@ class BufferProvider
 	}
 	
 private:
+	void*[void*] bufferPtrMap_;
 	ThreadSafeQueue2!(void[]) bufferPool_;
 	uint defaultBufferSize_;
 	uint maxCacheSize_ = 100;
