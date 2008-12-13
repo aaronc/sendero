@@ -41,6 +41,7 @@ class TestRequestHandler : ITcpRequestHandler
 int main(char[][] args)
 {
 	auto dispatcher = new EventDispatcher;
+	dispatcher.open(100,10);
 	auto server = new TcpServer(new TestProvider);
 	server.start(dispatcher);
 	dispatcher.run;

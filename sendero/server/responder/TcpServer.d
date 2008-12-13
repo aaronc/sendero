@@ -228,7 +228,7 @@ class TcpServer : EventResponder
 		this.bindAddr_ = bindAddr;
 		if(this.bindAddr_ is null)
 			this.bindAddr_ = new InternetAddress("127.0.0.1", 8081);
-		this.listen_ = 1000;
+		this.listen_ = listen;
 		bufferProvider_ = new BufferProvider;
 	}
 	

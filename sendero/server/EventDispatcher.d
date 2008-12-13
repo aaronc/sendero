@@ -30,6 +30,7 @@ class EventDispatcher : ISyncEventDispatcher
 	double timeout() { return timeout_; }
 	void timeout(double t) { timeout_ = t; }
 	
+	private bool opened_ = false;
 	private bool running_ = false;
 	debug private Thread loopThread_;
 	
@@ -43,8 +44,9 @@ class EventDispatcher : ISyncEventDispatcher
 	 * 
 	 * 
 	 */
-	void register(ISelectable conduit,Event events, EventResponder attachment)
+	void register(ISelectable conduit, Event events, EventResponder attachment)
 	{
+		debug log.trace("Registering {} for events {}", attachment, events);
 		debug assert(Thread.getThis == loopThread_, "register should only be called from the event loop thread");
 		selector.register(conduit, events, attachment);
 	}
@@ -56,13 +58,16 @@ class EventDispatcher : ISyncEventDispatcher
 	 */
 	void unregister(ISelectable conduit)
 	{
+		debug log.trace("Unregistering ISelectable");
 		debug assert(Thread.getThis == loopThread_, "unregister should only be called from the event loop thread");
 		selector.unregister(conduit);
 	}
 	
 	void open(uint size, uint maxEvents)
 	{
+		assert(!opened_, "EventDispatcher should be opened only once");
 		selector.open(size, maxEvents);
+		opened_ = true;
 	}
 	
 	void shutdown()
@@ -72,6 +77,7 @@ class EventDispatcher : ISyncEventDispatcher
 	
 	void run()
 	{
+		assert(opened_,"EventDispatcher.open must be called before run");
 		assert(!running_, "Only one instance of the event loop should be called at a time");
 		running_ = true;
 		loopThread_ = Thread.getThis;
@@ -79,8 +85,16 @@ class EventDispatcher : ISyncEventDispatcher
 		while(running_) {
 			try
 			{
+				auto task = taskQueue.pop;
+				while(task !is null && running_) {
+					debug log.trace("Running task");
+					task(this);
+					task = taskQueue.pop;
+				}
+				
 				auto eventCnt = selector.select(timeout);
 				if(eventCnt > 0) {
+					debug log.trace("Found some events");
 					foreach(key; selector.selectedSet) {
 						if(!running_) break;
 						
@@ -110,12 +124,6 @@ class EventDispatcher : ISyncEventDispatcher
 							responder.handleError(this);
 	                    }
 					}
-				}
-				
-				auto task = taskQueue.pop;
-				while(task !is null && running_) {
-					task(this);
-					task = taskQueue.pop;
 				}
 			}
 			catch(Exception ex)
