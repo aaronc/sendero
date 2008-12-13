@@ -29,10 +29,10 @@ import tango.util.log.Log;
 	default: 
 		break;
     }
-    log.info("write_value:{}:{}", field_start[0..field_len], mark[0.. fpc - mark]);
+    debug log.trace("write_value:{}:{}", field_start[0..field_len], mark[0.. fpc - mark]);
   }
   action request_method { 
-      log.info("request_method:{}", mark[0.. fpc - mark]);
+      debug log.trace("request_method:{}", mark[0.. fpc - mark]);
       switch(mark[0.. fpc - mark])
       {
       case "GET": method = HttpMethod.Get; break;
@@ -43,31 +43,32 @@ import tango.util.log.Log;
       }
   }
   action request_uri { 
-      log.info("request_uri:{}", mark[0.. fpc - mark]);
+      debug log.trace("request_uri:{}", mark[0.. fpc - mark]);
   }
+
   action fragment { 
-     log.info("fragment:{}", mark[0.. fpc - mark]);
-     postStr = mark[0.. fpc - mark];
+     debug log.trace("fragment:{}", mark[0.. fpc - mark]);
+     //postStr = mark[0.. fpc - mark];
   }
   
   action start_query {query_start = fpc; }
   action query_string { 
-      log.info("query_string:{}", query_start[0.. fpc - query_start]);
+      debug log.trace("query_string:{}", query_start[0.. fpc - query_start]);
       getStr = query_start[0.. fpc - query_start];
   }
 
   action http_version {	
-      log.info("http_version:{}", mark[0.. fpc - mark]);
+      debug log.trace("http_version:{}", mark[0.. fpc - mark]);
   }
 
   action request_path {
-      log.info("request_path:{}", mark[0.. fpc - mark]);
+      debug log.trace("request_path:{}", mark[0.. fpc - mark]);
       url = mark[0.. fpc - mark];
   }
 
   action done { 
     body_start = fpc + 1; 
-      log.info("done:{}", (fpc + 1)[0 .. pe - fpc - 1]);
+      debug log.trace("done:{}", (fpc + 1)[0 .. pe - fpc - 1]);
     fbreak;
   }
 

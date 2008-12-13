@@ -2,18 +2,17 @@ module sendero.server.model.IEventDispatcher;
 
 public import tango.io.selector.model.ISelector;
 
+alias void delegate(ISyncEventDispatcher) EventTaskDg;
 interface IEventDispatcher {
-    void postTask(TaskDg);
+    void postTask(EventTaskDg);
 }
 
 interface ISyncEventDispatcher {
-	void register(ISelector,Event,ITaskResponder);
-	void unregister(ISelector);
+	void register(ISelectable,Event,EventResponder);
+	void unregister(ISelectable);
 }
 
-alias void delegate(ISyncEventDispatcher) TaskDg;
-
-interface ITaskResponder
+abstract class EventResponder
 {
 	char[] toString();
     void handleRead(ISyncEventDispatcher);

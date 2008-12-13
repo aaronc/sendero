@@ -28,6 +28,37 @@ char[] regularizeDirname(char[] dirname)
 	else return dirname;
 }
 
+interface IBuildService
+{
+	IBuildAgent getBuildAgent(char[] modname, char[] srcpath);
+}
+
+interface IBuildAgent
+{
+	bool compile(bool rebuildAll);
+	bool link(bool rebuildAll);
+}
+
+interface IFileModService
+{
+	IFileModAgent getFileModAgent(char[] modname, char[] srcpath);
+}
+
+interface IFileModAgent
+{
+	bool checkAndClearModFlag();
+	bool hasMods();
+}
+
+class SenderXCConfigProvider
+{
+	SenderoXCompiler[char[]] registeredModules;
+	void reset()
+	{
+		registeredModules = null;
+	}
+}
+
 class SenderoXCompiler
 {
 	this(char[] modname, DecoratedDCompiler compiler, char[] dirname = null)

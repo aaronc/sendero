@@ -11,7 +11,7 @@ static Logger log;
 
 static this()
 {
-	log = Log.lookup("sendero.server.SimpleTest");
+	log = Log.lookup("sendero.server.EventDispatcher");
 }
 
 class EventDispatcher : ISyncEventDispatcher
@@ -20,10 +20,10 @@ class EventDispatcher : ISyncEventDispatcher
 	{
 		if(selector !is null) this.selector = selector;
 		else this.selector = new Selector;
-		this.taskQueue = new ThreadSafeQueue2!(TaskDg);
+		this.taskQueue = new ThreadSafeQueue2!(EventTaskDg);
 		this.timeout = timeout;
 	}
-	private ThreadSafeQueue2!(TaskDg) taskQueue;
+	private ThreadSafeQueue2!(EventTaskDg) taskQueue;
 	private ISelector selector;
 	private double timeout_ = 0.1;
 	double timeout() { return timeout_; }
@@ -33,7 +33,7 @@ class EventDispatcher : ISyncEventDispatcher
 	debug private Thread loopThread_;
 	
 	
-	void postTask(TaskDg task)
+	void postTask(EventTaskDg task)
 	{
 		taskQueue.push(task);
 	}
@@ -43,10 +43,10 @@ class EventDispatcher : ISyncEventDispatcher
 	 * 
 	 * 
 	 */
-	void register(ISelector conduit,Event events,ITaskResponder attachment)
+	void register(ISelectable conduit,Event events, EventResponder attachment)
 	{
 		debug assert(Thread.getThis == loopThread_, "register should only be called from the event loop thread");
-		selector.register(conduit, events, attachment)
+		selector.register(conduit, events, attachment);
 	}
 	
 	/**
@@ -54,7 +54,7 @@ class EventDispatcher : ISyncEventDispatcher
 	 * 
 	 * 
 	 */
-	void unregister(ISelector conduit)
+	void unregister(ISelectable conduit)
 	{
 		debug assert(Thread.getThis == loopThread_, "unregister should only be called from the event loop thread");
 		selector.unregister(conduit);
@@ -84,16 +84,16 @@ class EventDispatcher : ISyncEventDispatcher
 					foreach(key; selector.selectedSet) {
 						if(!running_) break;
 						
-						auto responder = cast(ITaskResponder)key.attachment;
+						auto responder = cast(EventResponder)key.attachment;
 						debug assert(responder);
 						if(key.isReadable)
 						{
-							log.trace("Read event for responder {}", responder.toString);
+							debug log.trace("Read event for responder {}", responder.toString);
 							responder.handleRead(this);
 						}
 						else if(key.isWritable)
 						{
-							log.trace("Write event for responder {}", responder.toString);
+							debug log.trace("Write event for responder {}", responder.toString);
 							responder.handleWrite(this);
 						}
 						else if(key.isHangup)
