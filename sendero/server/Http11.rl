@@ -72,7 +72,7 @@ import tango.util.log.Log;
     fbreak;
   }
 
-  include http_parser_common "sendero/server/http11_parser_common._rl";
+  include http_parser_common "http11_parser_common._rl";
 
 }%%
 

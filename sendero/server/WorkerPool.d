@@ -15,20 +15,114 @@ static this()
 	log = Log.lookup("sendero.server.WorkerPool");
 }
 
-class WorkerPoolThread(JobType) : SafeWorkerThread
+abstract class WorkerPoolBase(JobType)
+{
+	this()
+	{
+		greenLight_ = new Semaphore;
+		jobQueue_ = new ThreadSafeQueue2!(JobType);
+		threads_ = new ThreadGroup;
+	}
+	
+	void pushJob(JobType job)
+	{
+		debug log.trace("Pushing job");
+		debug assert(jobQueue_ !is null);
+		jobQueue_.push(job);
+		greenLight_.notify;
+		debug log.trace("Done pushing job");
+	}
+	
+	protected abstract Thread createThread();
+	
+	void start(uint startThreads = 1)
+	{
+		running_ = true;
+		for(uint i = 0; i < startThreads; ++i) {
+			//auto t = new ThreadT!(DgT)(&proc);
+			auto t = createThread;
+			threads_.add(t);
+			t.start;
+			++runningThreads_;
+		}
+	}
+	
+	uint runningThreads()
+	{
+		return runningThreads_;
+	}
+	
+	void shutdown()
+	{
+		running_ = false;
+		threads_.joinAll;
+	}
+	
+protected:
+	uint runningThreads_;
+	ThreadSafeQueue2!(JobType) jobQueue_;
+	Semaphore greenLight_;
+	bool running_;
+	ThreadGroup threads_;
+}
+
+alias void delegate() WorkDg;
+
+class WorkerPoolThread  : SafeWorkerThread
+{
+	this(WorkerPool pool)
+	{
+		assert(pool);
+		this.pool_ = pool;
+	}
+	private WorkerPool pool_;
+	
+	override void doWork()
+	{
+		try
+		{
+			debug log.trace("Waiting for traffic");
+			pool_.greenLight_.wait;
+			debug log.trace("Got notified");
+			auto jobDg = pool_.jobQueue_.pop;
+			debug assert(jobDg !is null);
+			jobDg();
+		}
+		catch(Exception ex)
+		{
+			if(ex.info !is null) {
+				log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
+			}
+			else {
+				log.error("Exception caught:{}", ex.toString);
+			}
+		}
+	}
+}
+
+
+class WorkerPool : WorkerPoolBase!(WorkDg)
+{	
+	protected override Thread createThread()
+	{
+		return new WorkerPoolThread(this);
+	}
+}
+
+class JobWorkerPoolThread(JobType) : SafeWorkerThread
 {
 	alias void delegate(JobType) DgT;
 	
-	this(WorkerPool(!JobType) ooil, DgT workerProc)
+	this(JobWorkerPool!(JobType) pool)
 	{
-		assert(workerProc);
+		assert(pool.workerProc_);
 		assert(pool);
 		this.pool_ = pool;
-		this.workerProc_ = workerProc;
+		this.workerProc_ = pool.workerProc_;
 		
 	}
 	private DgT workerProc_;
-	private WorkerPool(!JobType) pool_;
+	private JobWorkerPool!(JobType) pool_;
 	
 	override void doWork()
 	{
@@ -53,48 +147,23 @@ class WorkerPoolThread(JobType) : SafeWorkerThread
 	}
 }
 
-class WorkerPool(JobType)
+class JobWorkerPool(JobType) : WorkerPoolBase!(JobType)
 {
 public:
 	alias void delegate(JobType) DgT;
 
-	this(DgT workerProc, uint startThreads = 4)
+	this(DgT workerProc)
 	{
 		assert(workerProc);
 		this.workerProc_ = workerProc;
-		this.running_ = true;
-		greenLight_ = new Semaphore;
-		jobQueue_ = new ThreadSafeQueue2!(JobType);
-		threads_ = new ThreadGroup;
-		for(uint i = 0; i < startThreads; ++i) {
-			auto t = new WorkerPoolThread!(DgT)(&proc);
-			threads_.add(t);
-			t.start;
-		}
+		super();
 	}
 	
-	void pushJob(JobType job)
+	protected override Thread createThread()
 	{
-		debug log.info("Pushing job");
-		assert(jobQueue_ !is null);
-		jobQueue_.push(job);
-		greenLight_.notify;
-		debug log.info("Done pushing job");
+		return new JobWorkerPoolThread!(JobType)(this);
 	}
 	
-	void shutdown()
-	{
-		running_ = false;
-		threads_.joinAll;
-	}
-	
-private:
-	ThreadSafeQueue2!(JobType) jobQueue_;
-	
-	//Atomic!(bool) pause_;
-	//Mutex trafficLight_;
-	Semaphore greenLight_;
-	bool running_;
+protected:
 	DgT workerProc_;
-	ThreadGroup threads_;
-}	
+}

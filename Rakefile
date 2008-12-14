@@ -7,6 +7,7 @@ import '../decorated_d/build/Parser.rake'
 SENDERO_SRC = "sendero/**/*.d"
 SENDERO_BASE_SRC = "base/sendero_base/**/*.d"
 TEST_SENDERO = "test_sendero.d"
+TEST_SERVER = "test_server.d"
 RAGEL_SRC = FileList["sendero/**/*.rl"];
 RAGEL_OUTPUT = RAGEL_SRC.ext(".d");
 APD_SRC = FileList['sendero/xml/xpath10/*.apd']
@@ -24,7 +25,7 @@ file 'sendero/xml/xpath10/Parser.d' => APD_SRC do
   }
 end
 
-SRC = FileList[SENDERO_SRC, SENDERO_BASE_SRC, 'sendero/xml/xpath10/Parser.d', TEST_SENDERO, RAGEL_OUTPUT]
+SRC = FileList[SENDERO_SRC, SENDERO_BASE_SRC, 'sendero/xml/xpath10/Parser.d', TEST_SENDERO, TEST_SERVER, RAGEL_OUTPUT]
 
 TEST_FILES = FileList["test/template/*.xml"]
 
@@ -32,12 +33,16 @@ file "test_sendero.exe" => SRC do
   sh "dsss build test_sendero.d"
 end
 
+file "test_server.exe" => SRC do
+  sh "dsss build test_server.d"
+end
+
 task :senderoxc => SENDEROXC_SRC do
   sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofbin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP -g"
 end
 
 task :senderoxc_posix => SENDEROXC_SRC do
-  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -ofbin/senderoxc -L-lsqlite3 -L-ldl -debug -debug=SenderoXCUnittest"
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofbin/senderoxc -L-lsqlite3 -L-lmysqlclient -L-ldl -debug -debug=SenderoXCUnittest -g"
 end
 
 task :senderoimp => SENDEROXC_SRC do
@@ -45,6 +50,8 @@ task :senderoimp => SENDEROXC_SRC do
 end
 
 task :build => ["test_sendero.exe"]
+
+task :build_server => ["test_server.exe" ]
 
 task :test_files => TEST_FILES
 

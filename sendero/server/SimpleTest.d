@@ -143,7 +143,7 @@ void run(void function(Request req) appMain)
 	
 	auto responseQueue = new ThreadSafeQueue2!(Packet);
 	auto service = new SimpleService(appMain, responseQueue);
-	auto workerPool = new WorkerPool!(Packet)(&service.run);
+	auto workerPool = new JobWorkerPool!(Packet)(&service.run);
 	
 	auto readBuffer = new char[8192];
 
@@ -161,7 +161,8 @@ void run(void function(Request req) appMain)
 						serverSock.socket.accept(newCond.socket);
 						selector.register(newCond, Event.Read, null);
 						log.info("Accepted new connection");
-						selector.reregister(serverSock, Event.Read, null);
+						//selector.reregister(serverSock, Event.Read, null);
+						selector.register(serverSock, Event.Read, null);
 					}
 					else {
 						if(key.isReadable)
@@ -190,7 +191,8 @@ void run(void function(Request req) appMain)
 							auto packet = cast(Packet)key.attachment;
 							assert(packet !is null);
 							packet.cond.write(packet.res);
-							selector.reregister(packet.cond, Event.Read, null);
+							//selector.reregister(packet.cond, Event.Read, null);
+							selector.register(serverSock, Event.Read, null);
 						}
 						
 						assert(!key.isError);
@@ -201,7 +203,8 @@ void run(void function(Request req) appMain)
 			auto response = responseQueue.pop;
 			while(response !is null) {
 				serverLog.info("Pushing response object");
-				selector.reregister(response.cond, Event.Write, response);
+				//selector.reregister(response.cond, Event.Write, response);
+				selector.register(response.cond, Event.Write, response);
 				response = responseQueue.pop;
 			}
 		}

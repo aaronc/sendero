@@ -9,7 +9,7 @@ public import sendero.validation.ValidationErrors;
 
 import tango.text.Regex;
 import tango.core.Traits;
-import tango.group.time;
+import tango.time.Time;
 
 debug import tango.util.Convert;
 

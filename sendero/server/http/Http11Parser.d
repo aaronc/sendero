@@ -1,17 +1,28 @@
-#line 1 "sendero/server/Http11.rl"
-module http11_parser;
+#line 1 "sendero/server/http/Http11Parser.rl"
+module sendero.server.http.Http11Parser;
 
-public import sendero.http.Request;
-public import tango.net.http.HttpConst;
-
-import tango.util.log.Config;
+//public import sendero.http.Request;
+//public import tango.net.http.HttpConst;
 import tango.util.log.Log;
+import tango.core.Thread;
+import Int = tango.text.convert.Integer;
 
-#line 77 "sendero/server/Http11.rl"
+version (Win32) extern (C) int memicmp (char *, char *, uint);
+version (Posix) extern (C) int strncasecmp (char *, char*, uint);
+
+import sendero.server.model.IHttpServiceProvider;
+import sendero.server.model.ITcpServiceProvider;
+
+void snake_upcase_char(char* c)
+{
+	if (*c >= 'a' && *c <= 'z') *c &= ~0x20;
+}
+
+#line 88 "sendero/server/http/Http11Parser.rl"
 
 
 
-#line 15 "sendero/server/Http11.d"
+#line 26 "sendero/server/http/Http11Parser.d"
 static const byte[] _http_parser_actions = [
 	0, 1, 0, 1, 2, 1, 3, 1, 
 	4, 1, 5, 1, 6, 1, 7, 1, 
@@ -186,34 +197,103 @@ static const int http_parser_error = 0;
 
 static const int http_parser_en_main = 1;
 
-#line 80 "sendero/server/Http11.rl"
+#line 91 "sendero/server/http/Http11Parser.rl"
 
-HttpStatus parse(char[] buffer, Request req)
+class Http11Parser : ITcpRequestHandler
 {
-	auto log = Log.lookup("http11_parser");
+	static this()
+	{
+		log = Log.lookup("sendero.server.http.Http11Parser");
+	}
+	static Logger log;
+	/+
+	final static bool isMatch (char[] testToken, char[] match)
+	{
+	        auto length = testToken.length;
+	        if (length > match.length)
+	            length = match.length;
+	
+	        if (length is 0)
+	            return false;
+	
+	        version (Win32)
+	                 return memicmp (testToken.ptr, match.ptr, length) is 0;
+	        version (Posix)
+	                 return strncasecmp (testToken.ptr, match.ptr, length) is 0;
+	}
+	
+	final static char[] caseNormalizeHeaderName(char[] headerName)
+	{
+		void upcaseChar(ref char c)
+		{
+			if(c >= 'a' && c <= 'z') c &= ~0x20;
+		}
+	
+		void lowercaseChar(ref char c)
+		{
+			if(c >= 'A' && c <= 'Z') c &= ~0x20;
+		}
+	
+		version(SenderoHttpNonDestructive)
+		{
+			auto res = headerName.dup;
+		}
+		else alias headerName res;
+		
+		auto len = headerName.length;
+		debug assert(len);
+		else if(!len) return;
+		
+		upcaseChar(headerName[0]);
+		
+		bool up = true;
+		for(size_t i = 0; i < len; ++i)
+		{
+			if(headerName[i] == '-') up = true;
+			else if(up) {
+				upcaseChar(headerName[i]);
+				up = false;
+			}
+			else lowercaseChar(headerName[i]);
+		}
+	}+/
 
-	char* mark;
-	char* field_start, query_start, body_start;
-	size_t field_len;
+	this(IHttpRequestHandler req)
+	{
+		this.req = req;
+		this.parseFiber_ = new Fiber(&parse);
+	}
 	
-	int cs = 0;
-	char* p = buffer.ptr;
-	char* pe = p + buffer.length + 1;
-	char* eof = pe;
+	protected IHttpRequestHandler req;
+	protected Fiber parseFiber_;
+	protected void[][] data;
 	
-	req.reset;
+	void parse()
+	{
+		char* mark;
+		char* field_start, query_start;
+		char* body_start = null;
+		size_t field_len;
+		
+		char[] buffer; //TODO
+		
+		int cs = 0;
+		char* p = buffer.ptr;
+		char* pe = p + buffer.length + 1;
+		char* eof = pe;
+		
+		uint expectedContentLength = 0;
 	
-	HttpMethod method;
-	char[] url, getStr, postStr;
-	
-	
-#line 211 "sendero/server/Http11.d"
+		HttpRequestLineData reqLine;
+		
+		
+#line 291 "sendero/server/http/Http11Parser.d"
 	{
 	cs = http_parser_start;
 	}
-#line 100 "sendero/server/Http11.rl"
-	
-#line 217 "sendero/server/Http11.d"
+#line 180 "sendero/server/http/Http11Parser.rl"
+		
+#line 297 "sendero/server/http/Http11Parser.d"
 	{
 	int _klen;
 	uint _trans;
@@ -288,102 +368,100 @@ _match:
 		switch ( *_acts++ )
 		{
 	case 0:
-#line 13 "sendero/server/Http11.rl"
+#line 24 "sendero/server/http/Http11Parser.rl"
 	{mark = p; }
 	break;
 	case 1:
-#line 15 "sendero/server/Http11.rl"
+#line 26 "sendero/server/http/Http11Parser.rl"
 	{ field_start = p; }
 	break;
 	case 2:
-#line 16 "sendero/server/Http11.rl"
-	{ /* FIXME stub */ }
+#line 27 "sendero/server/http/Http11Parser.rl"
+	{ snake_upcase_char(p);}
 	break;
 	case 3:
-#line 17 "sendero/server/Http11.rl"
+#line 28 "sendero/server/http/Http11Parser.rl"
 	{ 
     field_len = p-field_start;
   }
 	break;
 	case 4:
-#line 21 "sendero/server/Http11.rl"
+#line 32 "sendero/server/http/Http11Parser.rl"
 	{ mark = p; }
 	break;
 	case 5:
-#line 22 "sendero/server/Http11.rl"
-	{ 
-    req.headers[field_start[0..field_len]] = mark[0.. p - mark];
-    switch(field_start[0..field_len])
-    {
-    case "Cookie":
-		req.cookies = parseCookies(mark[0.. p - mark]);
+#line 33 "sendero/server/http/Http11Parser.rl"
+	{
+  	auto fieldName = field_start[0..field_len];
+  	auto fieldVal = mark[0.. p - mark];
+  	debug log.trace("Parsed Http Header:{}:{}", fieldName, fieldVal); 
+    req.handleHeader(fieldName, fieldVal); 
+   	switch(fieldName)
+   	{
+   	case "CONTENT-LENGTH":
+   		expectedContentLength = Int.parse(fieldVal);
+    	debug log.trace("Parsed Content-Length:{}:{}", fieldName, expectedContentLength);
     	break;
-	default: 
-		break;
-    }
-    debug log.trace("write_value:{}:{}", field_start[0..field_len], mark[0.. p - mark]);
+    default:
+    	break;
+    }    
   }
 	break;
 	case 6:
-#line 34 "sendero/server/Http11.rl"
+#line 49 "sendero/server/http/Http11Parser.rl"
 	{ 
-      debug log.trace("request_method:{}", mark[0.. p - mark]);
-      switch(mark[0.. p - mark])
-      {
-      case "GET": method = HttpMethod.Get; break;
-      case "POST": method = HttpMethod.Post; break;
-      case "PUT": method = HttpMethod.Put; break;
-      case "DELETE": method = HttpMethod.Delete; break;
-      default: return HttpResponses.MethodNotAllowed;
-      }
+      debug log.trace("Parsed Http Request Method:{}", mark[0.. p - mark]);
+      reqLine.method = mark[0.. p - mark];
   }
 	break;
 	case 7:
-#line 45 "sendero/server/Http11.rl"
+#line 54 "sendero/server/http/Http11Parser.rl"
 	{ 
-      debug log.trace("request_uri:{}", mark[0.. p - mark]);
+      debug log.trace("Parsed Http RequestURI:{}", mark[0.. p - mark]);
+      reqLine.uri = mark[0.. p - mark];
   }
 	break;
 	case 8:
-#line 49 "sendero/server/Http11.rl"
+#line 59 "sendero/server/http/Http11Parser.rl"
 	{ 
-     debug log.trace("fragment:{}", mark[0.. p - mark]);
-     //postStr = mark[0.. fpc - mark];
+     debug log.trace("Parsed Http Request Fragment:{}", mark[0.. p - mark]);
+     reqLine.fragment = mark[0.. p - mark];
   }
 	break;
 	case 9:
-#line 54 "sendero/server/Http11.rl"
+#line 64 "sendero/server/http/Http11Parser.rl"
 	{query_start = p; }
 	break;
 	case 10:
-#line 55 "sendero/server/Http11.rl"
+#line 65 "sendero/server/http/Http11Parser.rl"
 	{ 
-      debug log.trace("query_string:{}", query_start[0.. p - query_start]);
-      getStr = query_start[0.. p - query_start];
+      debug log.trace("Parsed Http Query String:{}", query_start[0.. p - query_start]);
+      reqLine.queryString = query_start[0.. p - query_start];
   }
 	break;
 	case 11:
-#line 60 "sendero/server/Http11.rl"
+#line 70 "sendero/server/http/Http11Parser.rl"
 	{	
-      debug log.trace("http_version:{}", mark[0.. p - mark]);
+      debug log.trace("Parsed Http Version:{}", mark[0.. p - mark]);
+      reqLine.httpVersion = mark[0.. p - mark];
   }
 	break;
 	case 12:
-#line 64 "sendero/server/Http11.rl"
+#line 75 "sendero/server/http/Http11Parser.rl"
 	{
-      debug log.trace("request_path:{}", mark[0.. p - mark]);
-      url = mark[0.. p - mark];
+      debug log.trace("Parsed Http Request Path:{}", mark[0.. p - mark]);
+      reqLine.path = mark[0.. p - mark];
   }
 	break;
 	case 13:
-#line 69 "sendero/server/Http11.rl"
+#line 80 "sendero/server/http/Http11Parser.rl"
 	{ 
     body_start = p + 1; 
-      debug log.trace("done:{}", (p + 1)[0 .. pe - p - 1]);
+      debug log.trace("Finished Parsing Http Request:{}", (p + 1)[0 .. pe - p - 1]);
     {p++; if (true) goto _out; }
   }
 	break;
-#line 387 "sendero/server/Http11.d"
+#line 465 "sendero/server/http/Http11Parser.d"
 		default: break;
 		}
 	}
@@ -396,10 +474,16 @@ _again:
 	_test_eof: {}
 	_out: {}
 	}
-#line 101 "sendero/server/Http11.rl"
+#line 181 "sendero/server/http/Http11Parser.rl"
+		
+		req.handleRequestLine(reqLine);
+		
+		/+if(cs == http_parser_error) return false;
+		else return true;+/
+	}	
 	
-	req.parse(method, url, getStr, postStr);
-	
-	if(cs == http_parser_error) return HttpResponses.BadRequest;
-	else return HttpResponses.Accepted;
+	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	{
+		return null;
+	}
 }

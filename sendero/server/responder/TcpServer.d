@@ -50,43 +50,46 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		return "TcpConnection";
 	}
 	
-	void handleRead(ISyncEventDispatcher dispatcher)
+	private void doHandleRead(ISyncEventDispatcher dispatcher, void[][] existingData = null)
 	{
 		if(curReqHandler_ is null)
 			curReqHandler_ = serviceProvider_.getRequestHandler;
 		
 		auto buf = server_.bufferProvider.get;
-		readBuffers_ ~= buf;
 		
     	uint readLen = socket_.socket.receive(buf);
     	if(readLen > 0) {
     		//Data Read
-    		curReqHandler_.handleData([buf[0..readLen]]);
+    		readBuffers_ ~= buf;
+    		existingData ~= buf[0..readLen];
+    		//curReqHandler_.handleData([buf[0..readLen]]);
     		if(readLen == buf.length) {
     			//Probably have more data
     			//TODO use readv
-    			handleRead(dispatcher);
+    			doHandleRead(dispatcher, existingData);
     		}
     		else {
-    			checkForSyncResponse(curReqHandler_.processRequest(this));
+    			checkForSyncResponse(curReqHandler_.handleRequest(existingData, this));
     		}
     	}
     	else if(readLen == 0) {
+    		server_.bufferProvider.release(buf);
     		//Socket Disconnected
     		log.info("Socket {} disconnected on read", toString);
     		dispatcher.unregister(socket_);
     	}
     	else /* readLen < 0 */ {
+    		server_.bufferProvider.release(buf);
     		//Socket Error
     		auto err = lastError;
     		switch(err)
     		{
     		case EAGAIN:
     		//case EWOULDBLOCK:
-    			checkForSyncResponse(curReqHandler_.processRequest(this));
+    			checkForSyncResponse(curReqHandler_.handleRequest(existingData, this));
     			return;
     		case EINTR:
-    			handleRead(dispatcher);
+    			doHandleRead(dispatcher);
     			return;
     		default:
     			log.error("Socket error {} on read for socket {}", err, toString);
@@ -94,6 +97,11 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     			return;
     		}
     	}
+	}
+	
+	void handleRead(ISyncEventDispatcher dispatcher)
+	{
+		doHandleRead(dispatcher);
 	}
 	
 	private void checkForSyncResponse(SyncTcpResponse res)
@@ -162,7 +170,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	debug assert(!curResData_.pop.length && !unsentBuffer_.length,
     	             "Response being finished before all data is sent");
     	
-    	curReqHandler_.cleanup;
+    	serviceProvider_.cleanup(curReqHandler_);
     	curReqHandler_ = null;
     	
     	foreach(buf; readBuffers_)

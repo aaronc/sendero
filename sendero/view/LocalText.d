@@ -34,7 +34,8 @@ else {
 import sendero.time.Format;
 
 import tango.math.Math, tango.math.IEEE;
-import tango.group.time;
+import tango.time.Time;
+import tango.time.Clock;
 import Integer = tango.text.convert.Integer;
 import Utf = tango.text.convert.Utf;
 import Text = tango.text.Util;

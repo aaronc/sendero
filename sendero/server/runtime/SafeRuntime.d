@@ -6,7 +6,7 @@ import tango.stdc.posix.pthread;
 import tango.stdc.posix.ucontext;
 import tango.stdc.stdlib;
 
-import sendero.server.runtime.SafeThread;
+import sendero.server.runtime.SafeThreadManager;
 
 import sendero.server.model.IEventLoop;
 

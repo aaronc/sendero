@@ -53,7 +53,7 @@ class SenderoServer
 		
 		//auto service = new SimpleService(selector);
 		auto service = new SenderoService(selector, "../../practivist/practivist_main.lib");
-		auto workerPool = new WorkerPool!(Packet_)(&service.run);
+		auto workerPool = new JobWorkerPool!(Packet_)(&service.run);
 		
 		auto readBuffer = new char[8192];
 

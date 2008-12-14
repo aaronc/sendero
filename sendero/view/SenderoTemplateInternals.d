@@ -17,7 +17,8 @@ import sendero_base.util.ArrayWriter;
 import sendero.util.collection.NestedMap;
 import sendero.Exception;
 
-import tango.group.file;
+import tango.io.File;
+import tango.io.FilePath;
 import tango.text.Util;
 import Integer = tango.text.convert.Integer;
 debug import tango.io.Stdout;

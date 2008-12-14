@@ -136,6 +136,11 @@ class SenderoXCompiler
 			return false;
 		}
 
+		void onFindImportCallback(char[] modname)
+		{
+			imports ~= modname;
+		}
+		
 		DecoratedDCompiler createDDCompiler(char[] fname)
 		{
 			//Read File
@@ -147,7 +152,8 @@ class SenderoXCompiler
 			// Create Compiler
 			auto compiler = new DecoratedDCompiler(src, fname);
 			assert(compiler);
-			compiler.onImportStatement.attach((char[] modname){ imports ~= modname; });
+			//compiler.onImportStatement.attach((char[] modname){ imports ~= modname; });
+			compiler.onImportStatement.attach(&onFindImportCallback);
 			assert(compiler.parse);
 			compiler.build;
 			

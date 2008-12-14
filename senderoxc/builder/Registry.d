@@ -1,6 +1,7 @@
 module senderoxc.builder.Registry;
 
 import sendero.util.Serialization;
+import tango.io.Path;
 import tango.time.Time;
 
 import tango.util.log.Log;
@@ -16,7 +17,8 @@ class SenderoXCRegistry
 	{
 		try
 		{
-			if(!loadFromFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data"))
+			if(!exists("senderoxc_objs/senderoxc.data") ||
+			   !loadFromFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data"))
 				inst_ = new SenderoXCRegistry;
 			assert(inst_ !is null);
 			log.trace("Loaded senderoxc registry");
@@ -31,6 +33,8 @@ class SenderoXCRegistry
 	{
 		try
 		{
+			if(!exists("senderoxc_objs"))
+				createFolder("senderoxc_objs");
 			assert(inst_ !is null);
 			saveToFile!(SenderoXCRegistry)(inst_, "senderoxc_objs/senderoxc.data");
 		}

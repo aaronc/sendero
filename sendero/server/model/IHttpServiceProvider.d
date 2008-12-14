@@ -1,5 +1,7 @@
 module sendero.server.model.IHttpServiceProvider;
 
+import sendero.server.model.ITcpServiceProvider;
+
 interface IHttpServiceProvider
 {
 	IHttpRequestHandler handleHttpRequest(void[][] data);
