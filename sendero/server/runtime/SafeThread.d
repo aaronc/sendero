@@ -19,16 +19,14 @@ import sendero.server.model.IEventLoop;
 
 debug import tango.io.Stdout;
 
-class SafeWorkerThread : Thread, IEventLoop
+abstract class SafeWorkerThread : Thread, IEventLoop
 {
-	this(void delegate() work)
+	this()
 	{
-		work_ = work;
 		super(&this.run);
 	}
 	
 	private bool running_ = false;
-	private void delegate() work_;
 	
 	private ucontext_t restart_ctxt_;
 	void handleSyncSignal(SignalInfo sig)
@@ -36,13 +34,15 @@ class SafeWorkerThread : Thread, IEventLoop
 		setcontext(&restart_ctxt_);
 	}
 	
+	abstract protected void doWork();
+	
 	void run() {
 		assert(getcontext(&restart_ctxt_) == 0);
 		auto threadManager = new SafeThreadManager(this);
 		assert(work_ !is null);
 		running_ = true;
 		while(running_) {
-			work_();
+			doWork;
 		}
 	}
 	

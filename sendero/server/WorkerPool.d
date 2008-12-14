@@ -2,6 +2,7 @@ module sendero.server.WorkerPool;
 
 import tango.core.Thread;
 import tango.core.sync.Semaphore, tango.core.sync.Mutex;
+import sendero.server.runtime.SafeThread;
 
 import sendero.util.collection.ThreadSafeQueue;
 
@@ -14,7 +15,45 @@ static this()
 	log = Log.lookup("sendero.server.WorkerPool");
 }
 
-class WorkerPool(JobType,ThreadType = Thread)
+class WorkerPoolThread(JobType) : SafeWorkerThread
+{
+	alias void delegate(JobType) DgT;
+	
+	this(WorkerPool(!JobType) ooil, DgT workerProc)
+	{
+		assert(workerProc);
+		assert(pool);
+		this.pool_ = pool;
+		this.workerProc_ = workerProc;
+		
+	}
+	private DgT workerProc_;
+	private WorkerPool(!JobType) pool_;
+	
+	override void doWork()
+	{
+		try
+		{
+			debug log.trace("Waiting for traffic");
+			pool_.greenLight_.wait;
+			debug log.info("Got notified");
+			auto job = pool_.jobQueue_.pop;
+			if(job !is null)
+				workerProc_(job);
+		}
+		catch(Exception ex)
+		{
+			if(ex.info !is null) {
+				log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
+			}
+			else {
+				log.error("Exception caught:{}", ex.toString);
+			}
+		}
+	}
+}
+
+class WorkerPool(JobType)
 {
 public:
 	alias void delegate(JobType) DgT;
@@ -28,7 +67,7 @@ public:
 		jobQueue_ = new ThreadSafeQueue2!(JobType);
 		threads_ = new ThreadGroup;
 		for(uint i = 0; i < startThreads; ++i) {
-			auto t = new ThreadType(&proc);
+			auto t = new WorkerPoolThread!(DgT)(&proc);
 			threads_.add(t);
 			t.start;
 		}
@@ -50,32 +89,7 @@ public:
 	}
 	
 private:
-	ThreadSafeQueue2!(JobType) jobQueue_;	
-	
-	void proc()
-	{
-		debug log.trace("Starting thread");
-		while(running_) {
-			try
-			{
-				debug log.trace("Waiting for traffic");
-				greenLight_.wait;
-				debug log.info("Got notified");
-				auto job = jobQueue_.pop;
-				if(job !is null)
-					workerProc_(job);
-			}
-			catch(Exception ex)
-			{
-				if(ex.info !is null) {
-					log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
-				}
-				else {
-					log.error("Exception caught:{}", ex.toString);
-				}
-			}
-		}
-	}
+	ThreadSafeQueue2!(JobType) jobQueue_;
 	
 	//Atomic!(bool) pause_;
 	//Mutex trafficLight_;
