@@ -19,6 +19,39 @@ import sendero.server.model.IEventLoop;
 
 debug import tango.io.Stdout;
 
+class SafeWorkerThread : Thread, IEventLoop
+{
+	this(void delegate() work)
+	{
+		work_ = work;
+		super(&this.run);
+	}
+	
+	private bool running_ = false;
+	private void delegate() work_;
+	
+	private ucontext_t restart_ctxt_;
+	void restart()
+	{
+		return setcontext(&restart_ctxt_);
+	}
+	
+	void run() {
+		assert(getcontext(&restart_ctxt_) == 0);
+		auto threadManager = new SafeThreadManager(this);
+		assert(work_ !is null);
+		running_ = true;
+		while(running_) {
+			work_();
+		}
+	}
+	
+	void shutdown()
+	{
+		running_ = false;
+	}
+}
+
 class SafeThreadManager
 {
 	this(IEventLoop eventLoop)
@@ -32,7 +65,7 @@ class SafeThreadManager
 	
 	extern(C) static protected void syncSigHandler(int sig, siginfo_t* info, void* context)
 	{
-		Stdout.formatln("Caught signal {} on {}, {}", sig, context, pthread_self());
+		Stdout.formatln("Caught signal {} on thread {}", sig, context, pthread_self());
 		auto pRuntime = pthread_self in runtimeByThread_;
 		if(pRuntime) {
 			pRuntime.eventLoop_.restart;

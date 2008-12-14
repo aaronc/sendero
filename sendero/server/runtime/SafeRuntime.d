@@ -14,11 +14,13 @@ debug import tango.io.Stdout;
 
 class SafeRuntime : SafeThreadManager
 {		
-	this(IEventLoop eventLoop)
+	this(IMainEventLoop mainEventLoop)
 	{
-		super(eventLoop);
+		mainEventLoop_ = mainEventLoop;
+		super(mainEventLoop);
 	}
 	
+	protected IMainEventLoop mainEventLoop_;
 	protected sigset_t async_signals;
 	
 	protected void default_SIGINT_handler(SignalInfo sig)
@@ -30,7 +32,7 @@ class SafeRuntime : SafeThreadManager
 	
 	protected void initSignalHandling()
 	{
-		eventLoop_.setSignalHandler(SIGINT, &default_SIGINT_handler);
+		mainEventLoop_.setSignalHandler(SIGINT, &default_SIGINT_handler);
 		
         /* block all signals */
         sigfillset( &async_signals );
@@ -64,7 +66,7 @@ class SafeRuntime : SafeThreadManager
 		    /* whatever you need to do for
 		     * other signals */
 	        default:
-	        	eventLoop_.sendSignal(new SignalInfo(sig));
+	        	mainEventLoop_.sendSignal(new SignalInfo(sig));
 	        }
 		}
 	}

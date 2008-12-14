@@ -19,7 +19,7 @@ static this()
 	log = Log.lookup("sendero.server.EventDispatcher");
 }
 
-class EventDispatcher : IEventLoop, ISyncEventDispatcher
+class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 {
 	this(ISelector selector = null)
 	{
