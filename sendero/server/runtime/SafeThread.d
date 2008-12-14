@@ -39,7 +39,6 @@ abstract class SafeWorkerThread : Thread, IEventLoop
 	void run() {
 		assert(getcontext(&restart_ctxt_) == 0);
 		auto threadManager = new SafeThreadManager(this);
-		assert(work_ !is null);
 		running_ = true;
 		while(running_) {
 			doWork;

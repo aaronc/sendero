@@ -99,6 +99,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	private void checkForSyncResponse(SyncTcpResponse res)
 	{
 		if(res !is null) {
+			debug log.trace("Received sync response");
 			sendResponseData(res.data);
 			endResponse(res.keepAlive);
 		}
@@ -201,14 +202,16 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	});
     }
     
+    private void registerWriteEventTask(ISyncEventDispatcher d){
+		d.register(socket_,Event.Write,this);
+	}
+    
 	void sendResponseData(void[][] data)
 	{
 		foreach(buf;data)
 			curResData_.push(buf);
 		if(!awatingWrite_) {
-			dispatcher_.postTask((ISyncEventDispatcher d){
-	    		d.register(socket_,Event.Write,this);
-	    	});
+			dispatcher_.postTask(&registerWriteEventTask);
 			awatingWrite_ = true;
 		}
 	}
