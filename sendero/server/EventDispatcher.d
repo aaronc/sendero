@@ -117,9 +117,9 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	
 	private ucontext_t restart_ctxt_;
 	
-	void restart()
+	void handleSyncSignal(SignalInfo sig)
 	{
-		return setcontext(&restart_ctxt_);
+		setcontext(&restart_ctxt_);
 	}
 	
 	void run()

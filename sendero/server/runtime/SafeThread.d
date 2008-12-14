@@ -31,9 +31,9 @@ class SafeWorkerThread : Thread, IEventLoop
 	private void delegate() work_;
 	
 	private ucontext_t restart_ctxt_;
-	void restart()
+	void handleSyncSignal(SignalInfo sig)
 	{
-		return setcontext(&restart_ctxt_);
+		setcontext(&restart_ctxt_);
 	}
 	
 	void run() {
@@ -68,7 +68,7 @@ class SafeThreadManager
 		Stdout.formatln("Caught signal {} on thread {}", sig, context, pthread_self());
 		auto pRuntime = pthread_self in runtimeByThread_;
 		if(pRuntime) {
-			pRuntime.eventLoop_.restart;
+			pRuntime.eventLoop_.handleSyncSignal(new SignalInfo(sig));
 		}
 	}
 	
