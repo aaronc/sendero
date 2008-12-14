@@ -66,6 +66,7 @@ class SafeThreadManager
 	
 	protected void registerSyncSignalHandler()
 	{
+		debug log.trace("Registering sync signal handlers on thread {}", pthread_self);
 		runtimeByThread_[pthread_self] = this;
 		
 		sigset_t sync_signals;

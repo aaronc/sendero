@@ -51,7 +51,7 @@ private:
 
 class SimpleService
 {
-	this(void function(Request req) appMain, ThreadSafeQueue2!(Packet) responseQueue)
+	this(void function(Request req) appMain, ThreadSafeQueue!(Packet) responseQueue)
 	{
 		this.appMain = appMain;
 		this.responseQueue = responseQueue;
@@ -122,7 +122,7 @@ class SimpleService
 	
 private:
 	void function(Request req) appMain;
-	ThreadSafeQueue2!(Packet) responseQueue;
+	ThreadSafeQueue!(Packet) responseQueue;
 }
 
 void run(void function(Request req) appMain)
@@ -141,7 +141,7 @@ void run(void function(Request req) appMain)
 	selector.open(100, 10);
 	selector.register(serverSock, Event.Read);
 	
-	auto responseQueue = new ThreadSafeQueue2!(Packet);
+	auto responseQueue = new ThreadSafeQueue!(Packet);
 	auto service = new SimpleService(appMain, responseQueue);
 	auto workerPool = new JobWorkerPool!(Packet)(&service.run);
 	

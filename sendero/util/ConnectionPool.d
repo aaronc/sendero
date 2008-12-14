@@ -8,7 +8,7 @@ module sendero.util.ConnectionPool;
 import sendero.util.collection.ThreadSafeQueue;
 
 import tango.core.Atomic;
-
+/+
 interface IConnectionPool(ConnectionT)
 {
 	ConnectionT getConnection();
@@ -77,6 +77,52 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 	{
 		return queue.length;
 	}
+}+/
+
+abstract class ConnectionPool2(ConnT)
+{
+	final uint maxCacheSize() { return maxCacheSize_; }
+	final void maxCacheSize(uint sz) { maxCacheSize_ = sz; }	
+	
+	abstract ConnT createNewConnection();
+	
+	final ConnT get()
+	{
+		auto conn = queue_.pop;
+		if(conn !is null) {
+			atomicDecrement(cacheSize_);
+			connMap_.remove(conn);
+			return conn;
+		}
+		else return createNewConnection;
+	}
+	
+	final void release(ConnT conn)
+	{
+		if(atomicLoad(cacheSize_) < maxCacheSize_) {
+			auto pConn = conn in connMap_;
+			if(pConn) {
+				throw new Exception("Trying to place connection "
+					" in the pool a second time in class "
+					~ typeof(this).stringof);
+			}
+			queue_.push(conn);
+			connMap_[conn] = conn;
+			atomicIncrement(cacheSize_);
+		}
+		else delete conn;
+	}
+	
+	final uint cacheSize()
+	{
+		return cacheSize_;
+	}
+	
+private:
+	ConnT[ConnT] connMap_;
+	ThreadSafeQueue!(ConnT) queue_;
+	uint maxCacheSize_ = 100;
+	uint cacheSize_;
 }
 
 /+version(Unittest)

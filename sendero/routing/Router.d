@@ -9,7 +9,7 @@ public import sendero.routing.Common;
 import sendero.routing.FunctionWrapper;
 import sendero.routing.IRoute;
 
-debug(SenderoRuntime) {
+debug {
 	import sendero.Debug;
 	static this() { log = Log.lookup("debug.SenderoRuntime"); }
 	Logger log;
@@ -78,7 +78,7 @@ template Route(ReqT, bool UseDelegates = false)
 				}
 				
 				req.lastToken = token;
-				req.params.addParam(["__wildcard__"], token);
+				addParam(req.params, ["__wildcard__"], token);
 				
 				return pRoutes.starRoute.exec(req, ptr);
 			}

@@ -23,13 +23,13 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 {
 	this(ISelector selector = null)
 	{
-		this.signalQueue = new ThreadSafeQueue2!(SignalInfo);
+		this.signalQueue = new ThreadSafeQueue!(SignalInfo);
 		if(selector !is null) this.selector = selector;
 		else this.selector = new Selector;
-		this.taskQueue = new ThreadSafeQueue2!(EventTaskDg);
+		this.taskQueue = new ThreadSafeQueue!(EventTaskDg);
 	}
-	private ThreadSafeQueue2!(EventTaskDg) taskQueue;
-	private ThreadSafeQueue2!(SignalInfo) signalQueue;
+	private ThreadSafeQueue!(EventTaskDg) taskQueue;
+	private ThreadSafeQueue!(SignalInfo) signalQueue;
 	private ISelector selector;
 	private double timeout_ = 0.1;
 	double timeout() { return timeout_; }

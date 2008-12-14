@@ -20,7 +20,7 @@ abstract class WorkerPoolBase(JobType)
 	this()
 	{
 		greenLight_ = new Semaphore;
-		jobQueue_ = new ThreadSafeQueue2!(JobType);
+		jobQueue_ = new ThreadSafeQueue!(JobType);
 		threads_ = new ThreadGroup;
 	}
 	
@@ -60,7 +60,7 @@ abstract class WorkerPoolBase(JobType)
 	
 protected:
 	uint runningThreads_;
-	ThreadSafeQueue2!(JobType) jobQueue_;
+	ThreadSafeQueue!(JobType) jobQueue_;
 	Semaphore greenLight_;
 	bool running_;
 	ThreadGroup threads_;

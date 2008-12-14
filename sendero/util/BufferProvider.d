@@ -8,7 +8,7 @@ class BufferProvider
 {
 	this(uint defaultBufferSize = 16384)
 	{
-		this.bufferPool_ = new ThreadSafeQueue2!(void[]);
+		this.bufferPool_ = new ThreadSafeQueue!(void[]);
 		this.defaultBufferSize_ = defaultBufferSize;
 	}
 	
@@ -50,7 +50,7 @@ class BufferProvider
 	
 private:
 	void*[void*] bufferPtrMap_;
-	ThreadSafeQueue2!(void[]) bufferPool_;
+	ThreadSafeQueue!(void[]) bufferPool_;
 	uint defaultBufferSize_;
 	uint maxCacheSize_ = 100;
 	uint cacheSize_;

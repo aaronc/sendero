@@ -31,7 +31,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		this.server_ = server;
 		this.dispatcher_ = dispatcher;
 		this.serviceProvider_ = serviceProvider;
-		this.curResData_ = new ThreadSafeQueue2!(void[]);
+		this.curResData_ = new ThreadSafeQueue!(void[]);
 	}
 	private SocketConduit socket_;
 	private TcpServer server_;
@@ -39,7 +39,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	private ITcpServiceProvider serviceProvider_;
 	private ITcpRequestHandler curReqHandler_ = null;
 	private bool awatingWrite_ = false;
-	private ThreadSafeQueue2!(void[]) curResData_;
+	private ThreadSafeQueue!(void[]) curResData_;
 	private void[] unsentBuffer_ = null;
 	private void[][] readBuffers_ = null;
 	private bool endOfResponse_ = false;

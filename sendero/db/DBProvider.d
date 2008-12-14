@@ -14,18 +14,41 @@ import sendero.util.ConnectionPool;
 import sendero.core.Config;
 
 public import sendero.db.Statement;
-
+/+
 class DBConnectionProvider(char[] dbUrl, DatabaseT = Database)
 {
 	static Database createNewConnection()
 	{
 		return getDatabaseForURL(dbUrl);
 	}
-}
-
+}+/
+/+
 class DefaultConnectionProvider
 {
 	static Database createNewConnection()
+	{
+		return getDatabaseForURL(SenderoConfig().dbUrl);
+	}
+}+/
+
+class DBConnectionProvider(DatabaseT = Database) : ConnectionPool2!(ConnectionPool2!(Database))
+{
+	this(char[] dbUrl)
+	{
+		this.dbUrl = dbUrl;
+	}
+	
+	char[] dbUrl;
+	
+	DatabaseT createNewConnection()
+	{
+		return getDatabaseForURL(dbUrl);
+	}
+}
+
+class DefaultDatabasePool : ConnectionPool2!(Database)
+{
+	Database createNewConnection()
 	{
 		return getDatabaseForURL(SenderoConfig().dbUrl);
 	}
@@ -34,9 +57,9 @@ class DefaultConnectionProvider
 version(dbi_mysql) {
 	import dbi.mysql.MysqlDatabase;
 	
-	class DefaultMysqlConnectionProvider
+	class DefaultMysqlPool : ConnectionPool2!(MysqlDatabase)
 	{
-		static MysqlDatabase createNewConnection()
+		MysqlDatabase createNewConnection()
 		{
 			debug assert(SenderoConfig() !is null);
 			auto url = SenderoConfig().dbUrl;
@@ -51,9 +74,9 @@ version(dbi_mysql) {
 version(dbi_sqlite) {
 	import dbi.sqlite.SqliteDatabase;
 	
-	class DefaultSqliteConnectionProvider
+	class DefaultSqlitePool : ConnectionPool2!(SqliteDatabase)
 	{
-		static SqliteDatabase createNewConnection()
+		SqliteDatabase createNewConnection()
 		{
 			assert(SenderoConfig() !is null);
 			auto url = SenderoConfig().dbUrl;
@@ -181,13 +204,17 @@ class ProviderContainer(ConnectionT, ProviderT, StatementT) : IProvider!(Stateme
 
 
 
-class DBProvider(DBConnectionProvider, DatabaseT = Database)
+class DBProvider(DBPool, DatabaseT = Database)
 {
+	alias DBProvider!(DBPool, DatabaseT) TypeOfThis;
+	alias ProviderContainer!(DatabaseT, TypeOfThis, StatementContainer) ProviderContainerT;
+	alias IProvider!(StatementContainer, DatabaseT) IProviderContainerT;
+	
 	static this()
 	{
-		debug Log.lookup("DBProvider." ~ DBConnectionProvider.stringof ~ "." ~ DatabaseT.stringof ~ "").info("entering static this");
-		pool = new ConnectionPool!(DatabaseT, DBConnectionProvider);
-		providers_ = new ThreadLocal!(ProviderContainer!(DatabaseT, DBProvider!(DBConnectionProvider, DatabaseT), StatementContainer))(null);
+		debug Log.lookup(TypeOfThis.stringof ~ "").info("entering static this");
+		pool = new DBPool;
+		providers_ = new ThreadLocal!(ProviderContainerT)(null);
 	}
 	
 	/+static ~this()
@@ -199,27 +226,27 @@ class DBProvider(DBConnectionProvider, DatabaseT = Database)
 		}
 	}+/
 	
-	private static ConnectionPool!(Database, DBConnectionProvider) pool;
-	private static ThreadLocal!(ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)) providers_;
+	private static DBPool pool;
+	private static ThreadLocal!(ProviderContainerT) providers_;
 	
-	private static IProvider!(StatementContainer, DatabaseT) getProvider()
+	private static IProviderContainerT getProvider()
 	{
 		debug assert(providers_);
 		auto provider = providers_.val;
 		if(!provider) {
-			auto conn = pool.getConnection;
+			auto conn = pool.get;
 			debug assert(conn);
 			if(!conn) return null;
-			provider = new ProviderContainer!(Database, DBProvider!(DBConnectionProvider), StatementContainer)(conn);
+			provider = new ProviderContainerT(conn);
 			debug assert(provider);
 			providers_.val = provider;
 		}
 		return provider;
 	}
 	
-	static void releaseConnection(Database conn)
+	static void releaseConnection(DatabaseT conn)
 	{
-		pool.releaseConnection(conn);
+		pool.release(conn);
 	}
 		
 	static Statement prepare(char[] sql, char[] key = null)
@@ -301,11 +328,11 @@ class DBProvider(DBConnectionProvider, DatabaseT = Database)
 	}
 }
 
-alias DBProvider!(DefaultConnectionProvider) DefaultDatabaseProvider;
+alias DBProvider!(DefaultDatabasePool) DefaultDatabaseProvider;
 version(dbi_mysql) {
-	alias DBProvider!(DefaultMysqlConnectionProvider) DefaultMysqlProvider;	
+	alias DBProvider!(DefaultMysqlPool) DefaultMysqlProvider;	
 }
 
 version(dbi_mysql) {
-	alias DBProvider!(DefaultSqliteConnectionProvider) DefaultSqliteProvider;	
+	alias DBProvider!(DefaultSqlitePool) DefaultSqliteProvider;	
 }

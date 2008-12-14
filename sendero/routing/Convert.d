@@ -10,8 +10,6 @@ import tango.time.Clock;
 import tango.time.ISO8601;
 
 import sendero.routing.Common;
-import sendero.conversion.Convert;
-import sendero.msg.Msg;
 
 import tango.core.Traits;
 import Integer = tango.text.convert.Integer;
@@ -194,7 +192,7 @@ void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 	
 	debug log.trace("Start conversion:{} {}",paramNames,ParamT.stringof);
 	
-	auto params = req.params2;
+	auto params = req.params;
 	
 	foreach(Index, Type; ParamT)
 	{
