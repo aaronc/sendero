@@ -135,23 +135,23 @@ class ThreadSafeQueue2(T)
 private:
 	synchronized T doPushPop(T t = null)
 	{
-		debug log.trace("Doing push pop");
+		//debug log.trace("Doing push pop");
 		if(t !is null) {
-			debug log.trace("Doing push");
+			//debug log.trace("Doing push");
 			if(tail !is null) {
-				debug log.trace("Non-null tail");
+				//debug log.trace("Non-null tail");
 				tail.next = new Node(t);
 			}
 			else {
-				debug log.trace("Null tail");
+				//debug log.trace("Null tail");
 				assert(head is null);
 				head = new Node(t);
 				tail = head;
-				debug log.trace("Done adding head");
+				//debug log.trace("Done adding head");
 			}
 		}
 		else if(head !is null) {
-			debug log.trace("Doing pop");
+			//debug log.trace("Doing pop");
 			t = head.t;
 			if(head == tail) {
 				head = null;

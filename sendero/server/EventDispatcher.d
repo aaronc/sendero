@@ -1,12 +1,16 @@
 module sendero.server.EventDispatcher;
 
-public import sendero.server.model.IEventDispatcher;
+import sendero.server.model.IEventDispatcher;
+import sendero.server.model.IEventLoop;
+import tango.io.selector.model.ISelector;
 
 import sendero.util.collection.ThreadSafeQueue;
 
 import tango.io.selector.Selector;
 import tango.core.Thread;
 import tango.util.log.Log;
+
+import tango.stdc.posix.ucontext;
 
 static Logger log;
 
@@ -15,16 +19,17 @@ static this()
 	log = Log.lookup("sendero.server.EventDispatcher");
 }
 
-class EventDispatcher : ISyncEventDispatcher
+class EventDispatcher : IEventLoop, ISyncEventDispatcher
 {
 	this(ISelector selector = null)
 	{
+		this.signalQueue = new ThreadSafeQueue2!(SignalInfo);
 		if(selector !is null) this.selector = selector;
 		else this.selector = new Selector;
 		this.taskQueue = new ThreadSafeQueue2!(EventTaskDg);
-		this.timeout = timeout;
 	}
 	private ThreadSafeQueue2!(EventTaskDg) taskQueue;
+	private ThreadSafeQueue2!(SignalInfo) signalQueue;
 	private ISelector selector;
 	private double timeout_ = 0.1;
 	double timeout() { return timeout_; }
@@ -39,7 +44,7 @@ class EventDispatcher : ISyncEventDispatcher
 		taskQueue.push(task);
 	}
 	
-	static ISelectable[ISelectable] registered;
+	version(Tango_0_99_7) static ISelectable[ISelectable] registered;
 	
 	/**
 	 * Must be called synchronously!
@@ -50,11 +55,16 @@ class EventDispatcher : ISyncEventDispatcher
 	{
 		debug log.trace("Registering {} for events {}", attachment, events);
 		debug assert(Thread.getThis == loopThread_, "register should only be called from the event loop thread");
-		if(conduit in registered)
-			selector.reregister(conduit, events, attachment);
+		version(Tango_0_99_7) {
+			if(conduit in registered)
+				selector.reregister(conduit, events, attachment);
+			else {
+				selector.register(conduit, events, attachment);
+				registered[conduit] = conduit;
+			}
+		}
 		else {
 			selector.register(conduit, events, attachment);
-			registered[conduit] = conduit;
 		}
 	}
 	
@@ -70,6 +80,29 @@ class EventDispatcher : ISyncEventDispatcher
 		selector.unregister(conduit);
 	}
 	
+	void sendSignal(SignalInfo sig)
+	{
+		signalQueue.push(sig);
+	}
+	
+	SignalHandler setSignalHandler(int signal, SignalHandler dg)
+	{
+		auto pExistingHandler = signal in signalHandlers_;
+		signalHandlers_[signal] = dg;
+		if(pExistingHandler !is null) return *pExistingHandler;
+		else return null;
+	}
+	
+	SignalHandler unsetSignalHandler(int signal)
+	{
+		auto pExistingHandler = signal in signalHandlers_;
+		signalHandlers_.remove(signal);
+		if(pExistingHandler !is null) return *pExistingHandler;
+		else return null;
+	}
+	
+	private SignalHandler[int] signalHandlers_;
+	
 	void open(uint size, uint maxEvents)
 	{
 		assert(!opened_, "EventDispatcher should be opened only once");
@@ -82,6 +115,13 @@ class EventDispatcher : ISyncEventDispatcher
 		running_ = false;
 	}
 	
+	private ucontext_t restart_ctxt_;
+	
+	void restart()
+	{
+		return setcontext(&restart_ctxt_);
+	}
+	
 	void run()
 	{
 		assert(opened_,"EventDispatcher.open must be called before run");
@@ -89,14 +129,20 @@ class EventDispatcher : ISyncEventDispatcher
 		running_ = true;
 		loopThread_ = Thread.getThis;
 		
+		assert(getcontext(&restart_ctxt_) == 0);
+		
 		while(running_) {
 			try
 			{
-				auto task = taskQueue.pop;
-				while(task !is null && running_) {
-					debug log.trace("Running task");
-					task(this);
-					task = taskQueue.pop;
+				auto sig = signalQueue.pop;
+				while(sig !is null && running_) {
+					auto pHandler = sig.signal in signalHandlers_;
+					if(pHandler) {
+						(*pHandler)(sig);
+						log.warn("Handling signal {}", sig.signal);
+					}
+					else log.warn("Received signal {}, but have no handler", sig.signal);
+					sig = signalQueue.pop;
 				}
 				
 				auto eventCnt = selector.select(timeout);
@@ -131,6 +177,13 @@ class EventDispatcher : ISyncEventDispatcher
 							responder.handleError(this);
 	                    }
 					}
+				}
+				
+				auto task = taskQueue.pop;
+				while(task !is null && running_) {
+					debug log.trace("Running task");
+					task(this);
+					task = taskQueue.pop;
 				}
 			}
 			catch(Exception ex)

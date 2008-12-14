@@ -1,8 +1,13 @@
+import qcf.reflectioned;
+
 import sendero.server.EventDispatcher;
-import sendero.server.SimpleTest;
+import sendero.server.runtime.SafeRuntime;
+//import sendero.server.SimpleTest;
 import sendero.server.responder.TcpServer;
 
 import Int = tango.text.convert.Integer;
+
+import tango.util.log.Config;
 
 class TestProvider : ITcpServiceProvider
 {
@@ -38,12 +43,17 @@ class TestRequestHandler : ITcpRequestHandler
 	}
 }
 
+import tango.io.Stdout;
+
 int main(char[][] args)
 {
 	auto dispatcher = new EventDispatcher;
+	auto runtime = new SafeRuntime(dispatcher);
 	dispatcher.open(100,10);
 	auto server = new TcpServer(new TestProvider);
+	Stdout.formatln("here");
 	server.start(dispatcher);
+	Stdout.formatln("here");
 	dispatcher.run;
 	return 0;
 }

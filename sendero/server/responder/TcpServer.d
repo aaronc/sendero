@@ -243,8 +243,10 @@ class TcpServer : EventResponder
 	
 	void start(IEventDispatcher dispatcher)
 	{
+		debug log.trace("Starting");
 		this.dispatcher_ = dispatcher;
 		dispatcher_.postTask(&startDg);
+		debug log.trace("Done posting");
 	}
 	
 	private void startDg(ISyncEventDispatcher dispatcher)
