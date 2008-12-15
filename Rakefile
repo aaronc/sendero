@@ -38,6 +38,10 @@ file "test_server.exe" => SRC do
   sh "objdump test_server -t > test_server.symbols"
 end
 
+file "test_server_client.exe" => SRC do
+  sh "dsss build test_server_client.d"
+end
+
 task :senderoxc => SENDEROXC_SRC do
   sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofbin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP -g"
 end
@@ -54,8 +58,14 @@ task :build => ["test_sendero.exe"]
 
 task :build_server => ["test_server.exe" ]
 
+task :build_server_client => ["test_server_client.exe"]
+
 task :test_server => [:build_server] do
  sh "./test_server"
+end
+
+task :test_server_client => [:build_server_client] do
+ sh "./test_server_client"
 end
 
 task :test_files => TEST_FILES

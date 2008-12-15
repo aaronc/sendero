@@ -22,8 +22,6 @@ abstract class WorkerPoolBase(JobType)
 	{
 		greenLight_ = new Semaphore;
 		jobQueue_ = new ThreadSafeQueue!(JobType);
-		//threads_ = new ThreadGroup;
-		
 	}
 	
 	 static class Node
@@ -85,9 +83,7 @@ abstract class WorkerPoolBase(JobType)
 		startThreads_ = startThreads;
 		running_ = true;
 		for(uint i = 0; i < startThreads; ++i) {
-			//auto t = new ThreadT!(DgT)(&proc);
 			auto t = createThread;
-			//threads_.add(t);
 			addThread(t);
 			t.start;
 		}
@@ -96,11 +92,6 @@ abstract class WorkerPoolBase(JobType)
 	uint runningThreads()
 	{
 		uint i = 0;
-		/+foreach(thr; threads_)
-		{
-			if(thr.isRunning)
-				++i;
-		}+/
 		auto node = head;
 		while(node !is null) {
 			assert(node.t);
@@ -115,18 +106,10 @@ abstract class WorkerPoolBase(JobType)
 	void shutdown()
 	{
 		running_ = false;
-		//threads_.joinAll;
 	}
 	
 	void ensureAlive()
 	{
-		//Thread[] toRemove;
-		/+foreach(thr; threads_)
-		{
-			if(thr.isRunning)
-				return;
-			toRemove ~= thr;
-		}+/
 		auto node = head;
 		while(node !is null) {
 			assert(node.t);
@@ -134,7 +117,6 @@ abstract class WorkerPoolBase(JobType)
 				return;
 			else node = remove(node); 
 		}
-		//foreach(thr; toRemove) threads_.remove(thr);
 		
 		if(startThreads_ == 0) startThreads_ = 1;
 		log.error("Thread pool was dead on call to ensureAlive, "
@@ -153,7 +135,6 @@ protected:
 	ThreadSafeQueue!(JobType) jobQueue_;
 	Semaphore greenLight_;
 	bool running_;
-	ThreadGroup threads_;
 }
 
 alias void delegate() WorkDg;
