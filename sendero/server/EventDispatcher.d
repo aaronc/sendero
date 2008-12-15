@@ -2,14 +2,12 @@ module sendero.server.EventDispatcher;
 
 import sendero.server.model.IEventDispatcher;
 import sendero.server.model.IEventLoop;
-import tango.io.selector.model.ISelector;
-
 import sendero.util.collection.ThreadSafeQueue;
 
 import tango.io.selector.Selector;
 import tango.core.Thread;
 import tango.util.log.Log;
-
+import tango.io.selector.model.ISelector;
 import tango.stdc.posix.ucontext;
 
 static Logger log;
@@ -115,10 +113,13 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		running_ = false;
 	}
 	
+	public bool heartbeat = false;
 	private ucontext_t restart_ctxt_;
+	private bool gotRestartCtxt_ = false;
 	
 	void handleSyncSignal(SignalInfo sig)
 	{
+		assert(gotRestartCtxt_, "Don't have restart context");
 		setcontext(&restart_ctxt_);
 	}
 	
@@ -130,10 +131,12 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		loopThread_ = Thread.getThis;
 		
 		assert(getcontext(&restart_ctxt_) == 0);
+		gotRestartCtxt_ = true;
 		
 		while(running_) {
 			try
 			{
+				heartbeat = true;
 				auto sig = signalQueue.pop;
 				while(sig !is null && running_) {
 					auto pHandler = sig.signal in signalHandlers_;
@@ -181,7 +184,6 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 					debug log.trace("Running task");
 					task(this);
 					task = taskQueue.pop;
-					debug log.trace("{}",task.ptr);
 				}
 			}
 			catch(Exception ex)

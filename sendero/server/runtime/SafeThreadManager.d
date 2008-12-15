@@ -41,7 +41,7 @@ class SafeThreadManager
 		try
 		{
 			//Stdout.formatln("Caught signal {} on thread {}", sig, context, pthread_self());
-			log.error("Caught signal {} on thread {}", sig, context, pthread_self());
+			log.error("Caught signal {} on thread {}", sig, cast(ulong)pthread_self());
 			doStackTrace;
 			auto pRuntime = pthread_self in runtimeByThread_;
 			if(pRuntime) {
@@ -68,7 +68,7 @@ class SafeThreadManager
 	
 	protected void registerSyncSignalHandler()
 	{
-		debug log.trace("Registering sync signal handlers on thread {}", pthread_self);
+		log.info("Registering sync signal handlers on thread {}", pthread_self);
 		runtimeByThread_[pthread_self] = this;
 		
 		sigset_t sync_signals;
@@ -94,7 +94,7 @@ class SafeThreadManager
 		try
 		{
 			auto trace = StackTrace.get;
-			log.error("Thread {} {} ", pthread_self, trace.toString);
+			log.error("Thread {} {} ", cast(ulong)pthread_self, trace.toString);
 		}
 		catch(Exception ex)
 		{
@@ -105,6 +105,6 @@ class SafeThreadManager
 	protected void initSignalHandling()
 	{
 		registerSyncSignalHandler;
-		doStackTrace;
+		//doStackTrace;
 	}
 }

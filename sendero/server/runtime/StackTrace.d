@@ -69,7 +69,7 @@ class Symbol
 			{
 				auto parts = splitLine(line);
 				if(parts.length < 6 || parts[3] != ".text") continue;
-				symbols ~= new Symbol(parts[5],
+				symbols ~= new Symbol(parts[5].dup,
 					cast(void*)Int.parse(parts[0],16),
 					cast(ptrdiff_t)Int.parse(parts[4],16)
 				);
@@ -98,8 +98,12 @@ class Symbol
 			else
 				beg = mid;
 			mid = beg + (end - beg) /2;
+			if(code >= symbols[mid].code && code <= symbols[mid].code + symbols[mid].size)
+				return symbols[mid];
+			if(end - mid == 1) break;
 		}
-		return symbols[mid];
+		//return symbols[mid];
+		return null;
 	}
 }
 
@@ -149,7 +153,7 @@ class StackTrace : Exception.TraceInfo
 	
 	int opApply( int delegate( inout char[] val) dg)
 	{
-		//findSymbols;
+		findSymbols;
 		
 		int res = 0;
 		foreach(uint i, void* code;trace_)

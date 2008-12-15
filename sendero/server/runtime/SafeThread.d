@@ -28,13 +28,14 @@ abstract class SafeWorkerThread : Thread, IEventLoop
 		super(&this.run);
 	}
 	
-	private bool running_ = false;
-	private bool gotRestartCtxt_ = false;
-	private ucontext_t restart_ctxt_;
+	protected bool running_ = false;
+	protected bool gotRestartCtxt_ = false;
+	protected ucontext_t restart_ctxt_;
 	void handleSyncSignal(SignalInfo sig)
 	{
-		assert(gotRestartCtxt_, "Unable to restore restart context");
-		setcontext(&restart_ctxt_);
+		pthread_exit(null);
+		/+assert(gotRestartCtxt_, "Unable to restore restart context");
+		setcontext(&restart_ctxt_);+/
 	}
 	
 	abstract protected void doWork();

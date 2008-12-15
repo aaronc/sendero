@@ -9,6 +9,7 @@ import sendero.server.http.Http11Parser;
 import sendero.server.provider.WorkerPoolTcpServiceProvider;
 import sendero.server.runtime.StackTrace;
 import sendero.server.TimerDispatcher;
+import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
 import tango.util.log.Config;
@@ -55,18 +56,62 @@ class TestRequestHandler : ITcpRequestHandler
 
 import tango.io.Stdout;
 
+class Server
+{
+	this()
+	{
+		dispatcher = new EventDispatcher;
+		auto runtime = new SafeRuntime(dispatcher);
+		//auto timer = new TimerDispatcher(dispatcher);
+		dispatcher.open(100,10);
+		pool = new WorkerPool;
+		pool.start(1);
+		auto heartbeatThr = new HeartBeatThread(&heartbeat);
+		heartbeatThr.start;
+		//pool.setHeartbeat(timer);
+		auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
+		server.start(dispatcher);
+		dispatcher.run;
+	}
+	EventDispatcher dispatcher;
+	WorkerPool pool;
+	
+	void startFork()
+	{
+		pid_t pid;
+		pid = fork();
+		if(pid == 0)
+		{
+			auto server = new Server;
+			exit(0);
+		}
+		else if(pid > 0)
+		{
+			Stdout.formatln("Fprking server daemon");
+			exit(0);
+		}
+		else
+		{
+			//Error Forking
+			Stdout.formatln("Unable to create server daemon, errno {}", errno);
+			exit(-1);
+		}
+	}
+	
+	void heartbeat()
+	{
+		if(!dispatcher.heartbeat) {
+			startFork;
+			exit(-1);
+		}
+		pool.ensureAlive;
+		dispatcher.heartbeat = false;
+	}
+}
+
 int serverMain(char[][] args)
 {
-	auto dispatcher = new EventDispatcher;
-	auto runtime = new SafeRuntime(dispatcher);
-	auto timer = new TimerDispatcher(dispatcher);
-	dispatcher.open(100,10);
-	auto pool = new WorkerPool;
-	pool.start(1);
-	pool.setHeartbeat(timer);
-	auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
-	server.start(dispatcher);
-	dispatcher.run;
+	auto server = new Server;
 	return 0;
 }
 

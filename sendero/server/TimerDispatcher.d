@@ -46,14 +46,21 @@ class TimerDispatcher
 	}
 	
 	private ThreadSafeQueue!(TimedTask) taskQueue;
+	private TimedTask[] tasks;
 	private IMainEventLoop evntDispatcher;
 	
 	private void handleAlarmSignal(SignalInfo sig)
 	{
-		auto task = taskQueue.pop;
+		foreach(task; tasks)
+		{
+			task.dg();
+		}
+		//debug log.trace("Got Alarm Signal");
+		/+auto task = taskQueue.pop;
 		while(task !is null) {
 			if(task.count == 0)
 			{
+				//debug log.trace("Running Timed Task");
 				task.dg();
 				if(task.recurring)
 				{
@@ -66,7 +73,7 @@ class TimerDispatcher
 				taskQueue.push(task);
 			}
 			task = taskQueue.pop;
-		}
+		}+/
 	}
 	
 	private void setResolutionTask(ISyncEventDispatcher)
@@ -95,6 +102,7 @@ class TimerDispatcher
 	
 	void scheduleTask(TimedTask task)
 	{
-		taskQueue.push(task);
+		//taskQueue.push(task);
+		tasks ~= task;
 	}
 }

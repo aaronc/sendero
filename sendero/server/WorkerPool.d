@@ -67,11 +67,15 @@ abstract class WorkerPoolBase(JobType)
 	
 	void ensureAlive()
 	{
+		Thread[] toRemove;
 		foreach(thr; threads_)
 		{
 			if(thr.isRunning)
 				return;
+			toRemove ~= thr;
 		}
+		foreach(thr; toRemove) threads_.remove(thr);
+		
 		if(startThreads_ == 0) startThreads_ = 1;
 		log.error("Thread pool was dead on call to ensureAlive, "
 		"restarting {} threads", startThreads_);
@@ -80,7 +84,7 @@ abstract class WorkerPoolBase(JobType)
 	
 	void setHeartbeat(TimerDispatcher timer, uint resolutionMultiplier = 0)
 	{
-		auto heartbeat = new TimedTask(&ensureAlive, resolutionMultiplier);
+		auto heartbeat = new TimedTask(&ensureAlive, resolutionMultiplier, true);
 		timer.scheduleTask(heartbeat);
 	}
 	
