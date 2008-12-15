@@ -20,7 +20,7 @@ version(SenderoFCGI) {
 	
 } else {
 	
-	import sendero.server.SimpleTest;
+	//import sendero.server.SimpleTest;	
 	
 	int senderoMain(AppMain, Session)(char[][] args)
 	{

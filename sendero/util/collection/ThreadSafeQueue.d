@@ -41,7 +41,9 @@ private:
 			//debug log.trace("Doing push");
 			if(tail !is null) {
 				//debug log.trace("Non-null tail");
-				tail.next = new Node(t);
+				auto next = new Node(t);
+				tail.next = next;
+				tail = next;
 			}
 			else {
 				//debug log.trace("Null tail");

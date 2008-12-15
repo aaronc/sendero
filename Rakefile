@@ -35,6 +35,7 @@ end
 
 file "test_server.exe" => SRC do
   sh "dsss build test_server.d"
+  sh "objdump test_server -t > test_server.symbols"
 end
 
 task :senderoxc => SENDEROXC_SRC do
@@ -52,6 +53,10 @@ end
 task :build => ["test_sendero.exe"]
 
 task :build_server => ["test_server.exe" ]
+
+task :test_server => [:build_server] do
+ sh "./test_server"
+end
 
 task :test_files => TEST_FILES
 

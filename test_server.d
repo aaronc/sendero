@@ -1,4 +1,4 @@
-import qcf.reflectioned;
+//import qcf.reflectioned;
 
 import sendero.server.EventDispatcher;
 import sendero.server.runtime.SafeRuntime;
@@ -7,6 +7,8 @@ import sendero.server.responder.TcpServer;
 import sendero.server.WorkerPool;
 import sendero.server.http.Http11Parser;
 import sendero.server.provider.WorkerPoolTcpServiceProvider;
+import sendero.server.runtime.StackTrace;
+import sendero.server.TimerDispatcher;
 
 import Int = tango.text.convert.Integer;
 import tango.util.log.Config;
@@ -16,6 +18,11 @@ import tango.stdc.errno;
 import tango.sys.Process;
 
 import tango.core.Thread;
+
+static this()
+{
+	Symbol.loadObjDumpSymbols("test_server.symbols");
+}
 
 class TestProvider : ITcpServiceProvider
 {
@@ -52,8 +59,12 @@ int serverMain(char[][] args)
 {
 	auto dispatcher = new EventDispatcher;
 	auto runtime = new SafeRuntime(dispatcher);
+	auto timer = new TimerDispatcher(dispatcher);
 	dispatcher.open(100,10);
-	auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider));
+	auto pool = new WorkerPool;
+	pool.start(1);
+	pool.setHeartbeat(timer);
+	auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
 	server.start(dispatcher);
 	dispatcher.run;
 	return 0;

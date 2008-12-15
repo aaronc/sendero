@@ -16,6 +16,7 @@ import tango.stdc.posix.pthread;
 import tango.stdc.posix.ucontext;
 
 import sendero.server.model.IEventLoop;
+import sendero.server.runtime.StackTrace;
 
 import tango.util.log.Log;
 private Logger log;
@@ -40,7 +41,8 @@ class SafeThreadManager
 		try
 		{
 			//Stdout.formatln("Caught signal {} on thread {}", sig, context, pthread_self());
-			debug log.fatal("Caught signal {} on thread {}", sig, context, pthread_self());
+			log.error("Caught signal {} on thread {}", sig, context, pthread_self());
+			doStackTrace;
 			auto pRuntime = pthread_self in runtimeByThread_;
 			if(pRuntime) {
 				try
@@ -87,8 +89,22 @@ class SafeThreadManager
 		sigaction(SIGSEGV, &action, null);
 	}
 	
+	static void doStackTrace()
+	{
+		try
+		{
+			auto trace = StackTrace.get;
+			log.error("Thread {} {} ", pthread_self, trace.toString);
+		}
+		catch(Exception ex)
+		{
+			log.error("Exception performing stacktrace {}", ex.toString);
+		}
+	}
+	
 	protected void initSignalHandling()
 	{
 		registerSyncSignalHandler;
+		doStackTrace;
 	}
 }

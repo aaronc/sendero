@@ -5,11 +5,10 @@ import sendero.server.WorkerPool;
 
 class WorkerPoolTcpServiceProvider : ITcpServiceProvider
 {
-	this(ITcpServiceProvider wrappedProvider)
+	this(ITcpServiceProvider wrappedProvider, WorkerPool workerPool)
 	{
 		wrappedProvider_ = wrappedProvider;
-		workerPool_ = new WorkerPool;
-		workerPool_.start();
+		workerPool_ = workerPool;
 	}
 	private ITcpServiceProvider wrappedProvider_;
 	private WorkerPool workerPool_;

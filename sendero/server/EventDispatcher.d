@@ -137,10 +137,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 				auto sig = signalQueue.pop;
 				while(sig !is null && running_) {
 					auto pHandler = sig.signal in signalHandlers_;
-					if(pHandler) {
-						(*pHandler)(sig);
-						log.warn("Handling signal {}", sig.signal);
-					}
+					if(pHandler) (*pHandler)(sig);
 					else log.warn("Received signal {}, but have no handler", sig.signal);
 					sig = signalQueue.pop;
 				}
@@ -184,6 +181,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 					debug log.trace("Running task");
 					task(this);
 					task = taskQueue.pop;
+					debug log.trace("{}",task.ptr);
 				}
 			}
 			catch(Exception ex)

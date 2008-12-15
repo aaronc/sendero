@@ -1,6 +1,7 @@
 module sendero.server.model.IEventLoop;
 
 public import sendero.server.runtime.SignalInfo;
+public import sendero.server.model.IEventDispatcher;
 
 interface IEventLoop {
 	void run();
@@ -9,6 +10,6 @@ interface IEventLoop {
 	void handleSyncSignal(SignalInfo sig);
 }
 
-interface IMainEventLoop : IEventLoop, ISignalSync {
+interface IMainEventLoop : IEventLoop, ISignalSync, IEventDispatcher {
 	
 }

@@ -3,6 +3,7 @@ module sendero.server.WorkerPool;
 import tango.core.Thread;
 import tango.core.sync.Semaphore, tango.core.sync.Mutex;
 import sendero.server.runtime.SafeThread;
+import sendero.server.TimerDispatcher;
 
 import sendero.util.collection.ThreadSafeQueue;
 
@@ -37,19 +38,25 @@ abstract class WorkerPoolBase(JobType)
 	
 	void start(uint startThreads = 1)
 	{
+		startThreads_ = startThreads;
 		running_ = true;
 		for(uint i = 0; i < startThreads; ++i) {
 			//auto t = new ThreadT!(DgT)(&proc);
 			auto t = createThread;
 			threads_.add(t);
 			t.start;
-			++runningThreads_;
 		}
 	}
 	
 	uint runningThreads()
 	{
-		return runningThreads_;
+		uint i = 0;
+		foreach(thr; threads_)
+		{
+			if(thr.isRunning)
+				++i;
+		}
+		return i;
 	}
 	
 	void shutdown()
@@ -58,8 +65,27 @@ abstract class WorkerPoolBase(JobType)
 		threads_.joinAll;
 	}
 	
+	void ensureAlive()
+	{
+		foreach(thr; threads_)
+		{
+			if(thr.isRunning)
+				return;
+		}
+		if(startThreads_ == 0) startThreads_ = 1;
+		log.error("Thread pool was dead on call to ensureAlive, "
+		"restarting {} threads", startThreads_);
+		start(startThreads_);
+	}
+	
+	void setHeartbeat(TimerDispatcher timer, uint resolutionMultiplier = 0)
+	{
+		auto heartbeat = new TimedTask(&ensureAlive, resolutionMultiplier);
+		timer.scheduleTask(heartbeat);
+	}
+	
 protected:
-	uint runningThreads_;
+	uint startThreads_;
 	ThreadSafeQueue!(JobType) jobQueue_;
 	Semaphore greenLight_;
 	bool running_;

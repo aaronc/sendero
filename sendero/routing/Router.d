@@ -27,7 +27,7 @@ template Route(ReqT, bool UseDelegates = false)
 	in
 	{
 		assert(req !is null);
-		assert(req.url !is null);
+		assert(req.path !is null);
 		static if(UseDelegates)
 		{
 			assert(ptr !is null);
@@ -47,7 +47,7 @@ template Route(ReqT, bool UseDelegates = false)
 		{
 			debug(SenderoRuntime) log.trace(MName ~ " BEGIN TRY");
 			
-			auto token = req.url.top;
+			auto token = req.path.top;
 			
 			debug(SenderoRuntime) log.trace(MName ~ " token = {}", token);
 			
@@ -69,7 +69,7 @@ template Route(ReqT, bool UseDelegates = false)
 				return pRoutes.defRoute.exec(req, ptr);
 			}
 			
-			req.url.pop;
+			req.path.pop;
 			
 			auto routing = token in pRoutes.routes;
 			if(!routing) {

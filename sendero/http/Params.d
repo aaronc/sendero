@@ -11,6 +11,12 @@ public import sendero_base.Core;
 public import sendero_base.Set;
 import sendero.vm.Object, sendero.vm.Array;
 
+private Uri uri;
+static this()
+{
+	uri = new Uri;
+}
+
 void addParam(IObject params, char[][] key, char[] val, uint index = 0)
 {
 	if(index >= key.length) {
@@ -57,7 +63,7 @@ void addParam(IObject params, char[][] key, char[] val, uint index = 0)
 /*
  * Parses a set of HTTP GET or POST parameters ("name=bob&text=hello+world") into an associative array.
  */
-IObject parseParams(char[] str)
+IObject parseParams(char[] str, IObject existingObj = null)
 {
 	void plusToSpace(inout char[] val)
 	{
@@ -69,9 +75,9 @@ IObject parseParams(char[] str)
 		}
 	}
 	
-	auto resParams = new Obj;
+	IObject resParams = existingObj;
+	if(resParams is null) resParams = new Obj;
 	
-	auto uri = new Uri;
 	foreach(pair; patterns(str, "&"))
 	{
 		uint pos = locate(pair,'=');

@@ -10,6 +10,8 @@ public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
 public import sendero.http.Response;
 
+import sendero.server.model.IHttpRequestHandler;
+
 debug {
 	import sendero.Debug;
 	
@@ -20,47 +22,82 @@ debug {
 	}
 }
 
-enum HttpMethod { Get, Post, Put, Delete };
+enum HttpMethod { Get, Post, Put, Delete, Header, Unknown = 0 };
 
-final class Request
+final class Request : IHttpRequestHandler
 {
-	this()
+	void handleRequestLine(HttpRequestLineData reqLine)
+	{
+		switch(reqLine.method)
+		{
+	      case "GET": method = HttpMethod.Get; break;
+	      case "POST": method = HttpMethod.Post; break;
+	      case "PUT": method = HttpMethod.Put; break;
+	      case "DELETE": method = HttpMethod.Delete; break;
+	      case "HEADER": method = HttpMethod.Header; break;
+	      default: method = HttpMethod.Unknown; break;
+		}
+		uri = reqLine.uri;
+		path = UrlStack.parseUrl(reqLine.path);
+		fragment = reqLine.fragment;
+		params = parseParams(reqLine.queryString, params);
+	}
+	
+	void handleHeader(char[] field, char[] value)
+	{
+		headers[field] = value;
+		if(field == "COOKIE") cookies = parseCookies(value);
+	}
+	
+	void handleData(void[][] data)
 	{
 		
+	}
+
+	void[][] processRequest(ITcpCompletionPort completionPort)
+	{
+		return null;
 	}
 	
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
 	{
+		this.method = method;
+		this.path = UrlStack.parseUrl(url);
+		/+
 		if(method == HttpMethod.Get) {
 			debug log.trace("Req.parse url:{}, getParams:{}", url, getParams);
-			this.method = method;
-			this.url = UrlStack.parseUrl(url);
 			this.params = parseParams(getParams);
 		}
 		else if(method == HttpMethod.Post) {
 			debug log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
-			this.method = method;
-			this.url = UrlStack.parseUrl(url);
 
 			this.params = parseParams(postParams);
 			auto _get_ = parseParams(getParams);
 			Var _get_Var; set(_get_Var, _get_);
 			this.params["@get"] = _get_Var;
-		}
+		}+/
+		params = parseParams(getParams, params);
+		params = parseParams(postParams, params);
 	}
 	
 	void reset()
 	{
  		params = null;
-		url = null;
+		path = null;
+		uri = null;
+		fragment = null;
 		lastToken = null;
 		cookies = null;
 		ip = null;
+		headers = null;
+		method = HttpMethod.Unknown;
 	}
 	
 	IObject params;
 	HttpMethod method;
-	UrlStack url;
+	UrlStack path;
+	char[] uri;
+	char[] fragment;
 	char[] lastToken;
 	char[][char[]] cookies;
 	char[] ip;
