@@ -97,7 +97,8 @@ class SafeRuntime : SafeThreadManager
 	
 	protected void initSignalHandling()
 	{
-		mainEventLoop_.setSignalHandler(SIGINT, &default_SIGINT_handler);
+		//mainEventLoop_.setSignalHandler(SIGINT, &default_SIGINT_handler);
+		setSignalHandler(SIGINT, &default_SIGINT_handler);
 		
         /* block all signals */
         sigfillset( &async_signals );

@@ -10,6 +10,8 @@ import tango.util.log.Log;
 import tango.io.selector.model.ISelector;
 import tango.stdc.posix.ucontext;
 
+debug import sendero.server.runtime.StackTrace;
+
 static Logger log;
 
 static this()
@@ -113,7 +115,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		running_ = false;
 	}
 	
-	public bool heartbeat = false;
+	public bool inbeat = false, outbeat = false;
 	private ucontext_t restart_ctxt_;
 	private bool gotRestartCtxt_ = false;
 	
@@ -136,7 +138,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		while(running_) {
 			try
 			{
-				heartbeat = true;
+				inbeat = true;
 				auto sig = signalQueue.pop;
 				while(sig !is null && running_) {
 					auto pHandler = sig.signal in signalHandlers_;
@@ -157,6 +159,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 						{
 							debug log.trace("Read event for responder {}", responder.toString);
 							responder.handleRead(this);
+							//debug log.trace("{}",StackTrace.get.toString);
 						}
 						else if(key.isWritable)
 						{
@@ -185,6 +188,8 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 					task(this);
 					task = taskQueue.pop;
 				}
+				
+				outbeat = true;
 			}
 			catch(Exception ex)
 			{

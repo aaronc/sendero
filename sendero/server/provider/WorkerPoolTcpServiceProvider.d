@@ -37,18 +37,22 @@ class WorkerPoolTcpRequestHandler : ITcpRequestHandler
 	}
 	private ITcpRequestHandler wrappedHandler_;
 	private WorkerPoolTcpServiceProvider provider_;
-
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	private void[][] data;
+	private ITcpCompletionPort completionPort;
+	
+	private void jobFunc()
 	{
-		void jobFunc()
-		{
 			auto data = wrappedHandler_.handleRequest(data, completionPort);
 			if(data !is null) {
 				completionPort.sendResponseData(data.data);
 				completionPort.endResponse(data.keepAlive);
 			}
-		}
-	
+	}
+
+	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	{
+		this.data = data;
+		this.completionPort = completionPort;
 		provider_.workerPool_.pushJob(&jobFunc);
 		return null;
 	}

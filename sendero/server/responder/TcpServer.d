@@ -47,11 +47,14 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	
 	char[] toString()
 	{
+		//return "TcpConnection:" ~ socket_.socket.remoteAddress.toString;
 		return "TcpConnection";
 	}
 	
 	private void doHandleRead(ISyncEventDispatcher dispatcher, void[][] existingData = null)
 	{
+		debug log.trace("doHandleRead");
+		
 		if(curReqHandler_ is null)
 			curReqHandler_ = serviceProvider_.getRequestHandler;
 		

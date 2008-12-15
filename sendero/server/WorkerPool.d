@@ -116,7 +116,9 @@ class WorkerPoolThread  : SafeWorkerThread
 			debug log.trace("Got notified");
 			auto jobDg = pool_.jobQueue_.pop;
 			debug assert(jobDg !is null);
+			debug log.trace("Starting Job");
 			jobDg();
+			debug log.trace("Completed Job");
 		}
 		catch(Exception ex)
 		{
