@@ -22,7 +22,51 @@ abstract class WorkerPoolBase(JobType)
 	{
 		greenLight_ = new Semaphore;
 		jobQueue_ = new ThreadSafeQueue!(JobType);
-		threads_ = new ThreadGroup;
+		//threads_ = new ThreadGroup;
+		
+	}
+	
+	 static class Node
+	{
+		this(Thread t, Node prev = null)
+		{ this.t = t; this.prev = prev; }
+		Thread t;
+		Node next = null;
+		Node prev = null;
+	}
+	package Node head = null;
+	package Node tail = null;
+	private Node remove(Node node)
+	{
+		if(node.prev !is null) {
+			node.prev.next = node.next;
+			if(node.next !is null) node.next.prev = node.prev;
+			return node.next;
+		}									
+		else {
+			assert(head == node);
+			if(node == tail) {
+				head = tail = null;
+				return null;
+			}
+			else {
+				head = node.next;
+				return node.next;
+			}
+		}
+	}
+	private void addThread(Thread t)
+	{
+		if(head is null) {
+			assert(tail is null);
+			head = tail = new Node(t);
+		}
+		else {
+			assert(tail !is null);
+			auto n = new Node(t, tail);
+			tail.next = n;
+			tail = n;			
+		}
 	}
 	
 	void pushJob(JobType job)
@@ -43,7 +87,8 @@ abstract class WorkerPoolBase(JobType)
 		for(uint i = 0; i < startThreads; ++i) {
 			//auto t = new ThreadT!(DgT)(&proc);
 			auto t = createThread;
-			threads_.add(t);
+			//threads_.add(t);
+			addThread(t);
 			t.start;
 		}
 	}
@@ -51,10 +96,18 @@ abstract class WorkerPoolBase(JobType)
 	uint runningThreads()
 	{
 		uint i = 0;
-		foreach(thr; threads_)
+		/+foreach(thr; threads_)
 		{
 			if(thr.isRunning)
 				++i;
+		}+/
+		auto node = head;
+		while(node !is null) {
+			assert(node.t);
+			if(node.t.isRunning) {
+				++i; node = node.next;
+			}
+			else node = remove(node); 
 		}
 		return i;
 	}
@@ -62,19 +115,26 @@ abstract class WorkerPoolBase(JobType)
 	void shutdown()
 	{
 		running_ = false;
-		threads_.joinAll;
+		//threads_.joinAll;
 	}
 	
 	void ensureAlive()
 	{
-		Thread[] toRemove;
-		foreach(thr; threads_)
+		//Thread[] toRemove;
+		/+foreach(thr; threads_)
 		{
 			if(thr.isRunning)
 				return;
 			toRemove ~= thr;
+		}+/
+		auto node = head;
+		while(node !is null) {
+			assert(node.t);
+			if(node.t.isRunning)
+				return;
+			else node = remove(node); 
 		}
-		foreach(thr; toRemove) threads_.remove(thr);
+		//foreach(thr; toRemove) threads_.remove(thr);
 		
 		if(startThreads_ == 0) startThreads_ = 1;
 		log.error("Thread pool was dead on call to ensureAlive, "

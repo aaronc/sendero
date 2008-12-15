@@ -100,13 +100,7 @@ class Server
 	
 	void heartbeat()
 	{
-		/+if(!dispatcher.inbeat) {
-			startFork;
-			exit(-1);
-		}+/
 		pool.ensureAlive;
-		/+dispatcher.inbeat = false;
-		dispatcher.outbeat = false;+/
 	}
 }
 
