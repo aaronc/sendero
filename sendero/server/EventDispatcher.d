@@ -40,6 +40,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 			else this.selector = new Selector;
 		}
 		this.taskQueue = new QueueT!(EventTaskDg);
+		timeout = 0.1;
 	}
 	
 	~this()
@@ -62,9 +63,12 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	} else {
 		private ISelector selector;
 	}
-	private double timeout_ = 0.1;
+	private double timeout_;
+	private int epollTimespan_;
 	double timeout() { return timeout_; }
-	void timeout(double t) { timeout_ = t; }
+	void timeout(double t) { timeout_ = t; 
+		epollTimespan_ = cast(int)TimeSpan.fromInterval(timeout).millis;
+	}
 	
 	private bool opened_ = false;
 	private bool running_ = false;
@@ -240,8 +244,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 					while (true)
 		            {
 		                // FIXME: add support for the wakeup() call.
-		                evntCnt = epoll_wait(epfd_, events_.ptr, events_.length, 
-		                	cast(int)TimeSpan.fromInterval(timeout).millis);
+		                evntCnt = epoll_wait(epfd_, events_.ptr, events_.length, epollTimespan_);
 		                if (evntCnt >= 0)
 		                {
 		                    break;
@@ -263,17 +266,17 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	                	if(event.events == 0) continue;
 	                	debug log.trace("Found some events {}",event.events);
 	                	auto key = *(cast(SelectionKey *)event.data.ptr);
-	                    key.events = cast(Event) event.events;
+	                    //key.events = cast(Event) event.events;
 						
 						auto responder = cast(EventResponder)key.attachment;
 						debug assert(responder);
-						if(key.isReadable)
+						if((event.events & Event.Read) != 0)
 						{
 							debug log.trace("Read event for responder {}", responder.toString);
 							responder.handleRead(this);
 							//debug log.trace("{}",StackTrace.get.toString);
 						}
-						else if(key.isWritable)
+						else if((event.events & Event.Write) != 0)
 						{
 							debug log.trace("Write event for responder {}", responder.toString);
 							responder.handleWrite(this);
