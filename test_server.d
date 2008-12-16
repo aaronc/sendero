@@ -12,7 +12,7 @@ import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
-import tango.util.log.Config;
+//import tango.util.log.Config;
 import tango.stdc.stdlib;
 import tango.stdc.posix.unistd;
 import tango.stdc.errno;
@@ -69,7 +69,8 @@ class Server
 		auto heartbeatThr = new HeartBeatThread(&heartbeat);
 		heartbeatThr.start;
 		//pool.setHeartbeat(timer);
-		auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
+		//auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
+		auto server = new TcpServer(new TestProvider);
 		server.start(dispatcher);
 		dispatcher.run;
 	}

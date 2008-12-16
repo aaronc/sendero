@@ -3,6 +3,9 @@ module sendero.server.EventDispatcher;
 import sendero.server.model.IEventDispatcher;
 import sendero.server.model.IEventLoop;
 import sendero.util.collection.ThreadSafeQueue;
+import sendero.util.collection.SingleReaderQueue;
+
+alias ThreadSafeQueue QueueT;
 
 import tango.io.selector.Selector;
 import tango.core.Thread;
@@ -23,13 +26,13 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 {
 	this(ISelector selector = null)
 	{
-		this.signalQueue = new ThreadSafeQueue!(SignalInfo);
+		this.signalQueue = new QueueT!(SignalInfo);
 		if(selector !is null) this.selector = selector;
 		else this.selector = new Selector;
-		this.taskQueue = new ThreadSafeQueue!(EventTaskDg);
+		this.taskQueue = new QueueT!(EventTaskDg);
 	}
-	private ThreadSafeQueue!(EventTaskDg) taskQueue;
-	private ThreadSafeQueue!(SignalInfo) signalQueue;
+	private QueueT!(EventTaskDg) taskQueue;
+	private QueueT!(SignalInfo) signalQueue;
 	private ISelector selector;
 	private double timeout_ = 0.1;
 	double timeout() { return timeout_; }
@@ -139,12 +142,12 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 			try
 			{
 				inbeat = true;
-				auto sig = signalQueue.pop;
+				auto sig = signalQueue.pull;
 				while(sig !is null && running_) {
 					auto pHandler = sig.signal in signalHandlers_;
 					if(pHandler) (*pHandler)(sig);
 					else log.warn("Received signal {}, but have no handler", sig.signal);
-					sig = signalQueue.pop;
+					sig = signalQueue.pull;
 				}
 				
 				auto eventCnt = selector.select(timeout);
@@ -182,11 +185,11 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 					}
 				}
 				
-				auto task = taskQueue.pop;
+				auto task = taskQueue.pull;
 				while(task !is null && running_) {
 					debug log.trace("Running task");
 					task(this);
-					task = taskQueue.pop;
+					task = taskQueue.pull;
 				}
 				
 				outbeat = true;

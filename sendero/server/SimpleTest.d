@@ -200,12 +200,12 @@ void run(void function(Request req) appMain)
 				}
 			}
 			
-			auto response = responseQueue.pop;
+			auto response = responseQueue.pull;
 			while(response !is null) {
 				serverLog.info("Pushing response object");
 				//selector.reregister(response.cond, Event.Write, response);
 				selector.register(response.cond, Event.Write, response);
-				response = responseQueue.pop;
+				response = responseQueue.pull;
 			}
 		}
 		catch(Exception ex)

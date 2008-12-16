@@ -155,7 +155,7 @@ class WorkerPoolThread  : SafeWorkerThread
 			debug log.trace("Waiting for traffic");
 			pool_.greenLight_.wait;
 			debug log.trace("Got notified");
-			auto jobDg = pool_.jobQueue_.pop;
+			auto jobDg = pool_.jobQueue_.pull;
 			debug assert(jobDg !is null);
 			debug log.trace("Starting Job");
 			jobDg();
@@ -204,7 +204,7 @@ class JobWorkerPoolThread(JobType) : SafeWorkerThread
 			debug log.trace("Waiting for traffic");
 			pool_.greenLight_.wait;
 			debug log.info("Got notified");
-			auto job = pool_.jobQueue_.pop;
+			auto job = pool_.jobQueue_.pull;
 			if(job !is null)
 				workerProc_(job);
 		}

@@ -20,7 +20,7 @@ class BufferProvider
 	
 	void[] get()
 	{
-		auto buf = bufferPool_.pop;
+		auto buf = bufferPool_.pull;
 		if(buf.length) {
 			atomicDecrement(cacheSize_);
 			bufferPtrMap_.remove(buf.ptr);

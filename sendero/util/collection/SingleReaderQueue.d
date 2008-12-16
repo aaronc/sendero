@@ -4,7 +4,6 @@ import tango.core.Atomic;
 import tango.stdc.stdlib;
 
 import tango.util.log.Log;
-import tango.util.log.Config;
 Logger log;
 static this() {
 	log = Log.lookup("SingleReaderQueue");
@@ -42,7 +41,7 @@ class SingleReaderQueue(T)
 		}
 		while(!atomicStoreIf(tail, tail.next, curTail))
 		curTail.t = t;
-		log.trace("Pushed {}",t.i);
+		//log.trace("Pushed {}",t.i);
 	}
 	
 private:
@@ -57,7 +56,7 @@ private:
 
 debug(SenderoUnittest) {
 	import tango.core.Thread;
-	import tango.io.Stdout;
+	import tango.util.log.Config;
 	
 	class Test
 	{

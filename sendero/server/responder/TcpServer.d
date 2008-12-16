@@ -124,7 +124,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		buf = unsentBuffer_;
     		unsentBuffer_ = null;
     	}
-    	else buf = curResData_.pop;
+    	else buf = curResData_.pull;
     	
     	while(buf.length) {
 	    	auto sentLen = socket_.socket.send(buf);
@@ -160,7 +160,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	    			return;
 	    		}
 	    	}
-	    	buf = curResData_.pop;
+	    	buf = curResData_.pull;
     	}
     	
     	if(endOfResponse_) finishResponse;
@@ -170,7 +170,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     {
     	endOfResponse_ = false;
     	
-    	debug assert(!curResData_.pop.length && !unsentBuffer_.length,
+    	debug assert(!curResData_.pull.length && !unsentBuffer_.length,
     	             "Response being finished before all data is sent");
     	
     	serviceProvider_.cleanup(curReqHandler_);
