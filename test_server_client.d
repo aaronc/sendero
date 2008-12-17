@@ -10,7 +10,7 @@ int main(char[][] args)
 	
 	timer.start;
 	uint i = 0;
-	while(i < 200) {
+	while(i < 10000) {
 		auto page = new HttpGet("http://127.0.0.1:8081");
 		auto content = cast(char[])page.read;
 		assert(content == "Hello Sendero Server World!\r\n", content);

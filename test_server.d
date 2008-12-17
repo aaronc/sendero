@@ -12,7 +12,7 @@ import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
-import tango.util.log.Config;
+//import tango.util.log.Config;
 import tango.stdc.stdlib;
 import tango.stdc.posix.unistd;
 import tango.stdc.errno;

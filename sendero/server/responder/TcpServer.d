@@ -14,6 +14,8 @@ import tango.stdc.errno;
 import tango.util.log.Log;
 Logger log;
 
+alias SingleThreadBufferPool BufferQueueT;
+
 static this()
 {
 	log = Log.lookup("sendero.server.provider.TcpServer");
@@ -177,12 +179,39 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	if(socket_.socket !is null) {
     		dispatcher.register(socket_,Event.Read,this);
     	}
-//    	assert(socket_.socket !is null);
-		//
+    }
+    
+    private void reregisterReadAndFinishResDg(ISyncEventDispatcher dispatcher)
+    {
+    	foreach(buf; readBuffers_)
+		{
+			server_.bufferProvider.release(buf);
+		}
+		readBuffers_ = null;
+		
+    	debug assert(socket_ !is null);
+    	debug assert(socket_.socket !is null);
+    	if(socket_.socket !is null) {
+    		dispatcher.register(socket_,Event.Read,this);
+    	}
     }
     
     private void unregisterSocketDg(ISyncEventDispatcher dispatcher)
     {
+    	debug assert(socket_ !is null);
+    	debug assert(socket_.socket !is null);
+    	dispatcher.unregister(socket_);
+		socket_.detach;
+    }
+    
+    private void unregisterSocketAndFinishResDg(ISyncEventDispatcher dispatcher)
+    {
+    	foreach(buf; readBuffers_)
+		{
+			server_.bufferProvider.release(buf);
+		}
+		readBuffers_ = null;
+		
     	debug assert(socket_ !is null);
     	debug assert(socket_.socket !is null);
     	dispatcher.unregister(socket_);
@@ -199,17 +228,11 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	serviceProvider_.cleanup(curReqHandler_);
     	curReqHandler_ = null;
     	
-    	foreach(buf; readBuffers_)
-		{
-			server_.bufferProvider.release(buf);
-		}
-		readBuffers_ = null;
-		
 		if(keepAlive_) {
-			dispatcher_.postTask(&reregisterReadDg);
+			dispatcher_.postTask(&reregisterReadAndFinishResDg);
 		}
 		else {
-			dispatcher_.postTask(&unregisterSocketDg);
+			dispatcher_.postTask(&unregisterSocketAndFinishResDg);
 		}
     }
     
@@ -262,7 +285,7 @@ class TcpServer : EventResponder
 		if(this.bindAddr_ is null)
 			this.bindAddr_ = new InternetAddress("127.0.0.1", 8081);
 		this.listen_ = listen;
-		bufferProvider_ = new BufferProvider;
+		bufferProvider_ = new BufferQueueT;
 	}
 	
 	private ITcpServiceProvider serviceProvider_;
@@ -270,9 +293,9 @@ class TcpServer : EventResponder
 	private InternetAddress bindAddr_;
 	private uint listen_;
 	private IEventDispatcher dispatcher_;
-	private BufferProvider bufferProvider_;
+	private BufferQueueT bufferProvider_;
 	
-	BufferProvider bufferProvider() { return bufferProvider_; }
+	BufferQueueT bufferProvider() { return bufferProvider_; }
 	
 	void start(IEventDispatcher dispatcher)
 	{

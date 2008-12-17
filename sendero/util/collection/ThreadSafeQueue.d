@@ -22,13 +22,13 @@ class ThreadSafeQueue(T)
 		}
 	}
 	
-	void push(T t)
+	final void push(T t)
 	{
 		assert(t !is null);
 		doPushPull(t);
 	}
 	
-	T pull()
+	final T pull()
 	{
 		return doPushPull;
 	}

@@ -24,7 +24,7 @@ class SingleReaderQueue(T)
 		tail = head;
 	}
 	
-	T pull()
+	final T pull()
 	{
 		if(head == tail) return null;
 		auto item = head;
@@ -32,7 +32,7 @@ class SingleReaderQueue(T)
 		return item.t;
 	}
 	
-	void push(T t)
+	final void push(T t)
 	{
 		Node* curTail;
 		do {

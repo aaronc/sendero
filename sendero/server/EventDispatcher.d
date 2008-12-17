@@ -221,7 +221,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		assert(opened_,"EventDispatcher.open must be called before run");
 		assert(!running_, "Only one instance of the event loop should be called at a time");
 		running_ = true;
-		loopThread_ = Thread.getThis;
+		debug loopThread_ = Thread.getThis;
 		
 		assert(getcontext(&restart_ctxt_) == 0);
 		gotRestartCtxt_ = true;
