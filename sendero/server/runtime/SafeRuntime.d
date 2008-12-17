@@ -106,10 +106,12 @@ class SafeRuntime : SafeThreadManager
         sigdelset(&async_signals, SIGILL);
         sigdelset(&async_signals, SIGSEGV);
         sigdelset(&async_signals, SIGBUS);
-        pthread_sigmask(SIG_BLOCK, &async_signals, null);
+        sigdelset(&async_signals, SIGUSR1);
+        sigdelset(&async_signals, SIGUSR2);
+        //pthread_sigmask(SIG_BLOCK, &async_signals, null);
 
-        auto signalThread = new SafeRuntimeThread(this);
-        signalThread.start;
+        //auto signalThread = new SafeRuntimeThread(this);
+        //signalThread.start;
         
         registerSyncSignalHandler;
 	}

@@ -15,6 +15,7 @@ int main(char[][] args)
 		auto content = cast(char[])page.read;
 		assert(content == "Hello Sendero Server World!\r\n", content);
 		++i;
+		page.close;
 	}
 	auto t = timer.stop;
 	Stdout.formatln("{} requests handled in {} seconds",i,t);

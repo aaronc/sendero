@@ -264,7 +264,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	                	if(!running_) break;
 	                	
 	                	if(event.events == 0) continue;
-	                	debug log.trace("Found some events {}",event.events);
+	                	//debug log.trace("Found some events {}",event.events);
 	                	auto key = *(cast(SelectionKey *)event.data.ptr);
 	                    //key.events = cast(Event) event.events;
 						
@@ -272,18 +272,18 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 						debug assert(responder);
 						if((event.events & Event.Read) != 0)
 						{
-							debug log.trace("Read event for responder {}", responder.toString);
+							//debug log.trace("Read event for responder {}", responder.toString);
 							responder.handleRead(this);
 							//debug log.trace("{}",StackTrace.get.toString);
 						}
 						else if((event.events & Event.Write) != 0)
 						{
-							debug log.trace("Write event for responder {}", responder.toString);
+							//debug log.trace("Write event for responder {}", responder.toString);
 							responder.handleWrite(this);
 						}
 						else if(key.isHangup)
 						{
-							log.warn("Hangup event for responder {}", responder.toString);
+							//log.warn("Hangup event for responder {}", responder.toString);
 							responder.handleDisconnect(this);
 						}
 						else if(key.isError() || key.isInvalidHandle())
