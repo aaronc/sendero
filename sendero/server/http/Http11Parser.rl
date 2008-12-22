@@ -187,7 +187,6 @@ class Http11Parser : ITcpRequestHandler
 	
 	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
 	{
-		parseFiber_.call;
 		return null;
 	}
 }

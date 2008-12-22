@@ -1,15 +1,17 @@
 module sendero.server.runtime.StackTrace;
 
 import tango.core.Runtime;
-import tango.io.device.FileConduit;
+version(Tango_0_99_7) import tango.io.FileConduit;
+else import tango.io.device.FileConduit;
 import tango.text.stream.LineIterator;
 import tango.core.Array;
 import Int = tango.text.convert.Integer;
 
 debug import tango.io.Stdout;
 
-extern(C)
+version(linux) extern(C)
 {
+	
 	int backtrace(void **buffer, int size);
 	char **backtrace_symbols(void **buffer, int size);
 	void backtrace_symbols_fd(void **buffer, int size, int fd);
@@ -131,12 +133,14 @@ class StackTrace : Exception.TraceInfo
 	
 	private void doTrace()
 	{
-		void* trace[64];
-		int trace_size = 0;
-
-		trace_size = backtrace(trace.ptr, 16);
-		
-		trace_ = trace[0 .. trace_size].dup;
+		version(linux) {
+			void* trace[64];
+			int trace_size = 0;
+	
+			trace_size = backtrace(trace.ptr, 16);
+			
+			trace_ = trace[0 .. trace_size].dup;
+		}
 	}
 	
 	private void*[] trace_;

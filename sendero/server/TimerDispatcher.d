@@ -56,7 +56,7 @@ class TimerDispatcher
 			task.dg();
 		}
 		//debug log.trace("Got Alarm Signal");
-		/+auto task = taskQueue.pull;
+		/+auto task = taskQueue.pop;
 		while(task !is null) {
 			if(task.count == 0)
 			{
@@ -72,7 +72,7 @@ class TimerDispatcher
 				--task.count;
 				taskQueue.push(task);
 			}
-			task = taskQueue.pull;
+			task = taskQueue.pop;
 		}+/
 	}
 	

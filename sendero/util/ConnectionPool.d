@@ -88,7 +88,7 @@ abstract class ConnectionPool2(ConnT)
 	
 	final ConnT get()
 	{
-		auto conn = queue_.pull;
+		auto conn = queue_.pop;
 		if(conn !is null) {
 			atomicDecrement(cacheSize_);
 			connMap_.remove(conn);

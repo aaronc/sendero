@@ -14,8 +14,6 @@ import tango.stdc.errno;
 import tango.util.log.Log;
 Logger log;
 
-alias SingleThreadBufferPool BufferQueueT;
-
 static this()
 {
 	log = Log.lookup("sendero.server.provider.TcpServer");
@@ -82,7 +80,6 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		//Socket Disconnected
     		log.info("Socket {} disconnected on read", toString);
     		dispatcher.unregister(socket_);
-    		socket_.detach;
     	}
     	else /* readLen < 0 */ {
     		server_.bufferProvider.release(buf);
@@ -100,7 +97,6 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		default:
     			log.error("Socket error {} on read for socket {}", err, toString);
     			dispatcher.unregister(socket_);
-    			socket_.detach;
     			return;
     		}
     	}
@@ -128,7 +124,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		buf = unsentBuffer_;
     		unsentBuffer_ = null;
     	}
-    	else buf = curResData_.pull;
+    	else buf = curResData_.pop;
     	
     	while(buf.length) {
 	    	auto sentLen = socket_.socket.send(buf);
@@ -136,7 +132,6 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	    		if(sentLen != buf.length) {
 	    			log.error("sentLen ~= buf.length for {}", toString);
 	    			dispatcher.unregister(socket_);
-	    			socket_.detach;
 	    			return;
 	    		}
 	    	}
@@ -162,77 +157,40 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 	    		default:
 	    			log.error("Socket error {} on write for socket {}", err, toString);
 	    			dispatcher.unregister(socket_);
-	    			socket_.detach;
 	    			return;
 	    		}
 	    	}
-	    	buf = curResData_.pull;
+	    	buf = curResData_.pop;
     	}
     	
     	if(endOfResponse_) finishResponse;
-    }
-    
-    private void reregisterReadDg(ISyncEventDispatcher dispatcher)
-    {
-    	debug assert(socket_ !is null);
-    	debug assert(socket_.socket !is null);
-    	if(socket_.socket !is null) {
-    		dispatcher.register(socket_,Event.Read,this);
-    	}
-    }
-    
-    private void reregisterReadAndFinishResDg(ISyncEventDispatcher dispatcher)
-    {
-    	foreach(buf; readBuffers_)
-		{
-			server_.bufferProvider.release(buf);
-		}
-		readBuffers_ = null;
-		
-    	debug assert(socket_ !is null);
-    	debug assert(socket_.socket !is null);
-    	if(socket_.socket !is null) {
-    		dispatcher.register(socket_,Event.Read,this);
-    	}
-    }
-    
-    private void unregisterSocketDg(ISyncEventDispatcher dispatcher)
-    {
-    	debug assert(socket_ !is null);
-    	debug assert(socket_.socket !is null);
-    	dispatcher.unregister(socket_);
-		socket_.detach;
-    }
-    
-    private void unregisterSocketAndFinishResDg(ISyncEventDispatcher dispatcher)
-    {
-    	foreach(buf; readBuffers_)
-		{
-			server_.bufferProvider.release(buf);
-		}
-		readBuffers_ = null;
-		
-    	debug assert(socket_ !is null);
-    	debug assert(socket_.socket !is null);
-    	dispatcher.unregister(socket_);
-		socket_.detach;
     }
     
     private void finishResponse()
     {
     	endOfResponse_ = false;
     	
-    	debug assert(!curResData_.pull.length && !unsentBuffer_.length,
+    	debug assert(!curResData_.pop.length && !unsentBuffer_.length,
     	             "Response being finished before all data is sent");
     	
     	serviceProvider_.cleanup(curReqHandler_);
     	curReqHandler_ = null;
     	
+    	foreach(buf; readBuffers_)
+		{
+			server_.bufferProvider.release(buf);
+		}
+		readBuffers_ = null;
+		
 		if(keepAlive_) {
-			dispatcher_.postTask(&reregisterReadAndFinishResDg);
+			dispatcher_.postTask((ISyncEventDispatcher d){
+	    		d.register(socket_,Event.Read,this);
+	    	});
 		}
 		else {
-			dispatcher_.postTask(&unregisterSocketAndFinishResDg);
+			dispatcher_.postTask((ISyncEventDispatcher d){
+	    		d.unregister(socket_);
+	    	});
 		}
     }
     
@@ -240,19 +198,19 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     {
     	debug log.info("Socket {} disconnected", toString);
     	dispatcher.unregister(socket_);
-		socket_.detach;
     }
     
     void handleError(ISyncEventDispatcher dispatcher)
     {
     	log.info("Error in socket {}", toString);
     	dispatcher.unregister(socket_);
-    	socket_.detach;
     }
     
     void keepReading()
     {
-    	dispatcher_.postTask(&reregisterReadDg);
+    	dispatcher_.postTask((ISyncEventDispatcher dispatcher){
+    		dispatcher.register(socket_,Event.Read,this);
+    	});
     }
     
     private void registerWriteEventTask(ISyncEventDispatcher d){
@@ -285,7 +243,7 @@ class TcpServer : EventResponder
 		if(this.bindAddr_ is null)
 			this.bindAddr_ = new InternetAddress("127.0.0.1", 8081);
 		this.listen_ = listen;
-		bufferProvider_ = new BufferQueueT;
+		bufferProvider_ = new BufferProvider;
 	}
 	
 	private ITcpServiceProvider serviceProvider_;
@@ -293,9 +251,9 @@ class TcpServer : EventResponder
 	private InternetAddress bindAddr_;
 	private uint listen_;
 	private IEventDispatcher dispatcher_;
-	private BufferQueueT bufferProvider_;
+	private BufferProvider bufferProvider_;
 	
-	BufferQueueT bufferProvider() { return bufferProvider_; }
+	BufferProvider bufferProvider() { return bufferProvider_; }
 	
 	void start(IEventDispatcher dispatcher)
 	{
@@ -341,13 +299,11 @@ class TcpServer : EventResponder
     {
     	log.warn("Server socket disconnected");
     	dispatcher.unregister(serverSock_);
-    	serverSock_.close;
     }
     
     void handleError(ISyncEventDispatcher dispatcher)
     {
     	log.error("Error in server socket");
     	dispatcher.unregister(serverSock_);
-    	serverSock_.close;
     }
 }

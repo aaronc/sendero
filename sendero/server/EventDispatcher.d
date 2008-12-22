@@ -3,23 +3,16 @@ module sendero.server.EventDispatcher;
 import sendero.server.model.IEventDispatcher;
 import sendero.server.model.IEventLoop;
 import sendero.util.collection.ThreadSafeQueue;
-import sendero.util.collection.SingleReaderQueue;
 
-alias ThreadSafeQueue QueueT;
-
-version(linux) { 
-	import tango.sys.Common;
-    import tango.sys.linux.linux;
-    import tango.stdc.errno;
-    import tango.stdc.posix.signal;
-}
-else {
-	import tango.io.selector.Selector;
-}
+import tango.io.selector.Selector;
 import tango.core.Thread;
 import tango.util.log.Log;
 import tango.io.selector.model.ISelector;
+
+version(Windows) {}
+else {
 import tango.stdc.posix.ucontext;
+}
 
 debug import sendero.server.runtime.StackTrace;
 
@@ -34,41 +27,17 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 {
 	this(ISelector selector = null)
 	{
-		this.signalQueue = new QueueT!(SignalInfo);
-		version(linux) { } else {
-			if(selector !is null) this.selector = selector;
-			else this.selector = new Selector;
-		}
-		this.taskQueue = new QueueT!(EventTaskDg);
-		timeout = 0.1;
+		this.signalQueue = new ThreadSafeQueue!(SignalInfo);
+		if(selector !is null) this.selector = selector;
+		else this.selector = new Selector;
+		this.taskQueue = new ThreadSafeQueue!(EventTaskDg);
 	}
-	
-	~this()
-    {
-		version(linux) {
-			 if (epfd_ >= 0)
-	         {
-	             .close(epfd_);
-	             epfd_ = -1;
-	         }
-		}
-    }
-	
-	private QueueT!(EventTaskDg) taskQueue;
-	private QueueT!(SignalInfo) signalQueue;
-	version(linux) { 
-		private int epfd_ = -1;
-        private epoll_event[] events_;
-        SelectionKey[ISelectable.Handle] keys_;
-	} else {
-		private ISelector selector;
-	}
-	private double timeout_;
-	private int epollTimespan_;
+	private ThreadSafeQueue!(EventTaskDg) taskQueue;
+	private ThreadSafeQueue!(SignalInfo) signalQueue;
+	private ISelector selector;
+	private double timeout_ = 0.1;
 	double timeout() { return timeout_; }
-	void timeout(double t) { timeout_ = t; 
-		epollTimespan_ = cast(int)TimeSpan.fromInterval(timeout).millis;
-	}
+	void timeout(double t) { timeout_ = t; }
 	
 	private bool opened_ = false;
 	private bool running_ = false;
@@ -88,53 +57,18 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	 */
 	void register(ISelectable conduit, Event events, EventResponder attachment)
 	{
-		debug log.trace("Registering ISelectable {} for {}", attachment.toString, events);
-		debug assert(Thread.getThis == loopThread_, "unregister should only be called from the event loop thread");
-		version(linux) { 
-			auto key = conduit.fileHandle() in keys_;
-
-            if (key !is null)
-            {
-                epoll_event event;
-
-                key.events = events;
-                key.attachment = attachment;
-
-                event.events = events;
-                event.data.ptr = cast(void*) key;
-
-                if (epoll_ctl(epfd_, EPOLL_CTL_MOD, conduit.fileHandle(), &event) != 0)
-                {
-                    debug assert(false, "Unable to register epoll event");
-                }
-            }
-            else
-            {
-                epoll_event     event;
-                SelectionKey    newkey = SelectionKey(conduit, events, attachment);
-
-                event.events = events;
-                keys_[conduit.fileHandle()] = newkey;
-                auto x = conduit.fileHandle in keys_;
-                event.data.ptr = cast(void*) x;
-                if (epoll_ctl(epfd_, EPOLL_CTL_ADD, conduit.fileHandle(), &event) != 0)
-                {
-                    keys_.remove(conduit.fileHandle);
-                    debug assert(false, "Unable to register epoll event, errno {}");
-                }
-            }
-		} else {
-			version(Tango_0_99_7) {
-				if(conduit in registered)
-					selector.reregister(conduit, events, attachment);
-				else {
-					selector.register(conduit, events, attachment);
-					registered[conduit] = conduit;
-				}
-			}
+		debug log.trace("Registering {} for events {}", attachment, events);
+		debug assert(Thread.getThis == loopThread_, "register should only be called from the event loop thread");
+		version(Tango_0_99_7) {
+			if(conduit in registered)
+				selector.reregister(conduit, events, attachment);
 			else {
 				selector.register(conduit, events, attachment);
+				registered[conduit] = conduit;
 			}
+		}
+		else {
+			selector.register(conduit, events, attachment);
 		}
 	}
 	
@@ -147,22 +81,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	{
 		debug log.trace("Unregistering ISelectable");
 		debug assert(Thread.getThis == loopThread_, "unregister should only be called from the event loop thread");
-		version(linux) { 
-			 if (conduit !is null)
-            {
-                if (epoll_ctl(epfd_, EPOLL_CTL_DEL, conduit.fileHandle(), null) == 0)
-                {
-                    keys_.remove(conduit.fileHandle());
-                }
-                else
-                {
-                	debug assert(false, "Unable to unregister epoll event, errno {}");
-                }
-            }
-		} else {
-			
-			selector.unregister(conduit);
-		}
+		selector.unregister(conduit);
 	}
 	
 	void sendSignal(SignalInfo sig)
@@ -191,13 +110,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	void open(uint size, uint maxEvents)
 	{
 		assert(!opened_, "EventDispatcher should be opened only once");
-		version(linux) { 
-			events_ = new epoll_event[maxEvents];
-			epfd_ = epoll_create(cast(int)size);
-			assert(epfd_ >= 0, "Unable to start epoll, errno {}");
-		} else {
-			selector.open(size, maxEvents);
-		}
+		selector.open(size, maxEvents);
 		opened_ = true;
 	}
 	
@@ -207,13 +120,19 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	}
 	
 	public bool inbeat = false, outbeat = false;
+version(Windows) {}
+else {
 	private ucontext_t restart_ctxt_;
 	private bool gotRestartCtxt_ = false;
+}
 	
 	void handleSyncSignal(SignalInfo sig)
 	{
+version(Windows) {}
+else {
 		assert(gotRestartCtxt_, "Don't have restart context");
 		setcontext(&restart_ctxt_);
+}
 	}
 	
 	void run()
@@ -222,68 +141,46 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		assert(!running_, "Only one instance of the event loop should be called at a time");
 		running_ = true;
 		debug loopThread_ = Thread.getThis;
-		
+version(Windows) {}
+else {
 		assert(getcontext(&restart_ctxt_) == 0);
 		gotRestartCtxt_ = true;
+}
 		
 		while(running_) {
 			try
 			{
 				inbeat = true;
-				
-				auto sig = signalQueue.pull;
+				auto sig = signalQueue.pop;
 				while(sig !is null && running_) {
 					auto pHandler = sig.signal in signalHandlers_;
 					if(pHandler) (*pHandler)(sig);
 					else log.warn("Received signal {}, but have no handler", sig.signal);
-					sig = signalQueue.pull;
+					sig = signalQueue.pop;
 				}
 				
-				version(linux) {
-					int evntCnt;
-					while (true)
-		            {
-		                // FIXME: add support for the wakeup() call.
-		                evntCnt = epoll_wait(epfd_, events_.ptr, events_.length, epollTimespan_);
-		                if (evntCnt >= 0)
-		                {
-		                    break;
-		                }
-		                else
-		                {
-		                    if (errno != EINTR)
-		                    {
-		                        debug assert(false, "epoll_wait failed, errno {}");
-		                    }
-		                    debug log.warn("Restarting epoll_wait after failure");
-		                }
-		            }
-		                
-	                foreach(event; events_[0..evntCnt])
-	                {
-	                	if(!running_) break;
-	                	
-	                	if(event.events == 0) continue;
-	                	//debug log.trace("Found some events {}",event.events);
-	                	auto key = *(cast(SelectionKey *)event.data.ptr);
-	                    //key.events = cast(Event) event.events;
+				auto eventCnt = selector.select(timeout);
+				if(eventCnt > 0) {
+					debug log.trace("Found some events");
+					foreach(key; selector.selectedSet) {
+						if(!running_) break;
 						
 						auto responder = cast(EventResponder)key.attachment;
 						debug assert(responder);
-						if((event.events & Event.Read) != 0)
+						if(key.isReadable)
 						{
-							//debug log.trace("Read event for responder {}", responder.toString);
+							debug log.trace("Read event for responder {}", responder.toString);
 							responder.handleRead(this);
 							//debug log.trace("{}",StackTrace.get.toString);
 						}
-						else if((event.events & Event.Write) != 0)
+						else if(key.isWritable)
 						{
-							//debug log.trace("Write event for responder {}", responder.toString);
+							debug log.trace("Write event for responder {}", responder.toString);
 							responder.handleWrite(this);
 						}
 						else if(key.isHangup)
 						{
-							//log.warn("Hangup event for responder {}", responder.toString);
+							log.warn("Hangup event for responder {}", responder.toString);
 							responder.handleDisconnect(this);
 						}
 						else if(key.isError() || key.isInvalidHandle())
@@ -294,49 +191,14 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 								log.warn("Selection key for responder {} return invalid handle",responder.toString);
 							responder.handleError(this);
 	                    }
-		            }
-				} else {
-					auto eventCnt = selector.select(timeout);
-					if(eventCnt > 0) {
-						debug log.trace("Found some events");
-						foreach(key; selector.selectedSet) {
-							if(!running_) break;
-							
-							auto responder = cast(EventResponder)key.attachment;
-							debug assert(responder);
-							if(key.isReadable)
-							{
-								debug log.trace("Read event for responder {}", responder.toString);
-								responder.handleRead(this);
-								//debug log.trace("{}",StackTrace.get.toString);
-							}
-							else if(key.isWritable)
-							{
-								debug log.trace("Write event for responder {}", responder.toString);
-								responder.handleWrite(this);
-							}
-							else if(key.isHangup)
-							{
-								log.warn("Hangup event for responder {}", responder.toString);
-								responder.handleDisconnect(this);
-							}
-							else if(key.isError() || key.isInvalidHandle())
-		                    {
-								if(key.isError())
-									log.warn("Selection key for responder {} has an error",responder.toString);
-								if(key.isInvalidHandle())
-									log.warn("Selection key for responder {} return invalid handle",responder.toString);
-								responder.handleError(this);
-		                    }
-						}
 					}
 				}
 				
-				auto task = taskQueue.pull;
+				auto task = taskQueue.pop;
 				while(task !is null && running_) {
 					debug log.trace("Running task");
 					task(this);
-					task = taskQueue.pull;
+					task = taskQueue.pop;
 				}
 				
 				outbeat = true;
@@ -354,9 +216,6 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		
 		log.info("Shutting down");
 
-		version(linux) {}
-		else {
-			selector.close;
-		}
+		selector.close;
 	}
 }

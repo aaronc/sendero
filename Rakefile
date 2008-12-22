@@ -35,7 +35,7 @@ end
 
 file "test_server.exe" => SRC do
   sh "dsss build test_server.d"
-  sh "objdump test_server -t > test_server.symbols"
+#  sh "objdump test_server -t > test_server.symbols"
 end
 
 file "test_server_client.exe" => SRC do

@@ -22,47 +22,47 @@ class ThreadSafeQueue(T)
 		}
 	}
 	
-	final void push(T t)
+	void push(T t)
 	{
 		assert(t !is null);
-		doPushPull(t);
+		doPushPop(t);
 	}
 	
-	final T pull()
+	T pop()
 	{
-		return doPushPull;
+		return doPushPop;
 	}
 	
 private:
-	synchronized T doPushPull(T t = null)
+	synchronized T doPushPop(T t = null)
 	{
-		//debug log.trace("Doing push pull");
+		//debug log.trace("Doing push pop");
 		if(t !is null) {
 			debug log.trace("Doing push");
 			if(tail !is null) {
-				//debug log.trace("Non-null tail");
+				debug log.trace("Non-null tail");
 				auto next = new Node(t);
 				tail.next = next;
 				tail = next;
 			}
 			else {
-				//debug log.trace("Null tail");
+				debug log.trace("Null tail");
 				assert(head is null);
 				head = new Node(t);
 				tail = head;
-				//debug log.trace("Done adding head");
+				debug log.trace("Done adding head");
 			}
 		}
 		else if(head !is null) {
-			//debug log.trace("Doing pull");
+			debug log.trace("Doing pop");
 			t = head.t;
 			if(head == tail) {
-				//debug log.trace("head == tail");
+				debug log.trace("head == tail");
 				head = null;
 				tail = null;
 			}
 			else {
-				//debug log.trace("head != tail");
+				debug log.trace("head != tail");
 				head = head.next;
 			}
 			return t;
@@ -95,10 +95,10 @@ unittest
 	queue.push(new Test);
 	queue.push(new Test);
 	queue.push(new Test);
-	assert(queue.pull !is null);
-	assert(queue.pull !is null);
-	assert(queue.pull !is null);
+	assert(queue.pop !is null);
+	assert(queue.pop !is null);
+	assert(queue.pop !is null);
 	queue.push(new Test);
-	assert(queue.pull !is null);
-	assert(queue.pull is null);
+	assert(queue.pop !is null);
+	assert(queue.pop is null);
 }

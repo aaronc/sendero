@@ -8,15 +8,20 @@ import sendero.server.WorkerPool;
 import sendero.server.http.Http11Parser;
 import sendero.server.provider.WorkerPoolTcpServiceProvider;
 import sendero.server.runtime.StackTrace;
-import sendero.server.TimerDispatcher;
+//import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
-//import tango.util.log.Config;
 import tango.stdc.stdlib;
-import tango.stdc.posix.unistd;
 import tango.stdc.errno;
 import tango.sys.Process;
+
+debug import tango.util.log.Config;
+
+version(Windows) {}
+else {
+import tango.stdc.posix.unistd;
+}
 
 import tango.core.Thread;
 
@@ -69,8 +74,7 @@ class Server
 		auto heartbeatThr = new HeartBeatThread(&heartbeat);
 		heartbeatThr.start;
 		//pool.setHeartbeat(timer);
-		//auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
-		auto server = new TcpServer(new TestProvider);
+		auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
 		server.start(dispatcher);
 		dispatcher.run;
 	}
@@ -79,6 +83,8 @@ class Server
 	
 	void startFork()
 	{
+version(Windows) {}
+else {
 		pid_t pid;
 		pid = fork();
 		if(pid == 0)
@@ -97,6 +103,7 @@ class Server
 			Stdout.formatln("Unable to create server daemon, errno {}", errno);
 			exit(-1);
 		}
+}
 	}
 	
 	void heartbeat()
@@ -113,6 +120,8 @@ int serverMain(char[][] args)
 
 int start_server(char[][] args)
 {
+version(Windows) {return serverMain(args);}
+else {
 	//	 Daemonize
 	pid_t pid;
 	pid = fork();
@@ -133,6 +142,7 @@ int start_server(char[][] args)
 		Stdout.formatln("Unable to create server daemon, errno {}", errno);
 		return -1;
 	}
+}
 }
 	
 int stop_server(char[][] args)
