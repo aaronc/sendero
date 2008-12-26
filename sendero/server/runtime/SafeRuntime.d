@@ -1,9 +1,6 @@
 module sendero.server.runtime.SafeRuntime;
 
 import tango.core.Thread;
-import tango.stdc.posix.signal;
-import tango.stdc.posix.pthread;
-import tango.stdc.posix.ucontext;
 import tango.stdc.stdlib;
 
 import sendero.server.runtime.SafeThreadManager;
@@ -17,6 +14,24 @@ private Logger log;
 static this() {
 	log = Log.lookup("sendero.server.runtime.SafeRuntime");
 }
+
+version(Windows) {
+	
+class SafeRuntime : SafeThreadManager
+{		
+	this(IMainEventLoop mainEventLoop)
+	{
+		super(mainEventLoop);
+	}
+}
+
+}
+else {
+
+import tango.stdc.posix.signal;
+import tango.stdc.posix.pthread;
+import tango.stdc.posix.ucontext;
+		
 
 class SafeRuntimeThread : SafeWorkerThread
 {
@@ -117,4 +132,6 @@ class SafeRuntime : SafeThreadManager
 	}
 	
 	
+}
+
 }

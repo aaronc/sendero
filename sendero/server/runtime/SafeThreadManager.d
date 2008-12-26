@@ -10,11 +10,6 @@ SIGILL
 SIGSYS
 */
 
-import tango.core.Thread;
-import tango.stdc.posix.signal;
-import tango.stdc.posix.pthread;
-import tango.stdc.posix.ucontext;
-
 import sendero.server.model.IEventLoop;
 import sendero.server.runtime.StackTrace;
 
@@ -24,6 +19,26 @@ static this()
 {
 	log = Log.lookup("sender.server.runtime.SafeThreadManager");
 }
+
+version(Windows) {
+	
+class SafeThreadManager
+{
+	this(IEventLoop eventLoop)
+	{
+		eventLoop_ = eventLoop;
+	}
+	
+	protected IEventLoop eventLoop_;
+}
+
+}
+else {
+import tango.core.Thread;
+
+import tango.stdc.posix.signal;
+import tango.stdc.posix.pthread;
+import tango.stdc.posix.ucontext;
 
 class SafeThreadManager
 {
@@ -107,4 +122,6 @@ class SafeThreadManager
 		registerSyncSignalHandler;
 		//doStackTrace;
 	}
+}
+
 }

@@ -76,10 +76,11 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	this(DeclarationInfo decl)
 	{
 		this.decl_ = decl;
-		this.schema_ = Schema.create(decl_.name);
+		this.obj_ = new ObjectResponder(this);
+		if(this.obj_.parent !is null) this.schema_ = this.obj_.dataRes.schema;
+		else this.schema_ = Schema.create(decl_.name);
 		createFieldInfo;
 		this.hasInterface = findInterface(decl_.name);
-		this.obj_ = new ObjectResponder(this);
 		this.mapper_ = Mapper.create(decl_.name, this);
 		
 		assert(decl_ !is null);

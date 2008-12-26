@@ -16,9 +16,19 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	{
 		dataRes_ = res;
 		objects[res.classname] = this;
+		auto clsDecl = cast(ClassDeclaration)dataRes_.decl;
+		foreach(base;clsDecl.baseTypes) {
+			auto pObj = base in objects;
+			if(pObj !is null) {
+				parent_ = *pObj;
+				pObj.children_[res.classname] = this;
+			}
+		}
 	}
 	
 	private static ObjectResponder[char[]] objects;
+	
+	public char[] classname() { return dataRes_.classname; }
 	
 	public IField[] fields() { return fields_; }
 	private IField[] fields_;
@@ -26,8 +36,8 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	public ObjectResponder parent() { return parent_; }
 	private ObjectResponder parent_;
 	
-	public ObjectResponder[char[]] children() { return children_; }
-	private ObjectResponder[char[]] children_;
+	public IObjectResponder[char[]] children() { return children_; }
+	private IObjectResponder[char[]] children_;
 	
 	enum InheritanceType {None, SingleTable, MultiTable };
 	public InheritanceType inheritance() { return inheritance_;}

@@ -22,7 +22,7 @@ void snake_upcase_char(char* c)
 
 
 
-#line 26 "sendero/server/http/Http11Parser.d"
+#line 24 "sendero/server/http/Http11Parser.d"
 static const byte[] _http_parser_actions = [
 	0, 1, 0, 1, 2, 1, 3, 1, 
 	4, 1, 5, 1, 6, 1, 7, 1, 
@@ -287,13 +287,13 @@ class Http11Parser : ITcpRequestHandler
 		HttpRequestLineData reqLine;
 		
 		
-#line 291 "sendero/server/http/Http11Parser.d"
+#line 287 "sendero/server/http/Http11Parser.d"
 	{
 	cs = http_parser_start;
 	}
 #line 180 "sendero/server/http/Http11Parser.rl"
 		
-#line 297 "sendero/server/http/Http11Parser.d"
+#line 291 "sendero/server/http/Http11Parser.d"
 	{
 	int _klen;
 	uint _trans;
@@ -461,7 +461,7 @@ _match:
     {p++; if (true) goto _out; }
   }
 	break;
-#line 465 "sendero/server/http/Http11Parser.d"
+#line 444 "sendero/server/http/Http11Parser.d"
 		default: break;
 		}
 	}

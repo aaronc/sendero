@@ -35,18 +35,21 @@ class FieldCtxt : IStandaloneDecoratorContext
 				&& decorator.params[0].type == VarT.String) {
 			auto name = decorator.params[0].string_;
 			auto f = Field.createField(type, name, objBuilder, resp, decorator);
-			if(f !is null) objBuilder.addField(f, f.index_);
+			if(f !is null) {
+				objBuilder.addField(f, f.index_);
+				if(f.hasSetter) resp.mapper.addMapping(f);
+			}
 		}
 		return null;
 	}
 }
 
-class Field : IField
+class Field : IField, IMapping
 {
 	static Field createField(FieldType type, char[] name, IObjectBuilder objBuilder, IDataResponder resp, StandaloneDecorator decorator)
 	{
-		bool getter = true;
-		bool setter = true;
+		FieldAttributes attr;
+		
 		bool map = true;
 		
 		auto col = Schema.prepColumnInfo(type);
@@ -64,14 +67,17 @@ class Field : IField
 				resp.addValidation(new RequiredRes(type.DType, pname));
 				col.notNull = true;
 				break;
-			case "primaryKey": col.primaryKey = true; break;
-			case "autoIncrement": col.autoIncrement = true; setter = false; break;
+			case "primaryKey": col.primaryKey = true; attr.primaryKey = true; break;
+			case "autoIncrement": col.autoIncrement = true; attr.setter = false; break;
 			case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
 			case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
 			case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
 			case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "no_map": map = false; break;
+			case "privateSetter": attr.setterProtection = "private"; break;
+			case "protectedSetter": attr.setterProtection = "protected"; break;
+			case "packageSetter": attr.setterProtection = "package"; break;
 			default:
 				break;
 			// validations
@@ -83,11 +89,11 @@ class Field : IField
 		resp.schema.addColumn(col);
 		
 		if(map) {
-			auto field = new Field(type, name, getter, setter);
+			auto field = new Field(type, name, attr);
 			
 			resp.addMethod(new FunctionDeclaration(name, type.DType));
 			
-			if(setter) {
+			if(attr.setter) {
 				resp.addMethod(new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]));
 			}
 			
@@ -96,12 +102,11 @@ class Field : IField
 		else return null;
 	}
 	
-	this(FieldType type, char[] name, bool getter, bool setter)
+	this(FieldType type, char[] name, FieldAttributes attr)
 	{
 		this.type_ = type;
 		this.name_ = name;
-		this.setter_ = setter;
-		this.getter_ = getter;
+		this.attr_ = attr;
 	}
 	
 	char[] privateName()
@@ -114,25 +119,37 @@ class Field : IField
 		return type_.DType; 
 	}
 	
+	char[] fieldAccessor()
+	{
+		return privateName;
+	}
+	
 	private FieldType type_;
 	
 	char[] name() { return name_; }
 	char[] colname() { return name_; }
 	
+	struct FieldAttributes
+	{
+		bool getter = true;
+		bool setter = true;
+		bool primaryKey = false;
+		char[] setterProtection = "public";
+	}
+	
 	private char[] name_;
-	private bool getter_;
-	private bool setter_;
 	private uint index_;
+	private FieldAttributes attr_;
 	
 	void writeDecl(IPrint wr)
 	{
 		//if(map_) {
-			if(getter_) {
+			if(attr_.getter) {
 				wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
 			}
 			
-			if(setter_) {
-				wr.f("public void {}({} val) {{", name_, type_.DType);
+			if(attr_.setter) {
+				wr.f(attr_.setterProtection ~ " void {}({} val) {{", name_, type_.DType);
 				wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
 				wr.fln("}");
 			}
@@ -145,12 +162,17 @@ class Field : IField
 	
 	bool hasGetter()
 	{
-		return getter_;
+		return attr_.getter;
 	}
 	
 	bool hasSetter()
 	{
-		return setter_;
+		return attr_.setter;
+	}
+	
+	bool isPrimaryKey()
+	{
+		return attr_.primaryKey;
 	}
 	
 	char[] isModifiedExpr()

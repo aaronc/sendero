@@ -5,6 +5,7 @@ module sendero.server.http.Http11Parser;
 import tango.util.log.Log;
 import tango.core.Thread;
 import Int = tango.text.convert.Integer;
+import Text = tango.text.Util;
 
 version (Win32) extern (C) int memicmp (char *, char *, uint);
 version (Posix) extern (C) int strncasecmp (char *, char*, uint);
@@ -83,13 +84,13 @@ void snake_upcase_char(char* c)
     fbreak;
   }
 
-  include http_parser_common "http11_parser_common._rl";
+  include http_parser_common "sendero/server/http/http11_parser_common._rl";
 
 }%%
 
 %% write data;
 
-class Http11Parser : ITcpRequestHandler
+class Http11Handler : ITcpRequestHandler
 {
 	static this()
 	{
@@ -156,7 +157,9 @@ class Http11Parser : ITcpRequestHandler
 	
 	protected IHttpRequestHandler req;
 	protected Fiber parseFiber_;
-	protected void[][] data;
+	protected void[][] data_;
+	protected ITcpCompletionPort completionPort_;
+	protected void[][] response_;
 	
 	void parse()
 	{
@@ -165,29 +168,85 @@ class Http11Parser : ITcpRequestHandler
 		char* body_start = null;
 		size_t field_len;
 		
-		char[] buffer; //TODO
+		if(!data.length) {
+				throw new Exception("Http parsing initiated before any data has been received");
+		}
 		
 		int cs = 0;
-		char* p = buffer.ptr;
-		char* pe = p + buffer.length + 1;
-		char* eof = pe;
+		char* p;
+		char* pe;
+		char* eof;
 		
 		uint expectedContentLength = 0;
+		bool chunked = false;
 	
 		HttpRequestLineData reqLine;
 		
-		%% write init;
-		%% write exec;
+		void parseHeaders() {
+			p = data[0].ptr;
+			pe = p + data[0].length + 1;
+			eof = pe;
+			
+			%% write init;
+			%% write exec;
+		}
+		
+		void fail() {
+			req.signalFatalError;
+			response_ = req.processRequest(completionPort_);
+		}
+		
+		parseHeaders;
+		if(body_start is null || cs == http_parser_error) {
+			if(data_.length > 1) {
+				void[] buf;
+				foreach(b; data_) buf ~= b;
+				data_ = [buf];
+				parseHeaders;
+				if(body_start is null || cs == http_parser_error) return fail;
+			}
+			else return fail;
+		}
 		
 		req.handleRequestLine(reqLine);
+
+		size_t calcContentLength() {
+			size_t curLen = pe - body_start;
+			foreach(buf; data_[1..$]) curLen += buf.length;
+			return curLen;
+		}
 		
-		/+if(cs == http_parser_error) return false;
-		else return true;+/
-	}	
+		data_[0] = body_start[0 .. pe - body_start];
+		
+		if(expectedContentLength) {
+			auto curLen = calcContentLength;
+			while(curLen < expectedContentLength) {
+				completionPort_.keepReading;
+				Fiber.yield;
+				curLen = calcContentLength;
+			}
+			
+			req.handleData(data_);
+			response_ = req.processRequest(completionPort_);
+		}
+		else if(chunked) {
+			uint bufIdx = 0;
+			uint chunkSize = 0;
+			assert(false, "Not implemented yet");
+		}
+	}
 	
 	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
 	{
-		parseFiber_.call;
-		return null;
+		completionPort_ = completionPort;
+		data_ ~= data;
+		if(parseFiber_.state != Fiber.State.TERM) {
+			// TODO check for exec state and wait
+			parseFiber_.call;
+			return response_;
+		}
+		else return null;
+	/+	if(parseFiber_.state != Fiber.State.TERM) return null;
+		else return response_;+/
 	}
 }

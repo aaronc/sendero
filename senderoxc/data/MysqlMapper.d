@@ -5,6 +5,7 @@ import senderoxc.data.mapper.mysql.IMysqlMapper;
 import senderoxc.data.IDataResponder;
 
 import senderoxc.data.mapper.mysql.Delete;
+import senderoxc.data.mapper.mysql.Save;
 
 import sendero.core.Config;
 
@@ -38,5 +39,10 @@ class MysqlMapper : Mapper, IMysqlMapper
 	IMapperResponder getDeleteResponder()
 	{
 		return new MysqlDeleteResponder(this);
+	}
+	
+	IMapperResponder getSaveResponder()
+	{
+		return new MysqlSaveResponder!()(this);
 	}
 }

@@ -3,7 +3,7 @@ module sendero.server.WorkerPool;
 import tango.core.Thread;
 import tango.core.sync.Semaphore, tango.core.sync.Mutex;
 import sendero.server.runtime.SafeThread;
-import sendero.server.TimerDispatcher;
+//import sendero.server.TimerDispatcher;
 
 import sendero.util.collection.ThreadSafeQueue;
 
@@ -123,12 +123,13 @@ abstract class WorkerPoolBase(JobType)
 		"restarting {} threads", startThreads_);
 		start(startThreads_);
 	}
-	
+/+	
 	void setHeartbeat(TimerDispatcher timer, uint resolutionMultiplier = 0)
 	{
 		auto heartbeat = new TimedTask(&ensureAlive, resolutionMultiplier, true);
 		timer.scheduleTask(heartbeat);
 	}
++/
 	
 protected:
 	uint startThreads_;

@@ -65,13 +65,20 @@ class Mapper : IMapper
 	
 	IMapperResponder getSaveResponder()
 	{
+		return null;
 		return new SaveResponder!()(this);
 	}
 	
 	final void init()
 	{
-		responders ~= getDeleteResponder;
-		//responders ~= getSaveResponder;
+		void add(IMapperResponder responder)
+		{
+			if(responder !is null)
+				responders ~= responder;
+		}
+		
+		add(getDeleteResponder);
+		add(getSaveResponder);
 	}
 	
 	final void write(IPrint wr)
@@ -96,4 +103,16 @@ class Mapper : IMapper
 	{
 		iface_.addMethod(decl);
 	}
+	
+	final void addMapping(IMapping mapping)
+	{
+		mappings_ ~= mapping;
+	}
+	
+	final IMapping[] mappings()
+	{
+		return mappings_;
+	}
+	
+	IMapping[] mappings_;
 }

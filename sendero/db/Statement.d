@@ -239,7 +239,7 @@ class Statement
 				ubyte[] signature = cast(ubyte[])T.stringof;
 				foreach(Index, Type; T)
 				{
-					static if(T.length > Index && is(Type == BindInfo)) {
+					static if(T.length > Index && (is(Type == BindInfo) || is(Type == Binder))) {
 						signature ~= t[Index].types;
 					}
 				}
@@ -266,7 +266,7 @@ class Statement
 		
 		foreach(Index, Type; T)
 		{
-			static if(T.length > Index && is(Type == BindInfo)) {
+			static if(T.length > Index && (is(Type == BindInfo) || is(Type == Binder))) {
 				signature ~= t[Index].types;
 			}
 		}

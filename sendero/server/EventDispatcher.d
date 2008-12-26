@@ -19,7 +19,11 @@ else {
 import tango.core.Thread;
 import tango.util.log.Log;
 import tango.io.selector.model.ISelector;
+
+version(Windows) {}
+else {
 import tango.stdc.posix.ucontext;
+}
 
 debug import sendero.server.runtime.StackTrace;
 
@@ -56,18 +60,26 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	
 	private QueueT!(EventTaskDg) taskQueue;
 	private QueueT!(SignalInfo) signalQueue;
-	version(linux) { 
-		private int epfd_ = -1;
-        private epoll_event[] events_;
-        SelectionKey[ISelectable.Handle] keys_;
-	} else {
-		private ISelector selector;
-	}
+version(linux) { 
+	private int epfd_ = -1;
+    private epoll_event[] events_;
+    SelectionKey[ISelectable.Handle] keys_;
+    private int epollTimespan_;
+} else {
+	private ISelector selector;
+}
 	private double timeout_;
-	private int epollTimespan_;
-	double timeout() { return timeout_; }
-	void timeout(double t) { timeout_ = t; 
-		epollTimespan_ = cast(int)TimeSpan.fromInterval(timeout).millis;
+	
+	double timeout()
+	{
+		return timeout_;
+	}
+	
+	void timeout(double t)
+	{
+		timeout_ = t; 
+		version(linux)
+			epollTimespan_ = cast(int)TimeSpan.fromInterval(timeout).millis;
 	}
 	
 	private bool opened_ = false;
@@ -148,7 +160,7 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		debug log.trace("Unregistering ISelectable");
 		debug assert(Thread.getThis == loopThread_, "unregister should only be called from the event loop thread");
 		version(linux) { 
-			 if (conduit !is null)
+			if (conduit !is null)
             {
                 if (epoll_ctl(epfd_, EPOLL_CTL_DEL, conduit.fileHandle(), null) == 0)
                 {
@@ -207,13 +219,19 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 	}
 	
 	public bool inbeat = false, outbeat = false;
+version(Windows) {}
+else {
 	private ucontext_t restart_ctxt_;
 	private bool gotRestartCtxt_ = false;
+}
 	
 	void handleSyncSignal(SignalInfo sig)
 	{
+version(Windows) {}
+else {
 		assert(gotRestartCtxt_, "Don't have restart context");
 		setcontext(&restart_ctxt_);
+}
 	}
 	
 	void run()
@@ -222,9 +240,12 @@ class EventDispatcher : IMainEventLoop, ISyncEventDispatcher
 		assert(!running_, "Only one instance of the event loop should be called at a time");
 		running_ = true;
 		debug loopThread_ = Thread.getThis;
-		
+
+version(Windows) {}
+else {		
 		assert(getcontext(&restart_ctxt_) == 0);
 		gotRestartCtxt_ = true;
+}
 		
 		while(running_) {
 			try

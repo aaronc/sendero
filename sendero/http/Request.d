@@ -53,6 +53,11 @@ final class Request : IHttpRequestHandler
 	{
 		
 	}
+	
+	void signalFatalError()
+	{
+		assert(false, "Not implemented");
+	}
 
 	void[][] processRequest(ITcpCompletionPort completionPort)
 	{

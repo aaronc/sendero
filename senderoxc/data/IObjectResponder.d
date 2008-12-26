@@ -14,6 +14,15 @@ interface IField
 	char[] dtype();
 }
 
+interface IMapping
+{
+	char[] isModifiedExpr();
+	char[] colname();
+	char[] fieldAccessor();
+	char[] dtype();
+	bool isPrimaryKey();
+}
+
 interface IObjectBuilder
 {
 	void addField(IField, out uint setterIdx);
@@ -21,6 +30,9 @@ interface IObjectBuilder
 
 interface IObjectResponder
 {
+	char[] classname();
 	IField[] fields();
+	IObjectResponder parent();
+	IObjectResponder[char[]] children();
 	void writeCheckModifier(char[] delegate(FieldDeclaration));
 }

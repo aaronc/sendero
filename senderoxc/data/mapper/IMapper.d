@@ -16,4 +16,6 @@ interface IMapper : IInterfaceWriter
 	Schema schema();
 	IObjectResponder obj();
 	char[][] getPrimaryKeyFields();
+	IMapping[] mappings();
+	void addMapping(IMapping mapping);
 }

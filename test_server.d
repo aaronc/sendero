@@ -8,13 +8,16 @@ import sendero.server.WorkerPool;
 import sendero.server.http.Http11Parser;
 import sendero.server.provider.WorkerPoolTcpServiceProvider;
 import sendero.server.runtime.StackTrace;
-import sendero.server.TimerDispatcher;
+//import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
 //import tango.util.log.Config;
 import tango.stdc.stdlib;
+version(Windows) {}
+else {
 import tango.stdc.posix.unistd;
+}
 import tango.stdc.errno;
 import tango.sys.Process;
 
@@ -22,7 +25,10 @@ import tango.core.Thread;
 
 static this()
 {
+version(Windows) {}
+else {
 	Symbol.loadObjDumpSymbols("test_server.symbols");
+}
 }
 
 class TestProvider : ITcpServiceProvider
@@ -79,6 +85,8 @@ class Server
 	
 	void startFork()
 	{
+version(Windows) {}
+else {		
 		pid_t pid;
 		pid = fork();
 		if(pid == 0)
@@ -97,6 +105,7 @@ class Server
 			Stdout.formatln("Unable to create server daemon, errno {}", errno);
 			exit(-1);
 		}
+}
 	}
 	
 	void heartbeat()
@@ -113,6 +122,8 @@ int serverMain(char[][] args)
 
 int start_server(char[][] args)
 {
+version(Windows) {serverMain(args); return 0;}
+else {
 	//	 Daemonize
 	pid_t pid;
 	pid = fork();
@@ -133,6 +144,7 @@ int start_server(char[][] args)
 		Stdout.formatln("Unable to create server daemon, errno {}", errno);
 		return -1;
 	}
+}
 }
 	
 int stop_server(char[][] args)

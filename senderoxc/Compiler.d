@@ -1,6 +1,8 @@
 module senderoxc.Compiler;
 
-import tango.io.File, tango.io.device.FileConduit, tango.io.Path, tango.io.FilePath;
+import tango.io.File, tango.io.Path, tango.io.FilePath;
+version(Tango_0_99_7) import tango.io.FileConduit;
+else import tango.io.device.FileConduit;
 import tango.io.Stdout;
 import tango.util.log.Config;
 import Util = tango.text.Util;

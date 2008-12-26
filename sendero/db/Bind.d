@@ -5,7 +5,12 @@ import dbi.Statement;
 struct BindInfo
 {
 	BindType[] types;
-	void* ptrs;
+	void*[] ptrs;
+}
+
+struct Binder
+{
+	
 }
 
 interface IBindable {
@@ -17,7 +22,7 @@ interface IBindable {
 	 */
 	//BindInfo[] bind(char[][] fieldNames = null);
 	
-	Binder createBinder(char[][] fieldNames = null);
+	Binder createBinder(char[][] fieldNames);
 }
 
 // Ideas:
@@ -25,12 +30,16 @@ interface IBindable {
 struct Binder
 {
 	BindType[] types;
+	void*[] ptrs;
 	
 	package void*[] offsets;
 	
-	void bind(void* instPtr, ref void*[] ptrs)
+	void bind(void* instPtr)
 	{
-		
+		foreach(i, offset; offset)
+		{
+			ptrs[i] = instPtr + offset;
+		}
 	}
 	
 	alias bind opCall;
