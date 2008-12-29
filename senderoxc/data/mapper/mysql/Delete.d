@@ -13,7 +13,7 @@ class MysqlDeleteResponder : DeleteResponder
 	
 	private IMysqlMapper mapper;
 	
-	void write(IPrint wr)
+	void doWrite(IPrint wr)
 	{
 		wr("public void destroy()\n");
 		wr("{\n");

@@ -17,10 +17,13 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		dataRes_ = res;
 		objects[res.classname] = this;
 		auto clsDecl = cast(ClassDeclaration)dataRes_.decl;
+		assert(clsDecl);
 		foreach(base;clsDecl.baseTypes) {
 			auto pObj = base in objects;
 			if(pObj !is null) {
 				parent_ = *pObj;
+				parent_.inheritance_ = InheritanceType.SingleTable;
+				inheritance_ = InheritanceType.SingleTable;
 				pObj.children_[res.classname] = this;
 			}
 		}
@@ -39,9 +42,12 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	public IObjectResponder[char[]] children() { return children_; }
 	private IObjectResponder[char[]] children_;
 	
-	enum InheritanceType {None, SingleTable, MultiTable };
-	public InheritanceType inheritance() { return inheritance_;}
-	private InheritanceType inheritance_;	
+	public InheritanceType inheritance()
+	{ 
+		if(parent !is null) return parent.inheritance;
+		return inheritance_;
+	}
+	private InheritanceType inheritance_ = InheritanceType.None;	
 	
 	IDataResponder dataRes() { return dataRes_; }
 	private IDataResponder dataRes_;
@@ -73,7 +79,9 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	
 	private void writeChangeTracking(IPrint wr)
 	{
-		wr.fln("private StaticBitArray!({},{}) __touched__;",
+		if(parent !is null) return;
+		
+		wr.fln("protected StaticBitArray!({},{}) __touched__;",
 			cast(uint)ceil(cast(real)(setterIdx_)/ 32), setterIdx_);
 		wr.nl;
 	}
@@ -156,6 +164,13 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		//assert(!(fields.name in fields));
 		//fields[field.name] = field;
 		fields_ ~= field;
+		getSetterIdx(field, setterIdx);
+	}
+	
+	private void getSetterIdx(IField field, out uint setterIdx)
+	{
+		if(parent !is null) return parent.getSetterIdx(field, setterIdx);
+		
 		if(field.hasSetter) setterIdx = setterIdx_;
 		++setterIdx_;
 	}

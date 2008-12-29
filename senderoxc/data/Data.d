@@ -19,6 +19,13 @@ import dbi.Database;
 
 import senderoxc.data.IDataResponder;
 
+import tango.util.log.Log;
+Logger log;
+static this()
+{
+	log = Log.lookup("senderoxc.data.Data");
+}
+
 /*
  * TODO:
  * 
@@ -73,15 +80,18 @@ class DataContext : IDecoratorContext
 
 class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 {
-	this(DeclarationInfo decl)
+	this(DeclarationInfo declaration)
 	{
-		this.decl_ = decl;
+		this.decl_ = declaration;
 		this.obj_ = new ObjectResponder(this);
-		if(this.obj_.parent !is null) this.schema_ = this.obj_.dataRes.schema;
+		if(this.obj_.parent !is null) this.schema_ = this.obj_.parent.dataRes.schema;
 		else this.schema_ = Schema.create(decl_.name);
+		
 		createFieldInfo;
 		this.hasInterface = findInterface(decl_.name);
 		this.mapper_ = Mapper.create(decl_.name, this);
+		
+		debug log.trace("Done constructing DataResponder for {}", classname);
 		
 		assert(decl_ !is null);
 		assert(schema_ !is null);

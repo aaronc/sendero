@@ -255,7 +255,7 @@ Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
 
-private StaticBitArray!(1,6) __touched__;
+protected StaticBitArray!(1,6) __touched__;
 
 
 void httpSet(IObject obj, Request req)

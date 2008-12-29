@@ -28,11 +28,14 @@ interface IObjectBuilder
 	void addField(IField, out uint setterIdx);
 }
 
+enum InheritanceType { None, SingleTable, MultiTable };
+
 interface IObjectResponder
 {
 	char[] classname();
 	IField[] fields();
 	IObjectResponder parent();
 	IObjectResponder[char[]] children();
+	InheritanceType inheritance();
 	void writeCheckModifier(char[] delegate(FieldDeclaration));
 }

@@ -15,12 +15,7 @@ class DeleteResponder : IMapperResponder
 	private IMapper mapper;
 	
 	
-	void write(IPrint wr)
-	in
-	{
-		assert(wr); assert(mapper);	assert(mapper.schema);
-	}
-	body
+	void doWrite(IPrint wr)
 	{
 		wr("private static char[] deleteSql;\n");
 		
@@ -34,5 +29,18 @@ class DeleteResponder : IMapperResponder
 		wr.dedent;
 		wr("}\n");
 		wr("\n");
+	}
+	
+	final void write(IPrint wr)
+	in
+	{
+		assert(wr); assert(mapper);	assert(mapper.schema);
+	}
+	body
+	{
+		if(mapper.obj.parent !is null && mapper.obj.inheritance == InheritanceType.SingleTable)
+			return;
+		
+		doWrite(wr);
 	}
 }

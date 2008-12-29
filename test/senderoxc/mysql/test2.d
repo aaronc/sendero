@@ -24,7 +24,7 @@ import sendero.util.collection.StaticBitArray, sendero.util.Singleton;
 #line 1 "test/senderoxc/test2.sdx"
 
 
-/+@data+/ class BlogEntry#line 28 "test/senderoxc/mysql/test2.d"
+/+@data+/ class Posting#line 28 "test/senderoxc/mysql/test2.d"
 
 : IObject, IHttpSet
 #line 3 "test/senderoxc/test2.sdx"
@@ -72,11 +72,12 @@ private ErrorMap __errors__;
 alias DefaultMysqlProvider db;
 public void destroy()
 {
-	const char[] deleteSql = "DELETE FROM `BlogEntry` WHERE `id` = ?";
+	const char[] deleteSql = "DELETE FROM `Posting` WHERE `id` = ?";
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
 }
 
+protected char[] classname() { return "Posting";}
 protected void writeSerialization(void delegate(char[]) write)
 {
 	if(__touched__[0]) { write("entry = ");temp = writer.getWriteBuffer(entry_.length * 2);tempLen = mysql_real_escape_string(db.database.handle,temp.ptr,entry_.ptr,entry_.length);write(temp[0..tempLen]);}
@@ -90,8 +91,9 @@ bool save()
 {
 	if(id_) write("INSERT INTO ");;
 	else write("UPDATE ");;
-	write("`BlogEntry` SET ");;
+	write("`Posting` SET ");;
 	writeSerialization(write);
+	if(!id_) write("class = " ~ classname ~ ",");
 	write(" WHERE `id` = " ~ Integer.toString(id_));;
 }
 
@@ -124,7 +126,7 @@ Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
 
-private StaticBitArray!(1,5) __touched__;
+protected StaticBitArray!(1,5) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -171,4 +173,80 @@ private HasOne!(User) author_;
 
 
 #line 15 "test/senderoxc/test2.sdx"
+}
+
+/+@data+/ class BlogEntry : Posting#line 179 "test/senderoxc/mysql/test2.d"
+
+, IObject, IHttpSet
+#line 17 "test/senderoxc/test2.sdx"
+
+{
+	
+#line 186 "test/senderoxc/mysql/test2.d"
+
+
+bool validate()
+{
+	bool succeed = true;
+
+	void fail(char[] field, Error err)	{
+		succeed = false;
+		__errors__.add(field, err);
+	}
+
+
+	return succeed;
+}
+
+
+mixin SessionAllocate!();
+
+ErrorMap errors()
+{
+	return __errors__;
+}
+void clearErrors()
+{
+	__errors__.reset;
+}
+private ErrorMap __errors__;
+alias DefaultMysqlProvider db;
+protected char[] classname() { return "BlogEntry";}
+protected void writeSerialization(void delegate(char[]) write)
+{
+	super.writeSerialization(write);
+}
+
+Var opIndex(char[] key)
+{
+	Var res;
+	switch(key)
+	{
+		default: return Var();
+	}
+	return res;
+}
+int opApply (int delegate (inout char[] key, inout Var val) dg)
+{
+	int res; char[] key; Var val;
+	return res;
+}
+void opIndexAssign(Var val, char[] key) {}
+Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
+void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
+
+
+
+void httpSet(IObject obj, Request req)
+{
+	foreach(key, val; obj)
+	{
+		switch(key)
+		{
+			default: break;
+		}
+	}
+}
+
+#line 20 "test/senderoxc/test2.sdx"
 }

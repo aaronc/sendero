@@ -21,6 +21,14 @@ class MysqlSaveResponder(MapperT = IMapper) : IMapperResponder
 	}
 	body
 	{
+		auto primKey = mapper.schema.getPrimaryKeyCols;
+		//assert(primKey.length == 1, "Only single column primary keys supported so far - Class: " ~ mapper.obj.classname);
+		if(primKey.length != 1) return;
+		
+		if(mapper.obj.inheritance == InheritanceType.SingleTable) {
+			wr.fln(`protected char[] classname() {{ return "{}";}`, mapper.obj.classname);
+		}
+		
 		wr.fln("protected void writeSerialization(void delegate(char[]) write)");
 		wr("{").nl;
 		wr.indent;
@@ -39,6 +47,9 @@ class MysqlSaveResponder(MapperT = IMapper) : IMapperResponder
 		wr("}").nl;
 		wr.nl;
 		
+		if(mapper.obj.parent !is null && mapper.obj.inheritance == InheritanceType.SingleTable)
+			return;
+		
 		wr.fln("bool save()");
 		wr("{").nl;
 		wr.indent;
@@ -52,8 +63,10 @@ class MysqlSaveResponder(MapperT = IMapper) : IMapperResponder
 
 		wr.fln("writeSerialization(write);");
 		
-		auto primKey = mapper.schema.getPrimaryKeyCols;
-		assert(primKey.length == 1, "Only single column primary keys supported so far - Class: " ~ mapper.obj.classname);
+		if(mapper.obj.inheritance == InheritanceType.SingleTable) {
+			wr("if(!id_) ")(writeWriteExpr(`"class = " ~ classname ~ ","`)).nl;
+		}
+		
 		wr(writeWriteExpr("\" WHERE `" ~ primKey[0] ~ "` = \" ~ Integer.toString(id_)"))(";\n");
 
 		wr.dedent;
