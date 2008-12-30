@@ -167,6 +167,36 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 	}
 	return dst[0..idx];
 }
+void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = &this.entry_; break;
+		case "created": dst[i] = &this.created_; break;
+		case "modified": dst[i] = &this.modified_; break;
+		case "title": dst[i] = &this.title_; break;
+		case "tags": dst[i] = &this.tags_; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
+ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = &this.entry_ - &this; break;
+		case "created": dst[i] = &this.created_ - &this; break;
+		case "modified": dst[i] = &this.modified_ - &this; break;
+		case "title": dst[i] = &this.title_ - &this; break;
+		case "tags": dst[i] = &this.tags_ - &this; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
 
 public char[] entry() { return entry_; }
 public void entry(char[] val) {__touched__[0] = true; entry_ = val;}
@@ -198,14 +228,14 @@ private HasOne!(User) author_;
 #line 15 "test/senderoxc/test2.sdx"
 }
 
-/+@data+/ class BlogEntry : Posting#line 202 "test/senderoxc/test2.d"
+/+@data+/ class BlogEntry : Posting#line 232 "test/senderoxc/test2.d"
 
 , IObject, IHttpSet
 #line 17 "test/senderoxc/test2.sdx"
 
 {
 	
-#line 209 "test/senderoxc/test2.d"
+#line 239 "test/senderoxc/test2.d"
 
 
 bool validate()
@@ -297,6 +327,36 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 		case "modified": dst[i] = BindType.Time; break;
 		case "title": dst[i] = BindType.String; break;
 		case "tags": dst[i] = BindType.String; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
+void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = &this.entry_; break;
+		case "created": dst[i] = &this.created_; break;
+		case "modified": dst[i] = &this.modified_; break;
+		case "title": dst[i] = &this.title_; break;
+		case "tags": dst[i] = &this.tags_; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
+ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = &this.entry_ - &this; break;
+		case "created": dst[i] = &this.created_ - &this; break;
+		case "modified": dst[i] = &this.modified_ - &this; break;
+		case "title": dst[i] = &this.title_ - &this; break;
+		case "tags": dst[i] = &this.tags_ - &this; break;
 		}
 		++idx;
 	}

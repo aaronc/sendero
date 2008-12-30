@@ -316,6 +316,38 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 	}
 	return dst[0..idx];
 }
+void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[i] = &this.id_; break;
+		case "email": dst[i] = &this.email_; break;
+		case "username": dst[i] = &this.username_; break;
+		case "firstname": dst[i] = &this.firstname_; break;
+		case "lastname": dst[i] = &this.lastname_; break;
+		case "last_login": dst[i] = &this.last_login_; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
+ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[i] = &this.id_ - &this; break;
+		case "email": dst[i] = &this.email_ - &this; break;
+		case "username": dst[i] = &this.username_ - &this; break;
+		case "firstname": dst[i] = &this.firstname_ - &this; break;
+		case "lastname": dst[i] = &this.lastname_ - &this; break;
+		case "last_login": dst[i] = &this.last_login_ - &this; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
 
 public uint id() { return id_; }
 private uint id_;

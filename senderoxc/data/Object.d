@@ -162,25 +162,28 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	
 	private void writeFieldSwitchBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
 	{
+		wr.fln("switch(name) {{");
+		
+		foreach(field; fields)
+			writeField(wr, field);
+		
+		auto p = this.parent;
+		while(p !is null) {
+			foreach(field; p.fields)
+				writeField(wr, field);
+			p = p.parent;
+		}
+		wr.fln("}");
+	}
+	
+	private void writeIBindableBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
+	{
 		wr.fln("{{");
 		wr.indent;
 			wr.fln("size_t idx = 0;");
 			wr.fln("foreach(name;fieldNames) {{");
 			wr.indent;
-				wr.fln("switch(name) {{");
-				
-				foreach(field; fields)
-					writeField(wr, field);
-				
-				auto p = this.parent;
-				while(p !is null) {
-					foreach(field; p.fields)
-						writeField(wr, field);
-					p = p.parent;
-				}
-				
-				
-				wr.fln("}");
+				writeFieldSwitchBody(wr, writeField);
 				wr.fln("++idx;");
 			wr.dedent;
 			wr.fln("}");
@@ -193,10 +196,24 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr.fln(`case "{}": dst[i] = BindType.{}; break;`, field.name, field.bindType);
 	}
 	
+	private void field_getBindPtr(IPrint wr, IField field) {
+		wr.fln(`case "{}": dst[i] = &this.{}; break;`, field.name, field.privateName);
+	}
+	
+	private void field_getBindPtrOffset(IPrint wr, IField field) {
+		wr.fln(`case "{}": dst[i] = &this.{} - &this; break;`, field.name, field.privateName);
+	}
+	
 	private void writeIBindable(IPrint wr)
 	{
 		wr.fln("BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)");
-		writeFieldSwitchBody(wr, &field_getBindType);
+		writeIBindableBody(wr, &field_getBindType);
+		
+		wr.fln("void*[] setBindPtrs(char[][] fieldNames, void*[] dst)");
+		writeIBindableBody(wr, &field_getBindPtr);
+		
+		wr.fln("ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)");
+		writeIBindableBody(wr, &field_getBindPtrOffset);
 	}
 	
 	void addField(IField field, out uint setterIdx)
