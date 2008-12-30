@@ -1,6 +1,6 @@
 module senderoxc.data.FieldTypes;
 
-public import dbi.BindType;
+public import dbi.model.BindType;
 
 struct FieldType
 {

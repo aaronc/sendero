@@ -67,6 +67,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		writeIObject(wr); wr.nl;
 		writeChangeTracking(wr); wr.nl;
 		writeIHttpSet(wr); wr.nl;
+		writeIBindable(wr); wr.nl;
 		foreach(f; fields) {
 			f.writeDecl(wr);
 		}	
@@ -157,6 +158,45 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr("\t\t}\n");
 		wr("\t}\n");
 		wr("}\n");
+	}
+	
+	private void writeFieldSwitchBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
+	{
+		wr.fln("{{");
+		wr.indent;
+			wr.fln("size_t idx = 0;");
+			wr.fln("foreach(name;fieldNames) {{");
+			wr.indent;
+				wr.fln("switch(name) {{");
+				
+				foreach(field; fields)
+					writeField(wr, field);
+				
+				auto p = this.parent;
+				while(p !is null) {
+					foreach(field; p.fields)
+						writeField(wr, field);
+					p = p.parent;
+				}
+				
+				
+				wr.fln("}");
+				wr.fln("++idx;");
+			wr.dedent;
+			wr.fln("}");
+			wr.fln("return dst[0..idx];");
+		wr.dedent;
+		wr.fln("}");
+	}
+	
+	private void field_getBindType(IPrint wr, IField field) {
+		wr.fln(`case "{}": dst[i] = BindType.{}; break;`, field.name, field.bindType);
+	}
+	
+	private void writeIBindable(IPrint wr)
+	{
+		wr.fln("BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)");
+		writeFieldSwitchBody(wr, &field_getBindType);
 	}
 	
 	void addField(IField field, out uint setterIdx)

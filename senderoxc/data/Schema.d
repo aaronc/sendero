@@ -1,6 +1,6 @@
 module senderoxc.data.Schema;
 
-import dbi.Database;
+import dbi.DBI;
 import senderoxc.Reset;
 
 public import senderoxc.data.FieldTypes;

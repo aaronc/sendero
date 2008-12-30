@@ -13,7 +13,7 @@ struct Binder
 	
 }
 
-interface IBindable {
+/+interface IBindable {
 	/**
 	 * 
 	 * Params:
@@ -23,6 +23,12 @@ interface IBindable {
 	//BindInfo[] bind(char[][] fieldNames = null);
 	
 	Binder createBinder(char[][] fieldNames);
+}+/
+
+interface IBindable {
+	BindType[] setBindTypes(char[][] fieldNames, BindType[] dst);
+	void*[] setBindPtrs(char[][] fieldNames, void*[] dst);
+	void*[] setBindOffsets(char[][] fieldNames, void*[] dst);
 }
 
 // Ideas:

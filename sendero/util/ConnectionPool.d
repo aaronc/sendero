@@ -79,7 +79,7 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 	}
 }+/
 
-abstract class ConnectionPool2(ConnT)
+abstract class ConnectionPool(ConnT)
 {
 	final uint maxCacheSize() { return maxCacheSize_; }
 	final void maxCacheSize(uint sz) { maxCacheSize_ = sz; }	

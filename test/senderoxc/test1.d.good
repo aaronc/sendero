@@ -215,13 +215,39 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-alias DefaultDatabaseProvider db;
-private static char[] deleteSql;
+alias DefaultMysqlProvider db;
 public void destroy()
 {
-	if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql("User", ["id"]);
+	const char[] deleteSql = "DELETE FROM `User` WHERE `id` = ?";
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
+}
+
+bool save()
+{
+	auto db = getDb;
+	char[][6] fields;
+	BindType[6] bindTypes;
+	void*[6] bindPtrs;
+	BindInfo bindInfo;
+	uint idx = 0;
+	if(__touched__[1]) {malformed format}) { fields[idx] = "email"; ++idx;}
+	if(__touched__[2]) {malformed format}) { fields[idx] = "username"; ++idx;}
+	if(__touched__[3]) {malformed format}) { fields[idx] = "firstname"; ++idx;}
+	if(__touched__[4]) {malformed format}) { fields[idx] = "lastname"; ++idx;}
+	if(__touched__[5]) {malformed format}) { fields[idx] = "last_login"; ++idx;}
+	if(id_) { fields[idx] = "id"; ++idx; }
+	bindInfo.types = setBindTypes(fields[0..idx], bindTypes);
+	bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);
+	if(id_) {
+		auto res = db.update("User", fields[0..idx], "WHERE id = ?", bindInfo);
+		if(db.affectedRows == 1) return true; else return false;
+	}}
+	else {
+		auto res = db.insert("User", fields[0..idx], bindInfo);
+		id_ = db.lastInsertID;
+		if(id_) return true; else return false;
+	}}
 }
 
 Var opIndex(char[] key)
@@ -272,6 +298,23 @@ void httpSet(IObject obj, Request req)
 			default: break;
 		}
 	}
+}
+
+BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[i] = BindType.UInt; break;
+		case "email": dst[i] = BindType.String; break;
+		case "username": dst[i] = BindType.String; break;
+		case "firstname": dst[i] = BindType.String; break;
+		case "lastname": dst[i] = BindType.String; break;
+		case "last_login": dst[i] = BindType.Time; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
 }
 
 public uint id() { return id_; }

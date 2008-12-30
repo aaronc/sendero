@@ -223,22 +223,31 @@ public void destroy()
 	st.execute(id);
 }
 
-protected void writeSerialization(void delegate(char[]) write)
-{
-	if(__touched__[1]) { write("email = ");temp = writer.getWriteBuffer(email_.length * 2);tempLen = mysql_real_escape_string(db.database.handle,temp.ptr,email_.ptr,email_.length);write(temp[0..tempLen]);}
-	if(__touched__[2]) { write("username = ");temp = writer.getWriteBuffer(username_.length * 2);tempLen = mysql_real_escape_string(db.database.handle,temp.ptr,username_.ptr,username_.length);write(temp[0..tempLen]);}
-	if(__touched__[3]) { write("firstname = ");temp = writer.getWriteBuffer(firstname_.length * 2);tempLen = mysql_real_escape_string(db.database.handle,temp.ptr,firstname_.ptr,firstname_.length);write(temp[0..tempLen]);}
-	if(__touched__[4]) { write("lastname = ");temp = writer.getWriteBuffer(lastname_.length * 2);tempLen = mysql_real_escape_string(db.database.handle,temp.ptr,lastname_.ptr,lastname_.length);write(temp[0..tempLen]);}
-	if(__touched__[5]) { write("last_login = ");NULL}
-}
-
 bool save()
 {
-	if(id_) write("INSERT INTO ");;
-	else write("UPDATE ");;
-	write("`User` SET ");;
-	writeSerialization(write);
-	write(" WHERE `id` = " ~ Integer.toString(id_));;
+	auto db = getDb;
+	char[][6] fields;
+	BindType[6] bindTypes;
+	void*[6] bindPtrs;
+	BindInfo bindInfo;
+	uint idx = 0;
+	if(__touched__[1]) {malformed format}) { fields[idx] = "email"; ++idx;}
+	if(__touched__[2]) {malformed format}) { fields[idx] = "username"; ++idx;}
+	if(__touched__[3]) {malformed format}) { fields[idx] = "firstname"; ++idx;}
+	if(__touched__[4]) {malformed format}) { fields[idx] = "lastname"; ++idx;}
+	if(__touched__[5]) {malformed format}) { fields[idx] = "last_login"; ++idx;}
+	if(id_) { fields[idx] = "id"; ++idx; }
+	bindInfo.types = setBindTypes(fields[0..idx], bindTypes);
+	bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);
+	if(id_) {
+		auto res = db.update("User", fields[0..idx], "WHERE id = ?", bindInfo);
+		if(db.affectedRows == 1) return true; else return false;
+	}}
+	else {
+		auto res = db.insert("User", fields[0..idx], bindInfo);
+		id_ = db.lastInsertID;
+		if(id_) return true; else return false;
+	}}
 }
 
 Var opIndex(char[] key)
@@ -289,6 +298,23 @@ void httpSet(IObject obj, Request req)
 			default: break;
 		}
 	}
+}
+
+BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[i] = BindType.UInt; break;
+		case "email": dst[i] = BindType.String; break;
+		case "username": dst[i] = BindType.String; break;
+		case "firstname": dst[i] = BindType.String; break;
+		case "lastname": dst[i] = BindType.String; break;
+		case "last_login": dst[i] = BindType.Time; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
 }
 
 public uint id() { return id_; }

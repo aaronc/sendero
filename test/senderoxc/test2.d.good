@@ -69,13 +69,39 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-alias DefaultDatabaseProvider db;
-private static char[] deleteSql;
+alias DefaultMysqlProvider db;
 public void destroy()
 {
-	if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql("Posting", ["id"]);
+	const char[] deleteSql = "DELETE FROM `Posting` WHERE `id` = ?";
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
+}
+
+bool save()
+{
+	auto db = getDb;
+	char[][6] fields;
+	BindType[6] bindTypes;
+	void*[6] bindPtrs;
+	BindInfo bindInfo;
+	uint idx = 0;
+	if(__touched__[0]) {malformed format}) { fields[idx] = "entry"; ++idx;}
+	if(__touched__[1]) {malformed format}) { fields[idx] = "created"; ++idx;}
+	if(__touched__[2]) {malformed format}) { fields[idx] = "modified"; ++idx;}
+	if(__touched__[3]) {malformed format}) { fields[idx] = "title"; ++idx;}
+	if(__touched__[4]) {malformed format}) { fields[idx] = "tags"; ++idx;}
+	if(id_) { fields[idx] = "id"; ++idx; }
+	bindInfo.types = setBindTypes(fields[0..idx], bindTypes);
+	bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);
+	if(id_) {
+		auto res = db.update("Posting", fields[0..idx], "WHERE id = ?", bindInfo);
+		if(db.affectedRows == 1) return true; else return false;
+	}}
+	else {
+		auto res = db.insert("Posting", fields[0..idx], bindInfo);
+		id_ = db.lastInsertID;
+		if(id_) return true; else return false;
+	}}
 }
 
 Var opIndex(char[] key)
@@ -126,6 +152,22 @@ void httpSet(IObject obj, Request req)
 	}
 }
 
+BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = BindType.String; break;
+		case "created": dst[i] = BindType.Time; break;
+		case "modified": dst[i] = BindType.Time; break;
+		case "title": dst[i] = BindType.String; break;
+		case "tags": dst[i] = BindType.String; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
+}
+
 public char[] entry() { return entry_; }
 public void entry(char[] val) {__touched__[0] = true; entry_ = val;}
 private char[] entry_;
@@ -156,14 +198,14 @@ private HasOne!(User) author_;
 #line 15 "test/senderoxc/test2.sdx"
 }
 
-/+@data+/ class BlogEntry : Posting#line 160 "test/senderoxc/test2.d"
+/+@data+/ class BlogEntry : Posting#line 202 "test/senderoxc/test2.d"
 
 , IObject, IHttpSet
 #line 17 "test/senderoxc/test2.sdx"
 
 {
 	
-#line 167 "test/senderoxc/test2.d"
+#line 209 "test/senderoxc/test2.d"
 
 
 bool validate()
@@ -191,7 +233,29 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-alias DefaultDatabaseProvider db;
+alias DefaultMysqlProvider db;
+bool save()
+{
+	auto db = getDb;
+	char[][1] fields;
+	BindType[1] bindTypes;
+	void*[1] bindPtrs;
+	BindInfo bindInfo;
+	uint idx = 0;
+	if(id_) { fields[idx] = "id"; ++idx; }
+	bindInfo.types = setBindTypes(fields[0..idx], bindTypes);
+	bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);
+	if(id_) {
+		auto res = db.update("Posting", fields[0..idx], "WHERE id = ?", bindInfo);
+		if(db.affectedRows == 1) return true; else return false;
+	}}
+	else {
+		auto res = db.insert("Posting", fields[0..idx], bindInfo);
+		id_ = db.lastInsertID;
+		if(id_) return true; else return false;
+	}}
+}
+
 Var opIndex(char[] key)
 {
 	Var res;
@@ -221,6 +285,22 @@ void httpSet(IObject obj, Request req)
 			default: break;
 		}
 	}
+}
+
+BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
+{
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "entry": dst[i] = BindType.String; break;
+		case "created": dst[i] = BindType.Time; break;
+		case "modified": dst[i] = BindType.Time; break;
+		case "title": dst[i] = BindType.String; break;
+		case "tags": dst[i] = BindType.String; break;
+		}
+		++idx;
+	}
+	return dst[0..idx];
 }
 
 #line 20 "test/senderoxc/test2.sdx"

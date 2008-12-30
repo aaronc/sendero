@@ -25,36 +25,49 @@ class SaveResponder(MapperT = IMapper) : IMapperResponder
 		wr("{").nl;
 		wr.indent;
 		
+		wr.fln("auto db = getDb;");
+		wr.fln("char[][{}] fields;",mapper.mappings.length + 1);
+		wr.fln("BindType[{}] bindTypes;",mapper.mappings.length + 1);
+		wr.fln("void*[{}] bindPtrs;",mapper.mappings.length + 1);
+		wr.fln("BindInfo bindInfo;");
+		wr.fln("uint idx = 0;");
+
+		foreach(field; mapper.mappings)
+		{
+			wr.fln("if({}) { fields[idx] = {}; ++idx;}", field.isModifiedExpr, DQuote(field.colname));
+		}
+		
+		wr.fln("if(id_) {{ fields[idx] = \"id\"; ++idx; }");
+		
+		wr.fln("bindInfo.types = setBindTypes(fields[0..idx], bindTypes);");
+		wr.fln("bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);");
+		
 		wr.fln("if(id_) {{");
 		wr.indent;
-		wr.fln("char[][] fields");
-
-		foreach(field; mapper.obj.fields)
-		{
-			if(field.hasSetter)
-				wr.fln("if({}) fields ~= {};", field.isModifiedExpr, DQuote(field.colname));
-		}
 		
-		wr.fln("auto sql = db.sqlGen.makeInsertSql({}, fields);",
+		
+		wr.fln(`auto res = db.update({}, fields[0..idx], "WHERE id = ?", bindInfo);`,
 				DQuote(mapper.schema.tablename));
 		
-		foreach(field; mapper.obj.fields)
-		{
-			if(field.hasSetter)
-				wr.fln("if({}) ;", field.isModifiedExpr);
-		}
+		wr.fln(`if(db.affectedRows == 1) return true; else return false;`);
 		
 		wr.dedent;
 		wr.fln("}}");
 		
 		wr.fln("else {{");
 		wr.indent;
-		foreach(field; mapper.obj.fields)
-		{
+		
+		wr.fln("auto res = db.insert({}, fields[0..idx], bindInfo);",
+			DQuote(mapper.schema.tablename));
+		
+		wr.fln("id_ = db.lastInsertID;");
 			
-		}
+		wr.fln(`if(id_) return true; else return false;`);
+		
 		wr.dedent;
 		wr.fln("}}");
+		
+		
 		wr.dedent;
 		wr("}").nl;
 		wr.nl;

@@ -119,6 +119,11 @@ class Field : IField, IMapping
 		return type_.DType; 
 	}
 	
+	char[] bindType()
+	{
+		return type_.type;
+	}
+	
 	char[] fieldAccessor()
 	{
 		return privateName;

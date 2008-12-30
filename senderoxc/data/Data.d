@@ -15,7 +15,7 @@ import tango.math.Math;
 import tango.core.Signal;
 import sendero.util.Call;
 
-import dbi.Database;
+import dbi.DBI;
 
 import senderoxc.data.IDataResponder;
 

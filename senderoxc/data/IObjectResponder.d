@@ -12,6 +12,7 @@ interface IField
 	char[] privateName();
 	char[] colname();
 	char[] dtype();
+	char[] bindType();
 }
 
 interface IMapping

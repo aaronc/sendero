@@ -18,7 +18,7 @@ import senderoxc.builder.Linker;
 
 import sendero.core.Config;
 
-import dbi.all;
+import dbi.DBI;
 
 import tango.util.log.Log;
 Logger log;

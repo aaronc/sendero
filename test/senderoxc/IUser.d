@@ -24,6 +24,7 @@ module IUser;#line 15 "test/senderoxc/IUser.d"
 interface IUser : IObject, IHttpSet
 {
 	void destroy();
+	bool save();
 	uint id();
 	char[] email();
 	void email(char[]);

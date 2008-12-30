@@ -4,7 +4,7 @@ import senderoxc.data.mapper.IMapper;
 import senderoxc.data.IDataResponder;
 
 import sendero.core.Config;
-import dbi.all;
+import dbi.DBI;
 
 import senderoxc.data.mapper.Delete;
 import senderoxc.data.mapper.Save;
@@ -65,7 +65,6 @@ class Mapper : IMapper
 	
 	IMapperResponder getSaveResponder()
 	{
-		return null;
 		return new SaveResponder!()(this);
 	}
 	
