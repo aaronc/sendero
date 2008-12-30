@@ -59,9 +59,23 @@ class HTTPMethodContext(ubyte Method) : IDecoratorContext
 	
 	ControllerResponder resp;
 	
-	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] Params = null)
+	IDecoratorResponder init(DeclarationInfo decl, IContextBinder binder, Var[] params = null)
 	{
-		resp.addAction(Method, decl);
+		char[][] actionNames;
+		if(params.length) {
+			switch(params[0].type)
+			{
+			case VarT.String: actionNames ~= params[0].string_; break;
+			case VarT.Array:
+				foreach(var; params[0].array_)
+				{
+					if(var.type == VarT.String)
+						actionNames ~= var.string_;
+				}
+			default: break;
+			}
+		}
+		resp.addAction(Method, decl, actionNames);
 		return null;
 	}
 }
@@ -107,13 +121,13 @@ class ControllerResponder : IDecoratorResponder
 	
 	DeclarationInfo decl;
 	
-	void addAction(ubyte method, DeclarationInfo fDecl)
+	void addAction(ubyte method, DeclarationInfo fDecl, char[][] actionNames)
 	{
 		auto func = cast(FunctionDeclaration)fDecl;
 		if(!func)
 			return;
 		log.info("ControllerResponder.addAction({},{})", method, func.name);
-		actions ~= Action(method, func);
+		actions ~= Action(method, func, actionNames);
 	}
 	
 	void addContinue(char[] name, DeclarationInfo cDecl)
@@ -129,6 +143,7 @@ class ControllerResponder : IDecoratorResponder
 	{
 		ubyte method;
 		FunctionDeclaration func;
+		char[][] actionNames;
 	}
 	
 	struct Continue
@@ -181,32 +196,44 @@ class ControllerResponder : IDecoratorResponder
 			
 			auto fname = decl.name ~ "." ~ action.func.name;
 			
-			auto rname = action.func.name;
-			switch(rname)
-			{
-			case "index":
-			case "__index__":
-			case "__default__":
-			case "__show__":
-			case "__this__":
-			case "_":
-				rname = "";
+			foreach(ref name; action.actionNames)
+				if(name == "/") name = "";
+			
+			if(!action.actionNames.length) {
+				auto rname = action.func.name;
+				switch(rname)
+				{
+				case "index":
+				case "__index__":
+				case "__default__":
+				case "__show__":
+				case "__this__":
+				case "_":
+					rname = "";
+					break;
+				case "__wildcard__": rname = "*";
 				break;
-			case "__wildcard__": rname = "*";
-			break;
-			default: break;
+				default: break;
+				}
+				action.actionNames ~= rname;
 			}
 			
 			//writer ~= "\t" ~ i ~ "r.map!(typeof(&" ~ fname ~ `))(` ~ method ~ `,"` ~ action.func.name ~ `", &` ~ fname ~ ", [";
-			writer ~= "\t" ~ i ~ "r.map!(" ~ sig ~ `)(` ~ method ~ `,"` ~ rname ~ `", &` ~ fname ~ ", [";
-			first = true;
-			foreach(p; action.func.params)
+			foreach(rname; action.actionNames)
 			{
-				if(!first) writer ~= ", ";
-				writer ~= '"' ~ p.name ~ '"';
-				first = false;
+				writer ~= "\t" ~ i ~ "r.map!(" ~ sig ~ `)(` ~ method ~ `,"` ~ rname ~ `", &` ~ fname ~ ", [";
+				first = true;
+				foreach(p; action.func.params)
+				{
+					if(!first) writer ~= ", ";
+					if(p.decorators.length && p.decorators[0].name == "root")
+						writer ~= "null";
+					else
+						writer ~= '"' ~ p.name ~ '"';
+					first = false;
+				}
+				writer ~= "]);\n";
 			}
-			writer ~= "]);\n";
 		}
 		
 		auto print = writer.after;
