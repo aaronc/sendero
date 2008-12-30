@@ -302,6 +302,7 @@ void httpSet(IObject obj, Request req)
 
 BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 {
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -318,6 +319,7 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 }
 void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 {
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -334,6 +336,7 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 }
 ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 {
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {

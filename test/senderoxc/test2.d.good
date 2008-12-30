@@ -154,6 +154,7 @@ void httpSet(IObject obj, Request req)
 
 BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class Posting");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -169,6 +170,7 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 }
 void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class Posting");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -184,6 +186,7 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 }
 ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class Posting");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -228,14 +231,14 @@ private HasOne!(User) author_;
 #line 15 "test/senderoxc/test2.sdx"
 }
 
-/+@data+/ class BlogEntry : Posting#line 232 "test/senderoxc/test2.d"
+/+@data+/ class BlogEntry : Posting#line 235 "test/senderoxc/test2.d"
 
 , IObject, IHttpSet
 #line 17 "test/senderoxc/test2.sdx"
 
 {
 	
-#line 239 "test/senderoxc/test2.d"
+#line 242 "test/senderoxc/test2.d"
 
 
 bool validate()
@@ -319,6 +322,7 @@ void httpSet(IObject obj, Request req)
 
 BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class BlogEntry");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -334,6 +338,7 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 }
 void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class BlogEntry");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
@@ -349,6 +354,7 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 }
 ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 {
+	assert(dst.length >= 5, "Must provide an array of at least length 5 to bind items to class BlogEntry");
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {

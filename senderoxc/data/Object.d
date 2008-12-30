@@ -160,6 +160,20 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr("}\n");
 	}
 	
+	size_t bindableFieldCount()
+	{
+		size_t res = 0;
+		foreach(field; fields) ++res;
+	
+		auto p = this.parent;
+		while(p !is null) {
+			foreach(field; p.fields)
+				++res;
+			p = p.parent;
+		}
+		return res;
+	}
+	
 	private void writeFieldSwitchBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
 	{
 		wr.fln("switch(name) {{");
@@ -180,6 +194,8 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	{
 		wr.fln("{{");
 		wr.indent;
+			wr.fln(`assert(dst.length >= {0}, "Must provide an array `
+				`of at least length {0} to bind items to class {1}");`, bindableFieldCount, classname);
 			wr.fln("size_t idx = 0;");
 			wr.fln("foreach(name;fieldNames) {{");
 			wr.indent;

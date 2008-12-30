@@ -35,6 +35,7 @@ interface IObjectResponder
 {
 	char[] classname();
 	IField[] fields();
+	size_t bindableFieldCount();
 	IObjectResponder parent();
 	IObjectResponder[char[]] children();
 	InheritanceType inheritance();
