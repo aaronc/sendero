@@ -91,17 +91,24 @@ T convertParam(T, Req)(Var param, Req req)
 	}
 	else static if(is(typeof(val.convert)))
 	{
+		static if(is(T == class))
+			if(val is null) val = new T;
 		val.convert(param);
 	}
 	else static if(is(T : IHttpSet))
 	{
 		if(param.type == VarT.Object) {
+			if(val is null) val = new T;
 			val.httpSet(param.obj_, req);
 		}
+		else val = null;
 	}
 	else static if(is(T == IObject))
 	{
-		if(param.type == VarT.Object) val = param.obj_;
+		if(param.type == VarT.Object) {
+			if(val is null) val = new T;
+			val = param.obj_;
+		}
 		else val = null;
 	}
 	else static if(is(T == char[][]))
@@ -174,14 +181,6 @@ T convertParam(T, Req)(Var param, Req req)
 	else static assert(false, "Unhandled conversion type " ~ T.stringof);
 	
 	return val;
-}
-
-void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
-{
-	static if(is(T == class))
-		t = new T;
-	auto res = t.convert(params);
-	if(!res.empty) Msg.post(name, res);
 }
 
 void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
