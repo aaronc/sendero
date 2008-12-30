@@ -51,7 +51,7 @@ task :senderoxc_posix => SENDEROXC_SRC do
 end
 
 task :senderoimp => SENDEROXC_SRC do
-  sh "rebuild senderoxc/util/ImportPrinter.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -ofbin/senderoimp -version=SenderoXCImportPrinter"
+  sh "rebuild senderoxc/util/ImportPrinter.d -debug -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -ofbin/senderoimp -version=SenderoXCImportPrinter -version=Tango_0_99_7"
 end
 
 task :build => ["test_sendero.exe"]

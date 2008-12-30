@@ -4,7 +4,8 @@ import tango.io.File, tango.io.Path, tango.io.FilePath;
 version(Tango_0_99_7) import tango.io.FileConduit;
 else import tango.io.device.FileConduit;
 import tango.io.Stdout;
-import tango.util.log.Config;
+import tango.util.log.Log;
+debug import tango.util.log.Config;
 import Util = tango.text.Util;
 import sendero_base.util.ArrayWriter;
 
@@ -59,6 +60,11 @@ class SenderXCConfigProvider
 	{
 		registeredModules = null;
 	}
+}
+
+private Logger log;
+static this() {
+	log = Log.lookup("senderoxc.Compiler");
 }
 
 class SenderoXCompiler
@@ -140,6 +146,7 @@ class SenderoXCompiler
 
 		void onFindImportCallback(char[] modname)
 		{
+			debug log.trace("Found import {}", modname);
 			imports ~= modname;
 		}
 		
