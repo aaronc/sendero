@@ -203,7 +203,15 @@ void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 		else {
 			if(Index < paramNames.length) {
 				debug log.trace("Converting param {}, index {}", paramNames[Index], Index);
-				auto param = params[paramNames[Index]];
+				Var param;
+				static if(is(Type : IHttpSet) || is(Type : IObject)) {
+					if(paramNames[Index] == "") {
+						param.type = VarT.Object;
+						param.obj_ = params;
+					}
+					else param = params[paramNames[Index]];
+				}
+				else param = params[paramNames[Index]];
 				debug if(param.type == VarT.Null)
 					log.info("Param {}, index {} is null", paramNames[Index], Index);
 				p[Index] = convertParam!(Type, Req)(param, req);
