@@ -158,13 +158,15 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = BindType.String; break;
-		case "created": dst[i] = BindType.Time; break;
-		case "modified": dst[i] = BindType.Time; break;
-		case "title": dst[i] = BindType.String; break;
-		case "tags": dst[i] = BindType.String; break;
+		case "entry": dst[idx] = BindType.String; ++idx; break;
+		case "created": dst[idx] = BindType.Time; ++idx; break;
+		case "modified": dst[idx] = BindType.Time; ++idx; break;
+		case "title": dst[idx] = BindType.String; ++idx; break;
+		case "tags": dst[idx] = BindType.String; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class Posting");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -174,13 +176,15 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = &this.entry_; break;
-		case "created": dst[i] = &this.created_; break;
-		case "modified": dst[i] = &this.modified_; break;
-		case "title": dst[i] = &this.title_; break;
-		case "tags": dst[i] = &this.tags_; break;
+		case "entry": dst[idx] = &this.entry_; ++idx; break;
+		case "created": dst[idx] = &this.created_; ++idx; break;
+		case "modified": dst[idx] = &this.modified_; ++idx; break;
+		case "title": dst[idx] = &this.title_; ++idx; break;
+		case "tags": dst[idx] = &this.tags_; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class Posting");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -190,13 +194,15 @@ ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = &this.entry_ - &this; break;
-		case "created": dst[i] = &this.created_ - &this; break;
-		case "modified": dst[i] = &this.modified_ - &this; break;
-		case "title": dst[i] = &this.title_ - &this; break;
-		case "tags": dst[i] = &this.tags_ - &this; break;
+		case "entry": dst[idx] = &this.entry_ - &this; ++idx; break;
+		case "created": dst[idx] = &this.created_ - &this; ++idx; break;
+		case "modified": dst[idx] = &this.modified_ - &this; ++idx; break;
+		case "title": dst[idx] = &this.title_ - &this; ++idx; break;
+		case "tags": dst[idx] = &this.tags_ - &this; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class Posting");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -231,14 +237,14 @@ private HasOne!(User) author_;
 #line 15 "test/senderoxc/test2.sdx"
 }
 
-/+@data+/ class BlogEntry : Posting#line 235 "test/senderoxc/mysql/test2.d"
+/+@data+/ class BlogEntry : Posting#line 241 "test/senderoxc/mysql/test2.d"
 
 , IObject, IHttpSet
 #line 17 "test/senderoxc/test2.sdx"
 
 {
 	
-#line 242 "test/senderoxc/mysql/test2.d"
+#line 248 "test/senderoxc/mysql/test2.d"
 
 
 bool validate()
@@ -326,13 +332,15 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = BindType.String; break;
-		case "created": dst[i] = BindType.Time; break;
-		case "modified": dst[i] = BindType.Time; break;
-		case "title": dst[i] = BindType.String; break;
-		case "tags": dst[i] = BindType.String; break;
+		case "entry": dst[idx] = BindType.String; ++idx; break;
+		case "created": dst[idx] = BindType.Time; ++idx; break;
+		case "modified": dst[idx] = BindType.Time; ++idx; break;
+		case "title": dst[idx] = BindType.String; ++idx; break;
+		case "tags": dst[idx] = BindType.String; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class BlogEntry");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -342,13 +350,15 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = &this.entry_; break;
-		case "created": dst[i] = &this.created_; break;
-		case "modified": dst[i] = &this.modified_; break;
-		case "title": dst[i] = &this.title_; break;
-		case "tags": dst[i] = &this.tags_; break;
+		case "entry": dst[idx] = &this.entry_; ++idx; break;
+		case "created": dst[idx] = &this.created_; ++idx; break;
+		case "modified": dst[idx] = &this.modified_; ++idx; break;
+		case "title": dst[idx] = &this.title_; ++idx; break;
+		case "tags": dst[idx] = &this.tags_; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class BlogEntry");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -358,13 +368,15 @@ ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "entry": dst[i] = &this.entry_ - &this; break;
-		case "created": dst[i] = &this.created_ - &this; break;
-		case "modified": dst[i] = &this.modified_ - &this; break;
-		case "title": dst[i] = &this.title_ - &this; break;
-		case "tags": dst[i] = &this.tags_ - &this; break;
+		case "entry": dst[idx] = &this.entry_ - &this; ++idx; break;
+		case "created": dst[idx] = &this.created_ - &this; ++idx; break;
+		case "modified": dst[idx] = &this.modified_ - &this; ++idx; break;
+		case "title": dst[idx] = &this.title_ - &this; ++idx; break;
+		case "tags": dst[idx] = &this.tags_ - &this; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class BlogEntry");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }

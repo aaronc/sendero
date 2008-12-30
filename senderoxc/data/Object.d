@@ -174,7 +174,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		return res;
 	}
 	
-	private void writeFieldSwitchBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
+	private void writeFieldSwitchBody(IPrint wr, void delegate(IPrint wr, IField field) writeField, void delegate(IPrint wr) writeDefault = null)
 	{
 		wr.fln("switch(name) {{");
 		
@@ -187,10 +187,17 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 				writeField(wr, field);
 			p = p.parent;
 		}
+		
+		wr("default:").nl;
+		wr.indent;
+		if(writeDefault !is null) writeDefault(wr);
+		wr.fln(`debug assert(false,"Unknown field name " ~ name ~ " in class {}");`, classname);
+		wr("break;").nl;
+		wr.dedent;
 		wr.fln("}");
 	}
 	
-	private void writeIBindableBody(IPrint wr, void delegate(IPrint wr, IField field) writeField)
+	private void writeIBindableBody(IPrint wr, void delegate(IPrint wr, IField field) writeField, void delegate(IPrint wr) writeDefault = null)
 	{
 		wr.fln("{{");
 		wr.indent;
@@ -199,8 +206,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 			wr.fln("size_t idx = 0;");
 			wr.fln("foreach(name;fieldNames) {{");
 			wr.indent;
-				writeFieldSwitchBody(wr, writeField);
-				wr.fln("++idx;");
+				writeFieldSwitchBody(wr, writeField, writeDefault);
 			wr.dedent;
 			wr.fln("}");
 			wr.fln("return dst[0..idx];");
@@ -209,15 +215,15 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	}
 	
 	private void field_getBindType(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[i] = BindType.{}; break;`, field.name, field.bindType);
+		wr.fln(`case "{}": dst[idx] = BindType.{}; ++idx; break;`, field.name, field.bindType);
 	}
 	
 	private void field_getBindPtr(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[i] = &this.{}; break;`, field.name, field.privateName);
+		wr.fln(`case "{}": dst[idx] = &this.{}; ++idx; break;`, field.name, field.privateName);
 	}
 	
 	private void field_getBindPtrOffset(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[i] = &this.{} - &this; break;`, field.name, field.privateName);
+		wr.fln(`case "{}": dst[idx] = &this.{} - &this; ++idx; break;`, field.name, field.privateName);
 	}
 	
 	private void writeIBindable(IPrint wr)

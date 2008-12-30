@@ -306,14 +306,16 @@ BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "id": dst[i] = BindType.UInt; break;
-		case "email": dst[i] = BindType.String; break;
-		case "username": dst[i] = BindType.String; break;
-		case "firstname": dst[i] = BindType.String; break;
-		case "lastname": dst[i] = BindType.String; break;
-		case "last_login": dst[i] = BindType.Time; break;
+		case "id": dst[idx] = BindType.UInt; ++idx; break;
+		case "email": dst[idx] = BindType.String; ++idx; break;
+		case "username": dst[idx] = BindType.String; ++idx; break;
+		case "firstname": dst[idx] = BindType.String; ++idx; break;
+		case "lastname": dst[idx] = BindType.String; ++idx; break;
+		case "last_login": dst[idx] = BindType.Time; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -323,14 +325,16 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "id": dst[i] = &this.id_; break;
-		case "email": dst[i] = &this.email_; break;
-		case "username": dst[i] = &this.username_; break;
-		case "firstname": dst[i] = &this.firstname_; break;
-		case "lastname": dst[i] = &this.lastname_; break;
-		case "last_login": dst[i] = &this.last_login_; break;
+		case "id": dst[idx] = &this.id_; ++idx; break;
+		case "email": dst[idx] = &this.email_; ++idx; break;
+		case "username": dst[idx] = &this.username_; ++idx; break;
+		case "firstname": dst[idx] = &this.firstname_; ++idx; break;
+		case "lastname": dst[idx] = &this.lastname_; ++idx; break;
+		case "last_login": dst[idx] = &this.last_login_; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
@@ -340,14 +344,16 @@ ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 	size_t idx = 0;
 	foreach(name;fieldNames) {
 		switch(name) {
-		case "id": dst[i] = &this.id_ - &this; break;
-		case "email": dst[i] = &this.email_ - &this; break;
-		case "username": dst[i] = &this.username_ - &this; break;
-		case "firstname": dst[i] = &this.firstname_ - &this; break;
-		case "lastname": dst[i] = &this.lastname_ - &this; break;
-		case "last_login": dst[i] = &this.last_login_ - &this; break;
+		case "id": dst[idx] = &this.id_ - &this; ++idx; break;
+		case "email": dst[idx] = &this.email_ - &this; ++idx; break;
+		case "username": dst[idx] = &this.username_ - &this; ++idx; break;
+		case "firstname": dst[idx] = &this.firstname_ - &this; ++idx; break;
+		case "lastname": dst[idx] = &this.lastname_ - &this; ++idx; break;
+		case "last_login": dst[idx] = &this.last_login_ - &this; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
 		}
-		++idx;
 	}
 	return dst[0..idx];
 }
