@@ -28,7 +28,7 @@ struct Binder
 interface IBindable {
 	BindType[] setBindTypes(char[][] fieldNames, BindType[] dst);
 	void*[] setBindPtrs(char[][] fieldNames, void*[] dst);
-	void*[] setBindOffsets(char[][] fieldNames, void*[] dst);
+	ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst);
 }
 
 // Ideas:

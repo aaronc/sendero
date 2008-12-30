@@ -182,7 +182,7 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 	}
 	return dst[0..idx];
 }
-ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)
+ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 {
 	size_t idx = 0;
 	foreach(name;fieldNames) {
@@ -347,7 +347,7 @@ void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
 	}
 	return dst[0..idx];
 }
-ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)
+ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
 {
 	size_t idx = 0;
 	foreach(name;fieldNames) {

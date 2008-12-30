@@ -212,7 +212,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr.fln("void*[] setBindPtrs(char[][] fieldNames, void*[] dst)");
 		writeIBindableBody(wr, &field_getBindPtr);
 		
-		wr.fln("ptrdiff_t*[] setBindPtrs(char[][] fieldNames, void*[] ptrdiff_t)");
+		wr.fln("ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)");
 		writeIBindableBody(wr, &field_getBindPtrOffset);
 	}
 	
