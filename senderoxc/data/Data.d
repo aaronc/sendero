@@ -70,7 +70,7 @@ class DataContext : IDecoratorContext
 		
 		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
 		//binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
-		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
+		//binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
 		
 		res.init;
 		
@@ -562,7 +562,7 @@ struct Setter
 }
 
 
-class FieldCtxt : IStandaloneDecoratorContext
+/+class FieldCtxt : IStandaloneDecoratorContext
 {
 	this(DataResponder resp, FieldType type)
 	{
@@ -630,7 +630,7 @@ class FieldCtxt : IStandaloneDecoratorContext
 		
 		return null;
 	}
-}
+}+/
 
 class AbstractFieldResponder : IDecoratorResponder
 {
@@ -645,7 +645,7 @@ class AbstractFieldResponder : IDecoratorResponder
 	
 	abstract void finish(IDeclarationWriter wr);
 }
-
+/+
 class FieldResponder : AbstractFieldResponder
 {
 	this(uint index, char[] type, char[] name)
@@ -677,7 +677,7 @@ class NoSetFieldResponder : IDecoratorResponder
 		wr ~= "public " ~ type ~ " " ~  name ~ "() { return " ~  name ~ "_;}\n";
 		wr ~= "private " ~ type ~ " " ~  name ~ "_;\n\n";
 	}
-}
+}+/
 
 class ClassTableInheritanceCtxt : IStandaloneDecoratorContext
 {
@@ -734,7 +734,7 @@ class HasOneResponder : AbstractFieldResponder
 		wr ~= "private HasOne!(" ~ type ~ ") " ~ name ~ "_;\n\n";
 	}
 }
-
+/+
 class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
 {
 	this(DataResponder resp)
@@ -780,4 +780,4 @@ class AutoPrimaryKeyResponder : IDecoratorResponder
 		wr ~= "public uint " ~ name ~ "() {return " ~ name ~ "_;}\n";
 		wr ~= "private uint " ~ name ~ "_;\n\n";
 	}
-}
+}+/

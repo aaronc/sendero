@@ -60,6 +60,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 			debug Stdout.formatln("ObjectResponder.initCtxt type:{}", type.type);
 			binder.bindStandaloneDecorator(type.type, new FieldCtxt(this, dataRes, type));
 		}
+		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(this,dataRes));
 	}
 	
 	void write(IPrint wr)

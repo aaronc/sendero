@@ -44,6 +44,47 @@ class FieldCtxt : IStandaloneDecoratorContext
 	}
 }
 
+class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
+{
+	this(IObjectBuilder objBuilder, IDataResponder resp)
+	{
+		this.resp = resp;
+		this.objBuilder = objBuilder;
+		this.type = FieldType("UInt","uint", BindType.UInt);
+	}
+	
+	IObjectBuilder objBuilder;
+	IDataResponder resp;
+	FieldType type;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
+	{
+		if(resp.decl == parentDecl && decorator.params.length
+				&& decorator.params[0].type == VarT.String) {
+			auto name = decorator.params[0].string_;
+			Field.FieldAttributes attr;
+			auto col = Schema.prepColumnInfo(type);
+			col.name = name;
+			
+			char[] pname = name ~ "_";
+			attr.primaryKey = true;
+			attr.setter = false;
+			attr.getter = true;
+			col.primaryKey = true;
+			col.autoIncrement = true;
+							
+			resp.schema.addColumn(col);
+			
+			auto field = new Field(type, name, attr);
+			
+			resp.addMethod(new FunctionDeclaration(name, type.DType));
+			
+			objBuilder.addField(field, field.index_);
+		}
+		return null;
+	}
+}
+
 class Field : IField, IMapping
 {
 	static Field createField(FieldType type, char[] name, IObjectBuilder objBuilder, IDataResponder resp, StandaloneDecorator decorator)
