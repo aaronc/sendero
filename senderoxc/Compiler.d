@@ -14,6 +14,7 @@ import decorated_d.compiler.Main;
 
 import senderoxc.Config;
 import senderoxc.Reset;
+import senderoxc.Exception;
 
 import senderoxc.builder.Build;
 import senderoxc.builder.Linker;
@@ -165,7 +166,8 @@ class SenderoXCompiler
 			assert(compiler);
 			//compiler.onImportStatement.attach((char[] modname){ imports ~= modname; });
 			compiler.onImportStatement.attach(&onFindImportCallback);
-			assert(compiler.parse);
+			if(!compiler.parse)
+				throw new SenderoXCParseException(fname);
 			compiler.build;
 			
 			return compiler;

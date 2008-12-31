@@ -105,11 +105,11 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	
 	private void writeIObject(IPrint wr)
 	{		
-		wr("Var opIndex(char[] key)\n");
+		wr("Var opIndex(char[] _key_)\n");
 		wr("{\n");
 		wr.indent;
-		wr("Var res;\n");
-		wr("switch(key)\n");
+		wr("Var _res_;\n");
+		wr("switch(_key_)\n");
 		wr("{\n");
 		
 		wr.indent;
@@ -117,7 +117,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		{
 			if(!f.hasGetter) continue;
 			wr("case \"" ~ f.name ~ "\": ");
-			wr("bind(res, " ~ f.name ~ "()); ");
+			wr("bind(_res_, " ~ f.name ~ "()); ");
 			wr("break;\n");
 		}
 		
@@ -126,23 +126,23 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr.dedent;
 		
 		wr("}\n");
-		wr("return res;\n");
+		wr("return _res_;\n");
 		
 		wr.dedent;
 		
 		wr("}\n");
 		
-		wr("int opApply (int delegate (inout char[] key, inout Var val) dg)\n");
+		wr("int opApply (int delegate (inout char[] _key_, inout Var _val_) _dg_)\n");
 		wr("{\n");
 		wr.indent;
-			wr("int res; char[] key; Var val;").nl;
+			wr("int _res_; char[] _key_; Var _val_;").nl;
 			foreach(f; fields)
 			{
 				if(!f.hasGetter) continue;
-				wr.f(`key = "{0}"; bind(val, {0}()); `, f.name);
-				wr(`if((res = dg(key, val)) != 0) return res;`).nl;
+				wr.f(`_key_ = "{0}"; bind(_val_, {0}()); `, f.name);
+				wr(`if((_res_ = _dg_(_key_, _val_)) != 0) return _res_;`).nl;
 			}
-			wr("return res;").nl;
+			wr("return _res_;").nl;
 		wr.dedent;
 		wr("}\n");
 		
@@ -157,18 +157,18 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	
 	private void writeIHttpSet(IPrint wr)
 	{
-		wr("void httpSet(IObject obj, Request req)\n");
+		wr("void httpSet(IObject _obj_, Request _req_)\n");
 		wr("{\n");
 		//wr.fln("static if(is(typeof(this.beforeHttpSet))) if(!this.beforeHttpSet(obj,req)) return false");
-		wr("\tforeach(key, val; obj)\n");
+		wr("\tforeach(_key_, _val_; _obj_)\n");
 		wr("\t{\n");
-		wr("\t\tswitch(key)\n");
+		wr("\t\tswitch(_key_)\n");
 		wr("\t\t{\n");
 		foreach(f; fields)
 		{
 			if(!f.httpSet) continue;
 			wr("\t\t\tcase \"" ~ f.name ~ "\": ");
-			wr(f.fieldAccessor ~ " = convertParam!(" ~ f.dtype ~ ", Req)(val, req); ");
+			wr(f.fieldAccessor ~ " = convertParam!(" ~ f.dtype ~ ", Req)(_val_, _req_); ");
 			wr("break;\n");
 		}
 		wr("\t\t\tdefault: break;\n");

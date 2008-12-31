@@ -43,7 +43,7 @@ T convertParam(T, Req)(Var param, Req req)
 		switch(param.type)
 		{
 		case VarT.String: val = cast(T)param.string_; break;
-		case VarT.Void: val = *cast(T*)param.void_; break;
+		case VarT.Binary: val = *cast(T*)param.data_; break;
 		default: val = T.init; break;
 		}
 	}

@@ -14,6 +14,7 @@ import senderoxc.SenderoExt;
 import senderoxc.data.Schema;
 import senderoxc.Compiler;
 import senderoxc.Config;
+import senderoxc.Exception;
 import senderoxc.builder.Linker;
 
 import sendero.core.Config;
@@ -39,7 +40,7 @@ void init(char[] configName)
 	log.trace("Initialized config {}", configName);
 }
 
-void run(char[] modname, char[] outdir = null)
+bool run(char[] modname, char[] outdir = null)
 {
 	Stdout.formatln("Running SenderoXC on module {}", modname);
 	
@@ -60,6 +61,11 @@ void run(char[] modname, char[] outdir = null)
 			}
 		}
 	}
+	catch(SenderoXCException ex)
+	{
+		Stdout.formatln("{}", ex.toString);
+		return false;
+	}
 	catch(Exception ex)
 	{
 		Stdout.formatln("Caught exception: {}", ex.toString);
@@ -78,6 +84,11 @@ void run(char[] modname, char[] outdir = null)
 		Schema.commit(db);
 		db.close;
 	}
+	catch(SenderoXCException ex)
+	{
+		Stdout.formatln("{}", ex.toString);
+		return false;
+	}
 	catch(Exception ex)
 	{
 		Stdout.formatln("Caught exception: {}, while commiting db schema", ex.toString);
@@ -87,4 +98,6 @@ void run(char[] modname, char[] outdir = null)
 		}
 		throw ex;
 	}
+	
+	return true;
 }

@@ -62,7 +62,7 @@ class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
 		if(resp.decl == parentDecl && decorator.params.length
 				&& decorator.params[0].type == VarT.String) {
 			auto name = decorator.params[0].string_;
-			Field.FieldAttributes attr;
+			Field.Attributes attr;
 			auto col = Schema.prepColumnInfo(type);
 			col.name = name;
 			
@@ -89,7 +89,7 @@ class Field : IField, IMapping
 {
 	static Field createField(FieldType type, char[] name, IObjectBuilder objBuilder, IDataResponder resp, StandaloneDecorator decorator)
 	{
-		FieldAttributes attr;
+		Attributes attr;
 		
 		bool map = true;
 		
@@ -116,9 +116,10 @@ class Field : IField, IMapping
 			case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "no_map": map = false; break;
-			case "privateSetter": attr.setterProtection = "private"; break;
-			case "protectedSetter": attr.setterProtection = "protected"; break;
-			case "packageSetter": attr.setterProtection = "package"; break;
+			case "no_setter": attr.setter = false; break;
+			case "privateSetter": attr.setterProtection = Protection.Private; break;
+			case "protectedSetter": attr.setterProtection = Protection.Protected; break;
+			case "packageSetter": attr.setterProtection = Protection.Package; break;
 			default:
 				break;
 			// validations
@@ -135,7 +136,9 @@ class Field : IField, IMapping
 			resp.addMethod(new FunctionDeclaration(name, type.DType));
 			
 			if(attr.setter) {
-				resp.addMethod(new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]));
+				auto setter = new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]);
+				setter.setProtection(attr.setterProtection);
+				resp.addMethod(setter);
 			}
 			
 			return field;
@@ -143,7 +146,7 @@ class Field : IField, IMapping
 		else return null;
 	}
 	
-	this(FieldType type, char[] name, FieldAttributes attr)
+	this(FieldType type, char[] name, Attributes attr)
 	{
 		this.type_ = type;
 		this.name_ = name;
@@ -175,17 +178,17 @@ class Field : IField, IMapping
 	char[] name() { return name_; }
 	char[] colname() { return name_; }
 	
-	struct FieldAttributes
+	struct Attributes
 	{
 		bool getter = true;
 		bool setter = true;
 		bool primaryKey = false;
-		char[] setterProtection = "public";
+		Protection setterProtection = Protection.Public;
 	}
 	
 	private char[] name_;
 	private uint index_;
-	private FieldAttributes attr_;
+	private Attributes attr_;
 	
 	void writeDecl(IPrint wr)
 	{
@@ -194,8 +197,9 @@ class Field : IField, IMapping
 		}
 		
 		if(attr_.setter) {
-			wr.f(attr_.setterProtection ~ " void {}({} val) {{", name_, type_.DType);
-			wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
+			wr.f("{} void {}({} _val_) {{",
+				DeclarationInfo.printProtection(attr_.setterProtection), name_, type_.DType);
+			wr.f("__touched__[{}] = true; {}_ = _val_;", index_, name_);
 			wr.fln("}");
 		}
 		
