@@ -96,6 +96,9 @@ class DBProvider(PoolT)
 			assert(pool_ !is null);
 			conn = pool_.get;
 			assert(conn !is null);
+			if(conn.type == "Mysql") {
+				conn.execute("SET SESSION sql_mode = 'ANSI_QUOTES'");
+			}
 			providers_.val = conn;
 		}
 		return conn;

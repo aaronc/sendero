@@ -51,7 +51,7 @@ class HasOneCtxt : IStandaloneDecoratorContext
 				auto field = new HasOneField(type,name,attr);
 				
 				auto col = Schema.prepColumnInfo(FieldType("UInt","uint", BindType.UInt));
-				col.name = name;
+				col.name = name ~ "_id";
 				resp.schema.addColumn(col);
 				
 				if(attr.getter) {
