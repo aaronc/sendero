@@ -4,6 +4,7 @@ import senderoxc.data.IDataResponder;
 
 import senderoxc.data.IObjectResponder;
 import senderoxc.data.object.Field;
+import senderoxc.data.object.HasOne;
 import senderoxc.data.FieldTypes;
 
 import tango.math.Math;
@@ -61,6 +62,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 			binder.bindStandaloneDecorator(type.type, new FieldCtxt(this, dataRes, type));
 		}
 		binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(this,dataRes));
+		binder.bindStandaloneDecorator("HasOne", new HasOneCtxt(this,dataRes));
 	}
 	
 	void write(IPrint wr)
@@ -69,9 +71,22 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		writeChangeTracking(wr); wr.nl;
 		writeIHttpSet(wr); wr.nl;
 		writeIBindable(wr); wr.nl;
+		writeIsModified(wr); wr.nl;
 		foreach(f; fields) {
 			f.writeDecl(wr);
 		}	
+	}
+	
+	void writeIsModified(IPrint wr)
+	{
+		dataRes.addMethod(new FunctionDeclaration("isModifiied","bool"));
+		
+		wr.fln("bool isModified()");
+		wr.fln("{{");
+		wr.indent;
+			wr.fln("return __touched__.hasTrue;");
+		wr.dedent;
+		wr.fln("}");
 	}
 	
 	void writeCheckModifier(char[] delegate(FieldDeclaration))
@@ -151,9 +166,9 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr("\t\t{\n");
 		foreach(f; fields)
 		{
-			if(!f.hasSetter) continue;
+			if(!f.httpSet) continue;
 			wr("\t\t\tcase \"" ~ f.name ~ "\": ");
-			wr(f.privateName ~ " = convertParam!(" ~ f.dtype ~ ", Req)(val, req); ");
+			wr(f.fieldAccessor ~ " = convertParam!(" ~ f.dtype ~ ", Req)(val, req); ");
 			wr("break;\n");
 		}
 		wr("\t\t\tdefault: break;\n");
@@ -218,19 +233,21 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	}
 	
 	private void field_getBindType(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = BindType.{}; ++idx; break;`, field.name, field.bindType);
+		wr.fln(`case "{}": dst[idx] = BindType.{}; ++idx; break;`, field.name, bindTypeToString(field.bindType));
 	}
 	
 	private void field_getBindPtr(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = &this.{}; ++idx; break;`, field.name, field.privateName);
+		wr.fln(`case "{}": dst[idx] = &this.{}; ++idx; break;`, field.name, field.fieldAccessor);
 	}
 	
 	private void field_getBindPtrOffset(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = (cast(void*)&this.{} - cast(void*)this); ++idx; break;`, field.name, field.privateName);
+		wr.fln(`case "{}": dst[idx] = (cast(void*)&this.{} - cast(void*)this); ++idx; break;`, field.name, field.fieldAccessor);
 	}
 	
 	private void writeIBindable(IPrint wr)
 	{
+		dataRes.addInterface("IBindable", ["sendero.db.Bind"]);
+		
 		wr.fln("BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)");
 		writeIBindableBody(wr, &field_getBindType);
 		

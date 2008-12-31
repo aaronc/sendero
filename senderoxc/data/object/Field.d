@@ -160,9 +160,9 @@ class Field : IField, IMapping
 		return type_.DType; 
 	}
 	
-	char[] bindType()
+	BindType bindType()
 	{
-		return type_.type;
+		return type_.bindType;
 	}
 	
 	char[] fieldAccessor()
@@ -189,21 +189,19 @@ class Field : IField, IMapping
 	
 	void writeDecl(IPrint wr)
 	{
-		//if(map_) {
-			if(attr_.getter) {
-				wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
-			}
-			
-			if(attr_.setter) {
-				wr.f(attr_.setterProtection ~ " void {}({} val) {{", name_, type_.DType);
-				wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
-				wr.fln("}");
-			}
-			
-			wr.fln("private {} {}_;", type_.DType, name_);
+		if(attr_.getter) {
+			wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
+		}
+		
+		if(attr_.setter) {
+			wr.f(attr_.setterProtection ~ " void {}({} val) {{", name_, type_.DType);
+			wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
+			wr.fln("}");
+		}
+		
+		wr.fln("protected {} {};", type_.DType, privateName);
 
-			wr.nl;
-		//}
+		wr.nl;
 	}
 	
 	bool hasGetter()
@@ -219,6 +217,11 @@ class Field : IField, IMapping
 	bool isPrimaryKey()
 	{
 		return attr_.primaryKey;
+	}
+	
+	bool httpSet()
+	{
+		return hasSetter;
 	}
 	
 	char[] isModifiedExpr()

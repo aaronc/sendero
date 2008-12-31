@@ -55,7 +55,8 @@ class DataContext : IDecoratorContext
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
 			wr.prepend("import sendero.util.collection.StaticBitArray, sendero.util.Singleton;\n");
-			wr.prepend("import sendero.util.Call;");
+			wr.prepend("import sendero.util.Call;\n");
+			wr.prepend("import sendero.db.Relations;\n");
 		}
 	}
 	
@@ -68,7 +69,7 @@ class DataContext : IDecoratorContext
 		assert(res.obj !is null);
 		res.obj.initCtxt(binder);
 		
-		binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
+		//binder.bindStandaloneDecorator("hasOne", new HasOneCtxt(res));
 		//binder.bindStandaloneDecorator("habtm", new HABTMCtxt(res));
 		//binder.bindStandaloneDecorator("autoPrimaryKey", new AutoPrimaryKeyCtxt(res));
 		

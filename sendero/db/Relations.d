@@ -1,11 +1,12 @@
 module sendero.db.Relations;
 
-class HasOne2(T) : T
-{
-	
+struct HasOne(Type, UInt = uint)
+{	
+	UInt id;
+	Type inst;
 }
 
-struct HasOne(T, UInt = uint)
+/+struct HasOne(T, UInt = uint)
 {
 	BindInfo[] save()
 	{
@@ -37,7 +38,7 @@ struct HasOne(T, UInt = uint)
 		}
 		else return null;
 	}
-}
+}+/
 
 debug(SenderoUnittest)
 {	

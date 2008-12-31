@@ -1,6 +1,7 @@
 module senderoxc.data.IObjectResponder;
 
 public import decorated_d.core.Decoration;
+public import dbi.model.BindType;
 
 interface IField
 {
@@ -8,11 +9,13 @@ interface IField
 	char[] isModifiedExpr();
 	bool hasGetter();
 	bool hasSetter();
+	bool httpSet();
 	char[] name();
-	char[] privateName();
+	//char[] privateName();
+	char[] fieldAccessor();
 	char[] colname();
 	char[] dtype();
-	char[] bindType();
+	BindType bindType();
 }
 
 interface IMapping
