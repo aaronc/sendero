@@ -30,6 +30,14 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		}
 	}
 	
+	void initInterface() {
+		dataRes.addInterface("IObject");
+		dataRes.addInterface("IHttpSet");
+		dataRes.addInterface("IBindable", ["sendero.db.Bind"]);
+		
+		dataRes.addMethod(new FunctionDeclaration("isModified","bool"));
+	}
+	
 	private static ObjectResponder[char[]] objects;
 	
 	public char[] classname() { return dataRes_.classname; }
@@ -79,8 +87,6 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	
 	void writeIsModified(IPrint wr)
 	{
-		dataRes.addMethod(new FunctionDeclaration("isModifiied","bool"));
-		
 		wr.fln("bool isModified()");
 		wr.fln("{{");
 		wr.indent;
@@ -233,21 +239,19 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	}
 	
 	private void field_getBindType(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = BindType.{}; ++idx; break;`, field.name, bindTypeToString(field.bindType));
+		wr.fln(`case "{}": dst[idx] = BindType.{}; ++idx; break;`, field.colname, bindTypeToString(field.bindType));
 	}
 	
 	private void field_getBindPtr(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = &this.{}; ++idx; break;`, field.name, field.fieldAccessor);
+		wr.fln(`case "{}": dst[idx] = &this.{}; ++idx; break;`, field.colname, field.fieldAccessor);
 	}
 	
 	private void field_getBindPtrOffset(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = (cast(void*)&this.{} - cast(void*)this); ++idx; break;`, field.name, field.fieldAccessor);
+		wr.fln(`case "{}": dst[idx] = (cast(void*)&this.{} - cast(void*)this); ++idx; break;`, field.colname, field.fieldAccessor);
 	}
 	
 	private void writeIBindable(IPrint wr)
 	{
-		dataRes.addInterface("IBindable", ["sendero.db.Bind"]);
-		
 		wr.fln("BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)");
 		writeIBindableBody(wr, &field_getBindType);
 		

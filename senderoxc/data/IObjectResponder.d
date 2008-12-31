@@ -24,6 +24,7 @@ interface IMapping
 	char[] colname();
 	char[] fieldAccessor();
 	char[] dtype();
+	BindType bindType();
 	bool isPrimaryKey();
 }
 

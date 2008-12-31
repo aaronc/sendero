@@ -144,8 +144,7 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	
 	void init()
 	{
-		addInterface("IObject");
-		addInterface("IHttpSet");
+		obj.initInterface;
 		
 		foreach(child;decl.declarations)
 		{

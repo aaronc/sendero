@@ -65,6 +65,8 @@ class HasOneCtxt : IStandaloneDecoratorContext
 				}
 				
 				objBuilder.addField(field, field.index_);
+				
+				if(attr.setter) resp.mapper.addMapping(field);
 			}
 		}
 		
@@ -106,7 +108,7 @@ class HasOneField : IField, IMapping
 	char[] isModifiedExpr()
 	{
 		return "__touched__[" ~ Integer.toString(index)  ~ 
-		"] || " ~ privateName ~ ".isModified";
+		"] || " ~ privateName ~ ".inst.isModified";
 	}
 	bool hasGetter() { return attr_.getter; }
 	bool hasSetter() { return attr_.setter; }
