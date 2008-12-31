@@ -31,15 +31,15 @@ class MysqlMapper : Mapper, IMysqlMapper
 	Mysql db() { return db_; }
 	private Mysql db_;
 	
-	void writeDBAlias(IPrint wr)
+	/+void writeDBAlias(IPrint wr)
 	{
 		wr.fln("alias DefaultMysqlProvider db;");
-	}
+	}+/
 	
-	IMapperResponder getDeleteResponder()
+	/+IMapperResponder getDeleteResponder()
 	{
 		return new MysqlDeleteResponder(this);
-	}
+	}+/
 	
 	/+IMapperResponder getSaveResponder()
 	{

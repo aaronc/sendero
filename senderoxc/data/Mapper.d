@@ -55,7 +55,8 @@ class Mapper : IMapper
 	
 	void writeDBAlias(IPrint wr)
 	{
-		wr.fln("alias DefaultDatabaseProvider db;");
+		//wr.fln("alias DefaultDatabaseProvider db;");
+		wr.fln("alias mainDBProvider getDb;");
 	}
 	
 	IMapperResponder getDeleteResponder()
@@ -82,7 +83,9 @@ class Mapper : IMapper
 	
 	final void write(IPrint wr)
 	{
+		wr.newline;
 		writeDBAlias(wr);
+		wr.newline;
 		
 		foreach(resp; responders)
 			resp.write(wr);

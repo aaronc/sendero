@@ -259,12 +259,16 @@ class ControllerResponder : IDecoratorResponder
 		
 		writer ~= "static void route(Req req)\n";
 		writer ~= "{ ";
-		writer ~= "return r.route(req);";
+		writer ~= "static if(is(typeof(beforeRoute))) if(!beforeRoute(req)) return;\n";
+		writer ~= "r.route(req);";
+		writer ~= "static if(is(typeof(afterRoute))) afterRoute(req);\n";
 		writer ~= " }\n";
 		
 		writer ~= "void iroute(Req req)\n";
 		writer ~= "{ ";
-		writer ~= "return ir.route(req, cast(void*)this);";
+		writer ~= "static if(is(typeof(beforeIRoute))) if(!beforeIRoute(req)) return;\n";
+		writer ~= "ir.route(req, cast(void*)this);";
+		writer ~= "static if(is(typeof(afterIRoute))) afterIRoute(req);\n";
 		writer ~= " }\n";
 	}
 }

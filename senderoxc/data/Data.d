@@ -55,7 +55,7 @@ class DataContext : IDecoratorContext
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
 			wr.prepend("import sendero.util.collection.StaticBitArray, sendero.util.Singleton;\n");
-			//wr.prepend("import sendero.util.Call;");
+			wr.prepend("import sendero.util.Call;");
 		}
 	}
 	
@@ -75,6 +75,30 @@ class DataContext : IDecoratorContext
 		res.init;
 		
 		return res;
+	}
+}
+
+class InitDatabaseContext : IStandaloneDecoratorContext
+{	
+	IDecoratorResponder init(StandaloneDecorator dec, DeclarationInfo parentDecl, IContextBinder binder)
+	{
+		return new InitDatabaseResponder;
+	}
+}
+
+class InitDatabaseResponder : IDecoratorResponder
+{
+	void finish(IDeclarationWriter writer)
+	{
+		auto wr = writer.after;
+		
+		wr.fln("import sendero.db.DBProvider;");
+		/+wr.fln("static DBProvider!() mainDBProvider;");
+		wr.fln("static this() {{"); wr.indent;
+		wr.fln("auto dbPool = new DefaultDatabasePool;");
+		wr.fln("mainDBProvider = new DBProvider!()(dbPool);");
+		wr.dedent; wr.fln("}");+/
+		wr.fln("alias DBProvider!(DefaultDatabasePool) mainDBProvider;");
 	}
 }
 

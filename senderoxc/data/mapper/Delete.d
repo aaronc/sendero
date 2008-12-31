@@ -8,7 +8,7 @@ class DeleteResponder : IMapperResponder
 {
 	this(IMapper m)
 	{
-		m.addMethod(new FunctionDeclaration("destroy", "void"));
+		m.addMethod(new FunctionDeclaration("destroy", "bool"));
 		this.mapper = m;
 	}
 	
@@ -19,13 +19,20 @@ class DeleteResponder : IMapperResponder
 	{
 		wr("private static char[] deleteSql;\n");
 		
-		wr("public void destroy()\n");
+		wr("public bool destroy()\n");
 		wr("{\n");
+		
 		wr.indent;
+		//wr.fln("static if(is(typeof(this.beforeDestroy))) if(!this.beforeDestroy) return false;");
+		wr.fln("auto db = getDb();");
 		wr.fln("if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql({}, [{}]);",
 			DQuote(mapper.schema.tablename), makeQuotedList(mapper.schema.getPrimaryKeyCols()));
-		wr("scope st = db.prepare(deleteSql);\n");
-		wr.fln("st.execute({});", makeList(mapper.getPrimaryKeyFields));
+		wr.fln("db.query(deleteSql,{});",makeList(mapper.getPrimaryKeyFields));
+		
+		//wr.fln("static if(is(typeof(this.afterDestroy))) this.afterDestroy;");
+		
+		//wr.fln("st.execute({});", );
+		wr.fln("return (db.affectedRows == 1) ? true : false;");
 		wr.dedent;
 		wr("}\n");
 		wr("\n");

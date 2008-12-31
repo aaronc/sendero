@@ -1,17 +1,6 @@
 module sendero.db.Bind;
 
-import dbi.Statement;
-
-struct BindInfo
-{
-	BindType[] types;
-	void*[] ptrs;
-}
-
-struct Binder
-{
-	
-}
+public import dbi.model.BindType;
 
 /+interface IBindable {
 	/**
@@ -38,11 +27,11 @@ struct Binder
 	BindType[] types;
 	void*[] ptrs;
 	
-	package void*[] offsets;
+	package ptrdiff_t[] offsets;
 	
 	void bind(void* instPtr)
 	{
-		foreach(i, offset; offset)
+		foreach(i, offset; offsets)
 		{
 			ptrs[i] = instPtr + offset;
 		}

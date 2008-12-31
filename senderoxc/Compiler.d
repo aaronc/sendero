@@ -6,6 +6,7 @@ else import tango.io.device.FileConduit;
 import tango.io.Stdout;
 import tango.util.log.Log;
 debug import tango.util.log.Config;
+debug import tango.io.FileSystem;
 import Util = tango.text.Util;
 import sendero_base.util.ArrayWriter;
 
@@ -104,10 +105,11 @@ class SenderoXCompiler
 			auto sdxname = fname ~ ".sdx";
 			
 			if(exists(sdxname)) {
+				debug log.trace("Found sdx file {}", "./" ~ sdxname);
 				filename = sdxname;
 				isSDX = true;
 				return true;
-			}
+			} else debug Stdout.format("Can't find sdx file {} in {}\n", sdxname, FileSystem.getDirectory);
 			
 			foreach(includeDir; SenderoXCConfig().includeDirs)
 			{
@@ -169,13 +171,14 @@ class SenderoXCompiler
 			return compiler;
 		}
 		
-		Stdout.formatln("Looking for module {}", modname);
+		debug log.trace("Looking for module {}", modname);
 		
 		char[] filename, dirname;
 		bool isSDX;
 		
 		if(openModule(modname, filename, isSDX, dirname))
 		{
+			debug log.trace("Found module {} in {}", modname, filename);
 			auto compiler = createDDCompiler(filename);
 			if(isSDX) {
 				auto sxcompiler = new SenderoXCompiler(modname, compiler, dirname);
@@ -192,7 +195,10 @@ class SenderoXCompiler
 				return dcompiler;
 			}
 		}
-		else return null;
+		else {
+			debug log.trace("Unable to find module {}", modname);
+			return null;
+		}
 	}
 	
 	const char[] modname, dirname;

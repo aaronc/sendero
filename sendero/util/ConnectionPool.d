@@ -81,13 +81,22 @@ class ConnectionPool(ConnectionT, ProviderT) : IConnectionPool!(ConnectionT)
 
 abstract class ConnectionPool(ConnT)
 {
+	this()
+	{
+		queue_ = new ThreadSafeQueue!(ConnT);
+	}
+	
+	alias ConnT ConnectionT;
+	
 	final uint maxCacheSize() { return maxCacheSize_; }
 	final void maxCacheSize(uint sz) { maxCacheSize_ = sz; }	
 	
 	abstract ConnT createNewConnection();
 	
-	final ConnT get()
-	{
+	final ConnT get() in {
+		assert(queue_ !is null);
+	}
+	body {
 		auto conn = queue_.pull;
 		if(conn !is null) {
 			atomicDecrement(cacheSize_);
@@ -97,8 +106,10 @@ abstract class ConnectionPool(ConnT)
 		else return createNewConnection;
 	}
 	
-	final void release(ConnT conn)
-	{
+	final void release(ConnT conn) in {
+		assert(queue_ !is null);
+	}
+	body {
 		if(atomicLoad(cacheSize_) < maxCacheSize_) {
 			auto pConn = conn in connMap_;
 			if(pConn) {

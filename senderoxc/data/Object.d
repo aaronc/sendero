@@ -143,6 +143,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	{
 		wr("void httpSet(IObject obj, Request req)\n");
 		wr("{\n");
+		//wr.fln("static if(is(typeof(this.beforeHttpSet))) if(!this.beforeHttpSet(obj,req)) return false");
 		wr("\tforeach(key, val; obj)\n");
 		wr("\t{\n");
 		wr("\t\tswitch(key)\n");
@@ -156,6 +157,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		}
 		wr("\t\t\tdefault: break;\n");
 		wr("\t\t}\n");
+		//wr.fln("static if(is(typeof(this.afterHttpSet))) this.afterHttpSet(obj,req);");
 		wr("\t}\n");
 		wr("}\n");
 	}
@@ -223,7 +225,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	}
 	
 	private void field_getBindPtrOffset(IPrint wr, IField field) {
-		wr.fln(`case "{}": dst[idx] = &this.{} - &this; ++idx; break;`, field.name, field.privateName);
+		wr.fln(`case "{}": dst[idx] = (cast(void*)&this.{} - cast(void*)this); ++idx; break;`, field.name, field.privateName);
 	}
 	
 	private void writeIBindable(IPrint wr)

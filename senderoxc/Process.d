@@ -46,7 +46,7 @@ void run(char[] modname, char[] outdir = null)
 	try
 	{
 		auto compiler = SenderoXCompiler.create(modname);
-		assert(compiler);
+		assert(compiler !is null, "Unable to create SenderoXC compiler");
 		compiler.process;
 		compiler.write(outdir);
 		version(SenderoXCBuild) {
@@ -74,6 +74,7 @@ void run(char[] modname, char[] outdir = null)
 	{
 		Stdout.formatln("Committing db schema to {}", SenderoConfig().dbUrl);
 		auto db = getDatabaseForURL(SenderoConfig().dbUrl);
+		if(db is null) throw new Exception("Unable to connect to database " ~ SenderoConfig().dbUrl);
 		Schema.commit(db);
 		db.close;
 	}

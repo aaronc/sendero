@@ -113,9 +113,9 @@ class InterfaceResp : IInterface, IDecoratorResponder
 			pr.fln("{} {}({});", InterfaceCtxt.convertType(decl.retType), decl.name, params);
 		}
 		
+		pr.fln("alias Construct!({}).create create;", iname);
 		pr.dedent;
 		pr("}").nl;
-		pr.fln("alias Construct!({}).create construct{};", iname, name);
 		
 	}
 	

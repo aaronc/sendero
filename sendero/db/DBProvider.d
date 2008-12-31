@@ -14,7 +14,7 @@ import tango.core.Thread;
 import sendero.core.Config;
 import sendero.util.ConnectionPool;
 
-class DBConnectionProvider(DatabaseT = Database) : ConnectionPool!(Database)
+class DBConnectionProvider(DatabaseT = Database) : ConnectionPool!(DatabaseT)
 {
 	this(char[] dbUrl)
 	{
@@ -33,14 +33,18 @@ class DefaultDatabasePool : ConnectionPool!(Database)
 {
 	Database createNewConnection()
 	{
-		return getDatabaseForURL(SenderoConfig().dbUrl);
+		assert(SenderoConfig() !is null);
+		assert(SenderoConfig().dbUrl !is null);
+		auto db = getDatabaseForURL(SenderoConfig().dbUrl);
+		assert(db !is null);
+		return db;
 	}
 }
 
 version(dbi_mysql) {
-	import dbi.mysql.MysqlDatabase;
+	import dbi.mysql.Mysql;
 	
-	class DefaultMysqlPool : ConnectionPool!(MysqlDatabase)
+	class DefaultMysqlPool : ConnectionPool!(Mysql)
 	{
 		Mysql createNewConnection()
 		{
@@ -70,33 +74,35 @@ version(dbi_sqlite) {
 	}
 }
 
-class DBProvider(DatabaseT = Database)
+class DBProvider(PoolT)
 {
-	alias DBProvider!(DatabaseT) TypeOfThis;
+	alias DBProvider!(PoolT) TypeOfThis;
 	
-	this(ConnectionPool!(DatabaseT) pool)
+	static this()
 	{
 		debug Log.lookup(TypeOfThis.stringof ~ "").info("entering static this");
-		pool_ = pool
-		providers_ = new ThreadLocal!(DatabaseT)(null);
+		pool_ = new PoolT;
+		providers_ = new ThreadLocal!(PoolT.ConnectionT)(null);
 	}
 	
-	private ConnectionPool!(DatabaseT) pool_;
-	private ThreadLocal!(DatabaseT) providers_;
+	static private PoolT pool_;
+	static private ThreadLocal!(PoolT.ConnectionT) providers_;
 	
-	DatabaseT get()
+	static PoolT.ConnectionT get()
 	{
-		debug assert(providers_);
+		assert(providers_ !is null);
 		auto conn = providers_.val;
 		if(conn is null) {
+			assert(pool_ !is null);
 			conn = pool_.get;
-			debug assert(conn);
+			assert(conn !is null);
 			providers_.val = conn;
 		}
 		return conn;
 	}
+	alias get opCall;
 	
-	void cleanupThread()
+	static void cleanupThread()
 	{
 		auto conn = providers_.val;
 		if(conn !is null) {
