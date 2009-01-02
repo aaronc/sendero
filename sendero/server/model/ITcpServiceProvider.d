@@ -1,5 +1,7 @@
 module sendero.server.model.ITcpServiceProvider;
 
+public import sendero.server.io.StagedReadBuffer;
+
 interface ITcpServiceProvider
 {
 	ITcpRequestHandler getRequestHandler();
@@ -23,7 +25,10 @@ interface ITcpRequestHandler
 	 * response data for synchronous handling, or null to indicate that
 	 * response will be sent asynchonously
 	 */
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort);
+	SyncTcpResponse handleRequest(StagedReadBuffer buffer, ITcpCompletionPort completionPort);
+	
+	//SyncTcpResponse initRequest(StagedReadBuffer buffer, ITcpCompletionPort completionPort);
+	//SyncTcpResponse onNewData();
 }
 
 interface ITcpCompletionPort

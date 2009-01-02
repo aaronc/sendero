@@ -12,11 +12,19 @@ struct HttpRequestLineData
 	char[] httpVersion;
 }
 
+interface IHttpRequestData
+{
+	size_t expectedContentLength();
+	bool chunked();
+	void[] nextContentBuffer();
+	void releaseContentBuffer(void[]);
+}
+
 interface IHttpRequestHandler
 {
 	void handleRequestLine(HttpRequestLineData data);
 	void handleHeader(char[] field, char[] value);
-	void handleData(void[][] data);
+	//void handleData(void[][] data);
 	void signalFatalError();
-	void[][] processRequest(ITcpCompletionPort completionPort);
+	SyncTcpResponse processRequest(IHttpRequestData data, ITcpCompletionPort completionPort);
 }

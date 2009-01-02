@@ -6,8 +6,11 @@ class SaveResponder(MapperT = IMapper) : IMapperResponder
 {
 	this(MapperT m)
 	{
-		m.addMethod(new FunctionDeclaration("save", "bool"));
 		this.mapper = m;
+		
+		if(mapper.schema.getPrimaryKeyCols.length  == 1) {
+			mapper.addMethod(new FunctionDeclaration("save", "bool"));
+		}
 	}
 	protected MapperT mapper;
 	
@@ -21,6 +24,9 @@ class SaveResponder(MapperT = IMapper) : IMapperResponder
 	}
 	body
 	{
+		if(mapper.schema.getPrimaryKeyCols.length != 1)
+			return;
+		
 		wr.fln("bool save()");
 		wr("{").nl;
 		wr.indent;

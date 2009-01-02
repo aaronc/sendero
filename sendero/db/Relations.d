@@ -4,6 +4,12 @@ struct HasOne(Type, UInt = uint)
 {	
 	UInt id;
 	Type inst;
+	
+	void opAssign(Type t)
+	{
+		inst = t;
+		id = t.id;
+	}
 }
 
 /+struct HasOne(T, UInt = uint)

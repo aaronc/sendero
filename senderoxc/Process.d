@@ -83,6 +83,7 @@ bool run(char[] modname, char[] outdir = null)
 		if(db is null) throw new Exception("Unable to connect to database " ~ SenderoConfig().dbUrl);
 		Schema.commit(db);
 		db.close;
+		debug log.trace("Done closing database");
 	}
 	catch(SenderoXCException ex)
 	{

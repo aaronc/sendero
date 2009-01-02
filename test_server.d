@@ -1,12 +1,12 @@
 //import qcf.reflectioned;
 
+import sendero.server.http.Http11Parser;
 import sendero.server.EventDispatcher;
 import sendero.server.runtime.SafeRuntime;
 //import sendero.server.SimpleTest;
 import sendero.server.responder.TcpServer;
 import sendero.server.WorkerPool;
-import sendero.server.http.Http11Parser;
-import sendero.server.provider.WorkerPoolTcpServiceProvider;
+//import sendero.server.provider.WorkerPoolTcpServiceProvider;
 import sendero.server.runtime.StackTrace;
 //import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
@@ -46,10 +46,11 @@ class TestProvider : ITcpServiceProvider
 
 class TestRequestHandler : ITcpRequestHandler
 {
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	SyncTcpResponse handleRequest(StagedReadBuffer buffer, ITcpCompletionPort completionPort)
 	{
 		auto res = new SyncTcpResponse;
-		char[] txt = "Hello Sendero Server World!\r\n";
+		char[] txt = "Hello Sendero Server World!<br><br>";
+		txt ~= cast(char[])buffer.getReadable;
 		char[] resTxt = "HTTP/1.x 200 OK\r\n";
 		resTxt ~= "Content-Type: text/html\r\n";
 		resTxt ~= "Content-Length: " ~ Int.toString(txt.length) ~ "\r\n";
@@ -158,7 +159,7 @@ int stop_server(char[][] args)
 
 int main(char[][] args)
 {
-	Stdout.formatln("Server Server Version {}.{}.{}",0,0,0);
+	Stdout.formatln("Sendero Server Version {}.{}.{}",0,0,0);
 	
 	if(args.length > 1)
 	{

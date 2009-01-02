@@ -172,7 +172,7 @@ version(linux) {
                 }
             }
 		} else {
-			
+			debug assert(conduit !is null);
 			selector.unregister(conduit);
 		}
 	}
@@ -365,10 +365,10 @@ else {
 			catch(Exception ex)
 			{
 				if(ex.info !is null) {
-					log.error("Exception caught:{}. Trace: {}", ex.toString, ex.info.toString);
+					log.error("Exception caught:{} {} {}. Trace: {}", ex.toString, ex.file, ex.line, ex.info.toString);
 				}
 				else {
-					log.error("Exception caught:{}", ex.toString);
+					log.error("Exception caught:{} {} {}", ex.toString, ex.file, ex.line);
 				}
 			}
 		}

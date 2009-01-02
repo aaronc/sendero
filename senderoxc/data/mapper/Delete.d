@@ -8,8 +8,10 @@ class DeleteResponder : IMapperResponder
 {
 	this(IMapper m)
 	{
-		m.addMethod(new FunctionDeclaration("destroy", "bool"));
 		this.mapper = m;
+		
+		if(mapper.schema.getPrimaryKeyCols.length)
+			mapper.addMethod(new FunctionDeclaration("destroy", "bool"));
 	}
 	
 	private IMapper mapper;
@@ -17,6 +19,9 @@ class DeleteResponder : IMapperResponder
 	
 	void doWrite(IPrint wr)
 	{
+		if(!mapper.schema.getPrimaryKeyCols.length)
+			return;
+		
 		wr("private static char[] deleteSql;\n");
 		
 		wr("public bool destroy()\n");

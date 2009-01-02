@@ -56,9 +56,14 @@ private:
 	uint cacheSize_;
 }
 
+struct ChainedBuffer {
+	void[] buffer;
+	ChainedBuffer* next;
+}
+
 class SingleThreadBufferPool
 {
-	this(uint defaultBufferSize = 8192, uint maxCacheSize = 100, uint preAllocSize = 10)
+	this(uint defaultBufferSize = ushort.max, uint maxCacheSize = 100, uint preAllocSize = 10)
 	{
 		defaultBufferSize_ = defaultBufferSize;
 		bufferPool_ = new void[][maxCacheSize];
@@ -69,6 +74,7 @@ class SingleThreadBufferPool
 			bufferPool_[index] = buf;
 			debug bufferPtrMap_[buf.ptr] = buf.ptr;
 		}
+		--index;
 	}
 	
 	void[] get()
@@ -77,6 +83,7 @@ class SingleThreadBufferPool
 			auto buf = bufferPool_[index];
 			--index;
 			debug bufferPtrMap_.remove(buf.ptr);
+			debug assert(buf.length);
 			return buf;
 		}
 		else return new void[defaultBufferSize_];
