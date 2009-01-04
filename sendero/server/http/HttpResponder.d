@@ -4,6 +4,8 @@ version(Tango_0_99_7) import tango.io.FileConduit;
 else import tango.io.device.FileConduit;
 import tango.net.http.HttpConst;
 import Integer = tango.text.convert.Integer;
+import Timestamp = tango.text.convert.TimeStamp;
+import tango.time.Clock;
 
 import sendero.server.model.ITcpServiceProvider;
 
@@ -48,9 +50,14 @@ class HttpResponder
 	
 	TcpResponse sendContent(char[] mimeType, void[][] data...)
 	{
+		char[64] tmp;
 		auto res = new TcpResponse;
 		setStatus(HttpResponses.OK);
+		buf_ ~= "Server: Sendero\r\n";
 		HttpResponder.setContentType(mimeType);
+		buf_ ~= "Date: ";
+		buf_ ~= Timestamp.format(tmp, Clock.now);
+		buf_ ~= "\r\n";
 		buf_ ~= "Connection: keep-alive\r\n";
 		size_t len;
 		foreach(d; data) len += d.length;
