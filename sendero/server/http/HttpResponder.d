@@ -30,6 +30,7 @@ class HttpResponder : OutputStream
 	{
 		headers_ = new HttpHeaders(new Buffer(1024));
 		cookies_ = new HttpCookies(headers_);
+		requestHeaders_ = new HttpHeaders(new Buffer(4096));
 	}
 	
 	private HttpHeaders headers_;
@@ -59,6 +60,25 @@ class HttpResponder : OutputStream
 	private State state_;
 	private WriteState writeState_;
 	private TransferState transferState_;
+
+	
+	private int flags_;
+	private enum Flags { KeepAlive = 0x1 };
+	
+	protected HttpHeaders requestHeaders_;
+	
+	void handleHeader(char[] field, char[] value)
+	{
+		requestHeaders_.add(HttpHeaderName(field), value);
+		switch(field)
+		{
+		case "KEEP-ALIVE":
+			flags_ |= Flags.KeepAlive;
+			break;
+		default:
+			break;
+		}
+	}
 	
 	/**
 	 * Sets HTTP response status.
@@ -168,7 +188,8 @@ class HttpResponder : OutputStream
 		headerBuf_ ~= "\r\n";+/
 		headers_.add(HttpHeader.Server, "Sendero");
 		headers_.addDate(HttpHeader.Date, Clock.now);
-		headers_.add(HttpHeader.Connection, "keep-alive");
+		if(flags_ & Flags.KeepAlive)
+			headers_.add(HttpHeader.Connection, "keep-alive");
 		auto buf = headers_.getOutputBuffer;
 		debug log.trace("Headers Output: {}", cast(char[])buf.slice);
 		headers_.produce((void[] val) {headerBuf_ ~= val;}, HttpConst.Eol);
@@ -503,5 +524,13 @@ else {
 	OutputStream output ()
 	{
 		return null;
+	}
+	
+	void reset()
+	{
+		requestHeaders_.reset;
+		headers_.reset;
+		writeState_ = WriteState.Headers;
+		transferState_ = TransferState.Unknown;
 	}
 }

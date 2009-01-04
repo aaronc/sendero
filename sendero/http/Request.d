@@ -13,6 +13,26 @@ import sendero.server.model.IHttpRequestHandler;
 import sendero.server.http.HttpResponder;
 
 public import tango.net.http.HttpCookies : Cookie;
+static import tango.net.http.HttpCookies;
+private import tango.net.http.HttpHeaders;
+
+class CookieStack : tango.net.http.HttpCookies.CookieStack
+{
+	 this (int size)
+     {
+		 super(size);
+     }
+	
+	Cookie find(char[] name)
+	{
+		foreach(cookie; this)
+		{
+			if(cookie.name == name)
+				return cookie;
+		}
+		return null;
+	}
+}
 
 debug {
 	import sendero.Debug;
@@ -33,6 +53,8 @@ class Request : HttpResponder, IHttpRequestHandler
 	this(SenderoRequestHandler handler)
 	{
 		handler_ = handler;
+		cookies = new CookieStack(10);
+		cookieParser_ = new tango.net.http.HttpCookies.CookieParser(cookies);
 	}
 	private SenderoRequestHandler handler_;
 	
@@ -55,8 +77,9 @@ class Request : HttpResponder, IHttpRequestHandler
 	
 	void handleHeader(char[] field, char[] value)
 	{
-		headers[field] = value;
-		if(field == "COOKIE") cookies = parseCookies(value);
+		//headers[field] = value;
+		super.handleHeader(field, value);
+		if(field == "COOKIE") cookieParser_.parse(value);
 	}
 	
 	void signalFatalError()
@@ -88,10 +111,11 @@ class Request : HttpResponder, IHttpRequestHandler
 		uri = null;
 		fragment = null;
 		lastToken = null;
-		cookies = null;
+		cookies.reset;
 		ip = null;
-		headers = null;
+		//headers = null;
 		method = HttpMethod.Unknown;
+		super.reset;
 	}
 	
 	IObject params;
@@ -100,22 +124,21 @@ class Request : HttpResponder, IHttpRequestHandler
 	char[] uri;
 	char[] fragment;
 	char[] lastToken;
-	char[][char[]] cookies;
+	//char[][char[]] cookies;
+	CookieStack cookies;
 	char[] ip;
-	char[][char[]] headers;
+	//char[][char[]] headers;
+	HttpHeaders headers()
+	{
+		return requestHeaders_;
+	}
+	
+	private tango.net.http.HttpCookies.CookieParser cookieParser_;
 	
 	void delegate(void[]) getConsumer()
 	{
-		//assert(responder_, "responder_ is null");
-		//return &responder_.write;
 		return cast(void delegate(void[]))&this.write;
 	}
-	
-	/+void setContentType(char[] contentType)
-	{
-		//assert(responder_,  "responder_ is null");
-		responder_.setContentType(contentType);
-	}+/
 	
 	void respond(IRenderable r)
 	{
@@ -137,8 +160,6 @@ class Request : HttpResponder, IHttpRequestHandler
 	
 	void respond(char[] content, char[] contentType = ContentType.TextHtml)
 	{
-		/+responder_.setContentType(contentType);
-		responder_.write(content);+/
 		sendContent(contentType,content);
 	}
 	

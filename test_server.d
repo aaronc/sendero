@@ -76,14 +76,22 @@ class TestSenderoRequestHandler
 		res ~= "Path:" ~ req.path.origUrl;
 		res ~= "</p>";
 		res ~= "<table>";
-		foreach(key,val;req.headers)
+		foreach(header;req.headers)
 		{
 			res ~= "<tr>";
-			res ~= "<td>" ~ key ~ "</td>";
-			res ~= "<td>" ~ val ~ "</td>";
+			res ~= "<td>" ~ header.name.value ~ "</td>";
+			res ~= "<td>" ~ header.value ~ "</td>";
 			res ~= "</tr>";
 		}
 		res ~= "</table>";
+		
+		res ~= "<p>Cookies</p>";
+		foreach(cookie; req.cookies)
+		{
+			cookie.produce((void[]val){res ~= cast(char[])val;});
+			res ~= "<br>";
+		}
+		
 		res ~= "</body></html>";
 		
 		req.setCookie("Test","1");
