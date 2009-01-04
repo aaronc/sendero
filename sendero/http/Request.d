@@ -24,8 +24,16 @@ debug {
 
 enum HttpMethod { Get, Post, Put, Delete, Header, Unknown = 0 };
 
+alias void delegate(Request) SenderoRequestHandler;
+
 class Request : HttpResponder, IHttpRequestHandler
 {
+	/+this(RequestHandler handler)
+	{
+		handler_ = handler;
+	}
+	private RequestHandler handler_;+/
+	
 	void handleRequestLine(HttpRequestLineData reqLine)
 	{
 		switch(reqLine.method)
@@ -77,7 +85,10 @@ class Request : HttpResponder, IHttpRequestHandler
 		res ~= "</body></html>";
 		
 		setCookie("Test","1");
-		//setCookie(new Cookie("Test2","2"));
+		setCookie(new Cookie("Test2","2"));
+		
+		/+debug assert(handler_ !is null);
+		handler_(this);+/
 		
 		sendContent("text/html",res);
 		

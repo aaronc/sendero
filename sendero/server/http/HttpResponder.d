@@ -11,6 +11,7 @@ import Text = tango.text.Util;
 import tango.time.Clock;
 public import tango.net.http.HttpCookies;
 import tango.net.http.HttpHeaders;
+import tango.io.Buffer;
 
 import sendero.server.model.ITcpServiceProvider;
 import sendero.server.io.CachedBuffer;
@@ -27,12 +28,13 @@ class HttpResponder : OutputStream
 {
 	this()
 	{
-		headers_ = new HttpHeaders;
+		headers_ = new HttpHeaders(new Buffer(1024));
 		cookies_ = new HttpCookies(headers_);
 	}
 	
 	private HttpHeaders headers_;
 	private HttpCookies cookies_;
+	private HttpStatus status_;
 	
 	private void[] headerBuf_;
 	private char[] mimeType_;
@@ -49,7 +51,7 @@ class HttpResponder : OutputStream
 	private WriteBuffer buffer_;
 	private size_t idx_;
 	
-	private enum WriteState { Status, Headers, Data, Done };
+	private enum WriteState { Headers, Data, Done };
 	private enum TransferState { Unknown, Chunked, ContentLength };
 	private enum State { BeforeHeaders, BeforeData,
 		HeadersUncommitted, ChunkedTransfer,
@@ -64,40 +66,58 @@ class HttpResponder : OutputStream
 	 */
 	void setStatus(HttpStatus status)
 	{
-		assert(writeState_ == WriteState.Status);
-		headerBuf_ = "HTTP/1.x ";
-		headerBuf_ ~= Integer.toString(status.code);
-		headerBuf_ ~= " ";
-		headerBuf_ ~= status.name;
-		headerBuf_ ~= "\r\n";
-		writeState_ = WriteState.Headers;
+		assert(writeState_ == WriteState.Headers);
+		status_ = status;
+	}
+	
+	void setHeader(HttpHeaderName field, char[] value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headers_.add(field,value);
 	}
 	
 	void setHeader(char[] field, char[] value)
 	{
 		assert(writeState_ == WriteState.Headers);
-		headerBuf_ ~= field;
-		headerBuf_ ~= ": ";
-		headerBuf_ ~= value;
-		headerBuf_ ~= "\r\n";
+		headers_.add(HttpHeaderName(field),value);
+	}
+	
+	void setHeader(HttpHeaderName field, int value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headers_.addInt(field, value);
+	}
+	
+	void setHeader(char[] field, int value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headers_.addInt(HttpHeaderName(field), value);
+	}
+	
+	void setHeader(HttpHeaderName field, Time value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headers_.addDate (field, value);
+	}
+	
+	void setHeader(char[] field, Time value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headers_.addDate(HttpHeaderName(field), value);
 	}
 	
 	void setContentType(char[] mimeType)
 	{
 		assert(writeState_ == WriteState.Headers);
 		mimeType_ = mimeType;
-		headerBuf_ ~= "Content-Type: ";
-		headerBuf_ ~= mimeType;
-		headerBuf_ ~= "\r\n";
+		headers_.add(HttpHeader.ContentType,mimeType_);
 	}
 	
 	void setContentLength(size_t contentLength)
 	{
 		assert(writeState_ == WriteState.Headers);
 		assert(transferState_ == TransferState.Unknown);
-		headerBuf_ ~= "Content-Length: ";
-		headerBuf_ ~= Integer.toString(contentLength);
-		headerBuf_ ~= "\r\n";
+		headers_.addInt(HttpHeader.ContentLength,contentLength);
 		transferState_ = TransferState.ContentLength;
 	}
 	
@@ -105,38 +125,53 @@ class HttpResponder : OutputStream
 	{
 		assert(writeState_ == WriteState.Headers);
 		assert(transferState_ == TransferState.Unknown);
-		headerBuf_ ~= "Transfer-Encoding: chunked\r\n";
+		headers_.add(HttpHeader.TransferEncoding,"chunked");
 		transferState_ = TransferState.Chunked;
 	}
 	
 	void setCookie(char[] name, char[] value)
 	{
 		assert(writeState_ == WriteState.Headers);
-		headerBuf_ ~= "Set-Cookie: ";
+		cookies_.add(new Cookie(name, value));
+		/+headerBuf_ ~= "Set-Cookie: ";
 		headerBuf_ ~= name;
 		headerBuf_ ~= "=";
 		headerBuf_ ~= value;
-		headerBuf_ ~= "\r\n";
+		headerBuf_ ~= "\r\n";+/
 		//responder_.setCookie(name, value);
 	}
 	
 	void setCookie(Cookie cookie)
 	{
 		assert(writeState_ == WriteState.Headers);
-		headerBuf_ ~= "Set-Cookie: ";
+		cookies_.add(cookie);
+		/+headerBuf_ ~= "Set-Cookie: ";
 		cookie.produce((void[] val){headerBuf_ ~= val;});
 		headerBuf_ ~= "\r\n";
-		//responder_.setCookie(cookie);
+		//responder_.setCookie(cookie);+/
+		
 	}
 	
 	private void finishHeaders()
 	{
-		char[64] tmp;
+		headerBuf_ = "HTTP/1.x ";
+		headerBuf_ ~= Integer.toString(status_.code);
+		headerBuf_ ~= " ";
+		headerBuf_ ~= status_.name;
+		headerBuf_ ~= "\r\n";
+		/+char[64] tmp;
 		headerBuf_ ~= "Server: Sendero\r\n";
 		headerBuf_ ~= "Date: ";
 		headerBuf_ ~= Timestamp.format(tmp, Clock.now);
 		headerBuf_ ~= "\r\n";
 		headerBuf_ ~= "Connection: keep-alive\r\n";
+		headerBuf_ ~= "\r\n";+/
+		headers_.add(HttpHeader.Server, "Sendero");
+		headers_.addDate(HttpHeader.Date, Clock.now);
+		headers_.add(HttpHeader.Connection, "keep-alive");
+		auto buf = headers_.getOutputBuffer;
+		debug log.trace("Headers Output: {}", cast(char[])buf.slice);
+		headers_.produce((void[] val) {headerBuf_ ~= val;}, HttpConst.Eol);
 		headerBuf_ ~= "\r\n";
 		writeState_ = WriteState.Data;
 	}
@@ -148,7 +183,7 @@ class HttpResponder : OutputStream
 	
 	void sendContent(char[] mimeType, void[][] data...)
 	{
-		assert(writeState_ == WriteState.Status);
+		assert(writeState_ == WriteState.Headers);
 		auto res = new TcpResponse;
 		setStatus(HttpResponses.OK);
 		setContentType(mimeType);
