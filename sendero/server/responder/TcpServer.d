@@ -13,13 +13,12 @@ import tango.stdc.errno;
 
 import tango.util.log.Log;
 Logger log;
-
-alias SingleThreadBufferPool BufferQueueT;
-
 static this()
 {
 	log = Log.lookup("sendero.server.provider.TcpServer");
 }
+
+alias SingleThreadBufferPool BufferQueueT;
 
 class TcpConnection : EventResponder, ITcpCompletionPort
 {

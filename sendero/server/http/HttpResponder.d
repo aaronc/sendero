@@ -14,15 +14,38 @@ import sendero.server.model.ITcpServiceProvider;
 import sendero.server.io.CachedBuffer;
 import sendero.server.io.GzipStream;
 
+import tango.util.log.Log;
+Logger log;
+static this()
+{
+	log = Log.lookup("sendero.server.http.HttpResponder");
+}
+
 class HttpResponder : OutputStream
 {
-	this()
-	{
-		
-	}
+	private void[] headerBuf_;
+	private char[] mimeType_;
 	
-	void[] headerBuf_;
-	char[] mimeType_;
+	void setCompletionPort(ITcpCompletionPort completionPort)
+	{
+		completionPort_ = completionPort;
+	}
+	private ITcpCompletionPort completionPort_;
+	private TcpResponse syncResponse_;
+	
+	
+	
+	private WriteBuffer buffer_;
+	private size_t idx_;
+	
+	private enum WriteState { Status, Headers, Data, Done };
+	private enum TransferState { Unknown, Chunked, ContentLength };
+	private enum State { BeforeHeaders, BeforeData,
+		HeadersUncommitted, ChunkedTransfer,
+		ContentLengthTransfer, Done };
+	private State state_;
+	private WriteState writeState_;
+	private TransferState transferState_;
 	
 	/**
 	 * Sets HTTP response status.
@@ -30,15 +53,18 @@ class HttpResponder : OutputStream
 	 */
 	void setStatus(HttpStatus status)
 	{
+		assert(writeState_ == WriteState.Status);
 		headerBuf_ = "HTTP/1.x ";
 		headerBuf_ ~= Integer.toString(status.code);
 		headerBuf_ ~= " ";
 		headerBuf_ ~= status.name;
 		headerBuf_ ~= "\r\n";
+		writeState_ = WriteState.Headers;
 	}
 	
 	void setHeader(char[] field, char[] value)
 	{
+		assert(writeState_ == WriteState.Headers);
 		headerBuf_ ~= field;
 		headerBuf_ ~= ": ";
 		headerBuf_ ~= value;
@@ -47,41 +73,80 @@ class HttpResponder : OutputStream
 	
 	void setContentType(char[] mimeType)
 	{
+		assert(writeState_ == WriteState.Headers);
 		mimeType_ = mimeType;
 		headerBuf_ ~= "Content-Type: ";
 		headerBuf_ ~= mimeType;
 		headerBuf_ ~= "\r\n";
 	}
 	
-	void sendHeaders()
+	void setContentLength(size_t contentLength)
 	{
-		
+		assert(writeState_ == WriteState.Headers);
+		assert(transferState_ == TransferState.Unknown);
+		headerBuf_ ~= "Content-Length: ";
+		headerBuf_ ~= Integer.toString(contentLength);
+		headerBuf_ ~= "\r\n";
+		transferState_ = TransferState.ContentLength;
 	}
 	
-	TcpResponse sendContent(char[] mimeType, void[][] data...)
+	void setChunked()
+	{
+		assert(writeState_ == WriteState.Headers);
+		assert(transferState_ == TransferState.Unknown);
+		headerBuf_ ~= "Transfer-Encoding: chunked\r\n";
+		transferState_ = TransferState.Chunked;
+	}
+	
+	private void finishHeaders()
 	{
 		char[64] tmp;
-		auto res = new TcpResponse;
-		setStatus(HttpResponses.OK);
 		headerBuf_ ~= "Server: Sendero\r\n";
-		HttpResponder.setContentType(mimeType);
 		headerBuf_ ~= "Date: ";
 		headerBuf_ ~= Timestamp.format(tmp, Clock.now);
 		headerBuf_ ~= "\r\n";
 		headerBuf_ ~= "Connection: keep-alive\r\n";
+		headerBuf_ ~= "\r\n";
+		writeState_ = WriteState.Data;
+	}
+	
+	void sendHeaders()
+	{
+		finishHeaders;
+	}
+	
+	TcpResponse sendContent(char[] mimeType, void[][] data...)
+	{
+		auto res = new TcpResponse;
+		setStatus(HttpResponses.OK);
+		setContentType(mimeType);
 		size_t len;
 		foreach(d; data) len += d.length;
-		headerBuf_ ~= "Content-Length: ";
-		headerBuf_ ~= Integer.toString(len);
-		headerBuf_ ~= "\r\n\r\n";
+		setContentLength(len);
+		finishHeaders;
 		res.data ~= headerBuf_;
 		res.data ~= data;
 		return res;
 	}
 	
+	TcpResponse getSyncResponse()
+	{
+		assert(writeState_ == WriteState.Done);
+		return syncResponse_;
+	}
+	
 	enum SendFlags { Default = 0x0, ChunkedHeadersSet = 0x1, EndResponse = 0x2 };
 	
 	
+	private void sendWriteBuffer(bool haveMoreData = false, size_t start = 0, size_t end = size_t.max)
+	{
+		void initChunkBuffer()
+		{
+			// get new buffer;
+			idx_ = 6;
+		}
+	}
+		
 	void sendData(void[][] data...)
 	{
 		
@@ -174,11 +239,7 @@ class HttpResponder : OutputStream
 		}
 	}
 
-	private WriteBuffer buffer_;
-	private size_t idx_;
 	
-	private enum State { HeadersUncommitted, ChunkedTransfer, ContentLengthTransfer, Done }
-	private State state_;
 
 version(Tango_0_99_7) { }
 else {
@@ -195,30 +256,42 @@ else {
 	
 	void close()
 	{
-		assert(state_ != State.Done);
-		if(state_ == State.HeadersUncommitted) {
+		assert(writeState_ == WriteState.Headers || writeState_ == WriteState.Data);
+		if(writeState_ == WriteState.Headers) {
+			assert(transferState_ == TransferState.Unknown);
 			// Set Content-Length = buffer_.buffer.length
 			// Send headers
 			// Send chunk
+			// Create sync response
 		}
-		else if(state_ == State.ChunkedTransfer){
-			assert(state_ == State.ChunkedTransfer);
-			size_t writeable = buffer_.buffer.length - idx_;
-			if(writeable < 5) {
-				auto chunkSize = Integer.format(cast(char[])buffer_.buffer[0..4],buffer_.buffer.length,"x");
-				buffer_.buffer[5..6] = "\r\n";
-				// Send chunk buffer_.buffer[4 - chunkSize.length ..idx_];
-				// TODO get small buffer
-				auto temp = new void[5];
-				temp = "\r\n0\r\n";
-				// Send temp;
+		else if(transferState_ == TransferState.Chunked){
+			if(writeState_ == WriteState.Data) {
+				size_t writeable = buffer_.buffer.length - idx_;
+				if(writeable < 5) {
+					auto chunkSize = Integer.format(cast(char[])buffer_.buffer[0..4],buffer_.buffer.length,"x");
+					buffer_.buffer[5..6] = "\r\n";
+					// TODO get small buffer
+					sendWriteBuffer(false, 4 - chunkSize.length, idx_);
+					auto temp = new void[5];
+					temp = "\r\n0\r\n";
+					assert(false, "Not implemented");
+					// TODO Send temp;
+				}
+				else {
+					auto chunkSize = Integer.format(cast(char[])buffer_.buffer[0..4],buffer_.buffer.length,"x");
+					buffer_.buffer[5..6] = "\r\n";
+					buffer_.buffer[idx_..idx_+5] = "\r\n0\r\n";
+					// Send chunk buffer_.buffer[4 - chunkSize.length .. $];
+					sendWriteBuffer(false, 4 - chunkSize.length, idx_);
+				}
 			}
-			else {
-				auto chunkSize = Integer.format(cast(char[])buffer_.buffer[0..4],buffer_.buffer.length,"x");
-				buffer_.buffer[5..6] = "\r\n";
-				buffer_.buffer[idx_..idx_+5] = "\r\n0\r\n";
-				// Send chunk buffer_.buffer[4 - chunkSize.length .. $];
+			else if(writeState_ == WriteState.Headers) {
+			//Automatically revert to Content-Length transfer state
+				setContentLength(idx_);
+				sendHeaders;
+				sendWriteBuffer(false, 0, idx_);
 			}
+			else assert(false, "Uexpected state");
 		}
 		state_ = State.Done;
 	}
@@ -227,31 +300,18 @@ else {
 	{
 		size_t written = 0;
 		
-		void getNewBuffer()
-		{
-			
-		}
-		
-		void initChunkBuffer()
-		{
-			// get new buffer;
-			idx_ = 6;
-		}
-		
 		void writeChunkData(void[] data)
 		{
 			size_t writeable = buffer_.buffer.length - idx_;
-			if(writeable == 0) initChunkBuffer;
 			size_t src_len = data.length;
-			if(writeable < src_len) {
+			if(writeable <= src_len) {
 				buffer_.buffer[idx_..$-2] = data[0..writeable];
 				written += writeable;
 				buffer_.buffer[$-2..$] = "\r\n";
 				auto chunkSize = Integer.format(cast(char[])buffer_.buffer[0..4],buffer_.buffer.length,"x");
 				buffer_.buffer[5..6] = "\r\n";
-				// Send chunk buffer_.buffer[4 - chunkSize.length .. $];
-				initChunkBuffer;
-				writeChunkData(data[writeable..$]);
+				sendWriteBuffer(true, 4 - chunkSize.length, buffer_.buffer.length);
+				if(writeable < src_len) writeChunkData(data[writeable..$]);
 			}
 			else {
 				buffer_.buffer[idx_ .. idx_ + src_len] = src[0..$];
@@ -264,11 +324,11 @@ else {
 		{
 			size_t writeable = buffer_.buffer.length - idx_;
 			size_t src_len = data.length;
-			if(writeable < src_len) {
+			if(writeable <= src_len) {
 				buffer_.buffer[idx_ .. $] = data[0..writeable];
 				written += writeable;
-				getNewBuffer;
-				writeContentLengthData(data);
+				sendWriteBuffer(true);
+				if(writeable < src_len) writeContentLengthData(data);
 			}
 			else {
 				buffer_.buffer[idx_ .. idx_ + src_len] = src[0..$];
@@ -277,22 +337,22 @@ else {
 			}
 		}
 		
-		assert(state_ != State.Done);
+		assert(writeState_ == WriteState.Headers || writeState_ == WriteState.Data);
 		
-		if(state_ == State.HeadersUncommitted) {
+		if(writeState_ == WriteState.Headers) {
+			assert(transferState_ == TransferState.Unknown);
 			size_t writeable = buffer_.buffer.length - idx_;
 			size_t src_len = src.length;
-			if(writeable < src_len) {
+			if(writeable <= src_len) {
 				buffer_.buffer[idx_..$-2] = src[0..writeable];
 				written += writeable;
 				buffer_.buffer[$-2..$] = "\r\n";
-				// Set Transfer-Encoding: chunked
-				// Append first first chunk size to headers
-				// Send headers
-				// Send first chunk
-				state_ = State.ChunkedTransfer;
-				initChunkBuffer;
-				writeChunkData(src[writeable..$]);
+				setChunked;
+				headerBuf_ ~= Integer.toString(buffer_.buffer.length - 2);
+				headerBuf_ ~= "\r\n";
+				sendHeaders;
+				sendWriteBuffer(true);
+				if(writeable < src_len) writeChunkData(src[writeable..$]);
 			}
 			else {
 				written += src_len;
@@ -300,10 +360,12 @@ else {
 				idx_ += src_len;
 			}
 		}
-		else if(state_ == State.ChunkedTransfer) {
+		else if(transferState_ == TransferState.Chunked) {
+			assert(writeState_ == WriteState.Data);
 			writeChunkData(src);
 		}
 		else if(state_ == State.ContentLengthTransfer) {
+			assert(writeState_ == WriteState.Data);
 			writeContentLengthData(src);
 		}
 		
@@ -315,6 +377,54 @@ else {
 		Conduit.transfer (src, this);
 		return this;
 		//assert(false, "Not implemented");
+	/+	
+		if(state_ == State.HeadersUncommitted) {
+			auto len = src.read(buffer_.buffer[idx_ .. $]);
+			idx_ += len;
+			buffer_.buffer[$-2 .. $] = "\r\n";
+			// Set Transfer-Encoding: chunked
+			// Append first first chunk size to headers
+			// Send headers
+			// Send first chunk
+			state_ = State.ChunkedTransfer;
+			//initChunkBuffer;
+		}
+		else if(state_ == State.ChunkedTransfer) {
+			writeChunkData(src);
+		}
+		else if(state_ == State.ContentLengthTransfer) {
+			writeContentLengthData(src);
+		}
+		
+		auto len = src.read(buffer_.buffer[idx_ .. $]);
+		//idx_ +/
+		
+		/+
+		 byte[8192] tmp;
+         size_t     done;
+
+         while (max)
+               {
+               auto len = max;
+               if (len > tmp.length)
+                   len = tmp.length;
+
+               if ((len = src.read(tmp[0 .. len])) is Eof)
+                    max = 0;
+               else
+                  {
+                  max -= len;
+                  done += len;
+                  auto p = tmp.ptr;
+                  for (auto j=0; len > 0; len -= j, p += j)
+                       if ((j = dst.write (p[0 .. len])) is Eof)
+                            dst.conduit.error ("Conduit.copy :: Eof while writing to: "~
+                                                dst.conduit.toString);
+                  }
+               }
+
+         return done;+/
+
 	}
 	
 	OutputStream flush ()

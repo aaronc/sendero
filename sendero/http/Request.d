@@ -131,15 +131,15 @@ class Request : HttpResponder, IHttpRequestHandler
 	
 	void delegate(void[]) getConsumer()
 	{
-		assert(responder_, "responder_ is null");
+		//assert(responder_, "responder_ is null");
 		return &responder_.write;
 	}
 	
-	void setContentType(char[] contentType)
+	/+void setContentType(char[] contentType)
 	{
-		assert(responder_,  "responder_ is null");
+		//assert(responder_,  "responder_ is null");
 		responder_.setContentType(contentType);
-	}
+	}+/
 	
 	void respond(IRenderable r)
 	{
