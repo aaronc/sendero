@@ -1,7 +1,11 @@
 module sendero.server.http.HttpResponder;
 
-import tango.io.device.DeviceConduit;
+version(Tango_0_99_7) import tango.io.FileConduit;
+else import tango.io.device.FileConduit;
 import tango.net.http.HttpConst;
+import Integer = tango.text.convert.Integer;
+
+import sendero.server.model.ITcpServiceProvider;
 
 class HttpResponder
 {
@@ -18,6 +22,11 @@ class HttpResponder
 	 */
 	void setStatus(HttpStatus status)
 	{
+		buf_ = "HTTP/1.x";
+		buf_ ~= Integer.toString(status.code);
+		buf_ ~= " ";
+		buf_ ~= status.name;
+		buf_ ~= "\r\n";
 	}
 	
 	void setHeader(char[] field, char[] value)
@@ -25,12 +34,42 @@ class HttpResponder
 		
 	}
 	
-	void sendContent(char[] mimeType, void[][] data, bool compress = false)
+	void setContentType(char[] mimeType)
+	{
+		buf_ ~= "Content-Type: ";
+		buf_ ~= mimeType;
+		buf_ ~= "\r\n";
+	}
+	
+	void sendHeaders()
 	{
 		
 	}
 	
-	void sendFile(char[] mimeType, DeviceConduit file, bool compress = false)
+	TcpResponse sendContent(char[] mimeType, void[][] data...)
+	{
+		auto res = new TcpResponse;
+		setStatus(HttpResponses.OK);
+		HttpResponder.setContentType(mimeType);
+		size_t len;
+		foreach(d; data) len += d.length;
+		buf_ ~= "Content-Length: ";
+		buf_ ~= Integer.toString(len);
+		buf_ ~= "\r\n\r\n";
+		res.data ~= buf_;
+		res.data ~= data;
+		return res;
+	}
+	
+	enum SendFlags { Default = 0x0, ChunkedHeadersSet = 0x1, EndResponse = 0x2 };
+	
+	
+	void sendData(SendFlags flags, void[][] data...)
+	{
+		
+	}
+	
+	void sendFile(char[] mimeType, FileConduit file, bool compress = false)
 	{
 		
 	}

@@ -1,6 +1,7 @@
 //import qcf.reflectioned;
 
 import sendero.server.http.Http11Parser;
+import sendero.http.Request;
 import sendero.server.EventDispatcher;
 import sendero.server.runtime.SafeRuntime;
 //import sendero.server.SimpleTest;
@@ -35,7 +36,8 @@ class TestProvider : ITcpServiceProvider
 {
 	ITcpRequestHandler getRequestHandler()
 	{
-		return new TestRequestHandler;
+		//return new TestRequestHandler;
+		return new Http11Handler(new TestRequest);
 	}
 	
 	void cleanup(ITcpRequestHandler handler)
@@ -59,6 +61,11 @@ class TestRequestHandler : ITcpRequestHandler
 		res.data ~= resTxt;
 		return res;
 	}
+}
+
+class TestRequest : Request
+{
+	
 }
 
 import tango.io.Stdout;

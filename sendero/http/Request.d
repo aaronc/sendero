@@ -11,6 +11,7 @@ public import sendero.http.IRenderable;
 public import sendero.http.Response;
 
 import sendero.server.model.IHttpRequestHandler;
+import sendero.server.http.HttpResponder;
 
 debug {
 	import sendero.Debug;
@@ -24,7 +25,7 @@ debug {
 
 enum HttpMethod { Get, Post, Put, Delete, Header, Unknown = 0 };
 
-final class Request : IHttpRequestHandler
+class Request : HttpResponder, IHttpRequestHandler
 {
 	void handleRequestLine(HttpRequestLineData reqLine)
 	{
@@ -49,19 +50,34 @@ final class Request : IHttpRequestHandler
 		if(field == "COOKIE") cookies = parseCookies(value);
 	}
 	
-	void handleData(void[][] data)
-	{
-		
-	}
-	
 	void signalFatalError()
 	{
 		assert(false, "Not implemented");
 	}
 
-	void[][] processRequest(ITcpCompletionPort completionPort)
+	SyncTcpResponse processRequest(IHttpRequestData data, ITcpCompletionPort completionPort)
 	{
-		return null;
+		//completionPort.sendResponseData("Hello world")
+		//return null;
+		char[] res = "<html><head><title>Sendero Server Test</title></head><body>";
+		res ~= "<h1>Hello Sendero HTTP Server World</h1>";
+		res ~= "<p>";
+		res ~= "URI:" ~ uri;
+		res ~= "</p><p>";
+		res ~= "Path:" ~ path.origUrl;
+		res ~= "</p>";
+		res ~= "<table>";
+		foreach(key,val;headers)
+		{
+			res ~= "<tr>";
+			res ~= "<td>" ~ key ~ "</td>";
+			res ~= "<td>" ~ val ~ "</td>";
+			res ~= "</tr>";
+		}
+		res ~= "</table>";
+		res ~= "</body></html>";
+		
+		return sendContent("text/html",res);
 	}
 	
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)

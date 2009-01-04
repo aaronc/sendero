@@ -286,34 +286,40 @@ class Http11Handler : ITcpRequestHandler, IHttpRequestData
 					completionPort_.keepReading;
 					Fiber.yield;
 				}
-				auto next = curBuffer_.next;
-				if(next !is null) curBuffer_ = next;
-				response_ = req.processRequest(this, completionPort_);
-				if(response_ !is null) return;
-			}
-			/+
-			DataBuffer
-			
-			size_t calcContentLength() {
-				size_t curLen = pe - body_start;
-				//foreach(buf; data_[1..$]) curLen += buf.length;
-				return curLen;
-			}
-			
-			//data_[0] = body_start[0 .. pe - body_start];
-			
-			
-				auto curLen = calcContentLength;
-				while(curLen < expectedContentLength) {
-					completionPort_.keepReading;
-					Fiber.yield;
-					curLen = calcContentLength;
+				
+				if(head is null) {
+					assert(curBuffer_ == data_);
+					assert(tail is null);
+					assert(cur is null);
+					head = new DataBuffer;
+					head.data = data_.getReadable[startIdx..$];
+					head.next = null;
+					tail = head;
+					cur = head;
+				}
+				else {
+					assert(curBuffer_ != data_);
+					assert(tail.next is null);
+					tail.next = new DataBuffer;
+					tail = tail.next;
+					tail.data = curBuffer_.getReadable[startIdx..$];
+					tail.next = null;
 				}
 				
-				//req.handleData(data_);
-				//response_ = req.processRequest(completionPort_);+/
+				auto next = curBuffer_.next;
+				if(next !is null) curBuffer_ = next;
+				
+				Fiber handleFiber;
+				if(curLen >= expectedContentLength_) break;
+				handleFiber.call;				
+				if(response_ !is null) return;
+			}
+			response_ = req.processRequest(this, completionPort_);
 		}
-		else throw new Exception("Unknown HTTP transfer encoding");
+		else {
+			response_ = req.processRequest(this, completionPort_);
+			if(body_start != pe) debug log.warn("Unknown HTTP transfer encoding, body_start = ? and pe = ?", body_start, pe);
+		}
 	}
 	
 	SyncTcpResponse handleRequest(StagedReadBuffer data, ITcpCompletionPort completionPort)
@@ -323,11 +329,15 @@ class Http11Handler : ITcpRequestHandler, IHttpRequestData
 		if(parseFiber_.state != Fiber.State.TERM) {
 			// TODO check for exec state and wait
 			parseFiber_.call;
-			return response_;
+			//return response_;
 		}
-		else return null;
-	/+	if(parseFiber_.state != Fiber.State.TERM) return null;
-		else return response_;+/
+		//else return null;
+		return response_;
+	}
+	
+	void doHandling()
+	{
+		response_ = req.processRequest(this, completionPort_);
 	}
 	
 	size_t expectedContentLength()
@@ -342,7 +352,12 @@ class Http11Handler : ITcpRequestHandler, IHttpRequestData
 	
 	void[] nextContentBuffer()
 	{
-		return null;
+		if(cur.next is null) {
+			Fiber.yield;
+			if(cur.next is null) return null;
+		}
+		cur = cur.next;
+		return cur.data;
 	}
 	
 	void releaseContentBuffer(void[])

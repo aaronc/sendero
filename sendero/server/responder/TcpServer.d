@@ -29,6 +29,12 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		assert(server !is null);
 		assert(dispatcher !is null);
 		assert(serviceProvider !is null);
+		int True = 1;
+		void[] TrueBuf = (cast(void*)&True)[0..4];
+		void[] buf = new void[256];
+		socket.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SO_KEEPALIVE,TrueBuf);
+		auto res = socket.socket.getOption(SocketOptionLevel.SOCKET, SocketOption.SO_KEEPALIVE,buf);
+		debug log.trace("Socket option SO_KEEPALIVE = {}",buf[0..res]);
 		this.socket_ = socket;
 		this.server_ = server;
 		this.dispatcher_ = dispatcher;
@@ -55,7 +61,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		return "TcpConnection";
 	}
 	
-	private void doHandleRead(ISyncEventDispatcher dispatcher)
+	void handleRead(ISyncEventDispatcher dispatcher)
 	{
 		debug log.trace("doHandleRead");
 		
@@ -88,7 +94,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     		if(!curBuffer_.writeable) {
     			//Probably have more data
     			//TODO use readv
-    			doHandleRead(dispatcher);
+    			handleRead(dispatcher);
     		}
     		else {
     			checkForSyncResponse(curReqHandler_.handleRequest(curBuffer_, this));
@@ -112,7 +118,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     			checkForSyncResponse(curReqHandler_.handleRequest(curBuffer_, this));
     			return;
     		case EINTR:
-    			doHandleRead(dispatcher);
+    			handleRead(dispatcher);
     			return;
     		default:
     			log.error("Socket error {} on read for socket {}", err, toString);
@@ -121,11 +127,6 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     			return;
     		}
     	}
-	}
-	
-	void handleRead(ISyncEventDispatcher dispatcher)
-	{
-		doHandleRead(dispatcher);
 	}
 	
 	private void checkForSyncResponse(SyncTcpResponse res)

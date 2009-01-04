@@ -8,11 +8,18 @@ interface ITcpServiceProvider
 	void cleanup(ITcpRequestHandler);
 }
 
-class SyncTcpResponse
+alias void delegate(void[]) TcpBufferCleanupDgT;
+
+class TcpResponse
 {
+	enum { Continue, FinishKeepAlive, FinishDisconnect }
 	void[][] data;
 	bool keepAlive = true;
+	int type;
+	TcpBufferCleanupDgT dg;
 }
+
+alias TcpResponse SyncTcpResponse;
 
 interface ITcpRequestHandler
 {
@@ -36,4 +43,5 @@ interface ITcpCompletionPort
 	void keepReading();
 	void sendResponseData(void[][] data);
 	void endResponse(bool keepAlive = true);
+	//void sendResponseData(TcpResponse type, TcpBufferCleanupDgT cleanupDg, void[][] data...);
 }
