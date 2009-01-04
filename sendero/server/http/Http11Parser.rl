@@ -233,6 +233,11 @@ class Http11Handler : ITcpRequestHandler, IHttpRequestData
 			//return fail;
 		}
 		
+		/*TODO
+			if received "Expect: 100-continue"
+				send "100" Continue response
+		*/
+		
 		req.handleRequestLine(reqLine);
 		if(chunked_) {
 			/+while(1) {

@@ -225,8 +225,10 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	{
 		wr.fln("{{");
 		wr.indent;
-			wr.fln(`assert(dst.length >= {0}, "Must provide an array `
+			wr.fln(`if(dst.length) {{ debug assert(dst.length >= {0}, "Must provide an array `
 				`of at least length {0} to bind items to class {1}");`, bindableFieldCount, classname);
+			wr.fln(`else if(dst.length < {0}) dst.length = {0}; }}`, bindableFieldCount);
+			wr.fln(`else dst.length = {0};`, bindableFieldCount`)
 			wr.fln("size_t idx = 0;");
 			wr.fln("foreach(name;fieldNames) {{");
 			wr.indent;
@@ -258,7 +260,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 		wr.fln("void*[] setBindPtrs(char[][] fieldNames, void*[] dst)");
 		writeIBindableBody(wr, &field_getBindPtr);
 		
-		wr.fln("ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)");
+		wr.fln("ptrdiff_t[] setBindOffsets(char[][] fieldNames, ptrdiff_t[] dst)");
 		writeIBindableBody(wr, &field_getBindPtrOffset);
 	}
 	

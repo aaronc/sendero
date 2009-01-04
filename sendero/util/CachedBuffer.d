@@ -35,7 +35,7 @@ class CachedBuffer(size_t size = ushort.max) : OutputStream
 	
 	void close() {}
 	
-	private uint writable()
+	private uint writeable()
 	{
 		return buffers[bufNum].length - index;
 	}
