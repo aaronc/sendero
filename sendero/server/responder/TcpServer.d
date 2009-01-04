@@ -32,7 +32,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
 		int True = 1;
 		void[] TrueBuf = (cast(void*)&True)[0..4];
 		void[] buf = new void[256];
-		socket.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SO_KEEPALIVE,TrueBuf);
+		//socket.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SO_KEEPALIVE,TrueBuf);
 		auto res = socket.socket.getOption(SocketOptionLevel.SOCKET, SocketOption.SO_KEEPALIVE,buf);
 		debug log.trace("Socket option SO_KEEPALIVE = {}",buf[0..res]);
 		this.socket_ = socket;
@@ -188,6 +188,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	}
     	
     	if(endOfResponse_) finishResponse;
+    	else awatingWrite_ = false;
     }
     
     private void reregisterReadDg(ISyncEventDispatcher dispatcher)
@@ -252,6 +253,7 @@ class TcpConnection : EventResponder, ITcpCompletionPort
     	
     	serviceProvider_.cleanup(curReqHandler_);
     	curReqHandler_ = null;
+    	awatingWrite_ = false;
     	
 		if(keepAlive_) {
 			dispatcher_.postTask(&reregisterReadAndFinishResDg);

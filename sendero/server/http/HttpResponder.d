@@ -51,6 +51,7 @@ class HttpResponder
 		auto res = new TcpResponse;
 		setStatus(HttpResponses.OK);
 		HttpResponder.setContentType(mimeType);
+		buf_ ~= "Connection: keep-alive\r\n";
 		size_t len;
 		foreach(d; data) len += d.length;
 		buf_ ~= "Content-Length: ";
