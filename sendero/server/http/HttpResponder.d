@@ -9,6 +9,8 @@ import Integer = tango.text.convert.Integer;
 import Timestamp = tango.text.convert.TimeStamp;
 import Text = tango.text.Util;
 import tango.time.Clock;
+public import tango.net.http.HttpCookies;
+import tango.net.http.HttpHeaders;
 
 import sendero.server.model.ITcpServiceProvider;
 import sendero.server.io.CachedBuffer;
@@ -23,6 +25,15 @@ static this()
 
 class HttpResponder : OutputStream
 {
+	this()
+	{
+		headers_ = new HttpHeaders;
+		cookies_ = new HttpCookies(headers_);
+	}
+	
+	private HttpHeaders headers_;
+	private HttpCookies cookies_;
+	
 	private void[] headerBuf_;
 	private char[] mimeType_;
 	
@@ -98,6 +109,26 @@ class HttpResponder : OutputStream
 		transferState_ = TransferState.Chunked;
 	}
 	
+	void setCookie(char[] name, char[] value)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headerBuf_ ~= "Set-Cookie: ";
+		headerBuf_ ~= name;
+		headerBuf_ ~= "=";
+		headerBuf_ ~= value;
+		headerBuf_ ~= "\r\n";
+		//responder_.setCookie(name, value);
+	}
+	
+	void setCookie(Cookie cookie)
+	{
+		assert(writeState_ == WriteState.Headers);
+		headerBuf_ ~= "Set-Cookie: ";
+		cookie.produce((void[] val){headerBuf_ ~= val;});
+		headerBuf_ ~= "\r\n";
+		//responder_.setCookie(cookie);
+	}
+	
 	private void finishHeaders()
 	{
 		char[64] tmp;
@@ -115,8 +146,9 @@ class HttpResponder : OutputStream
 		finishHeaders;
 	}
 	
-	TcpResponse sendContent(char[] mimeType, void[][] data...)
+	void sendContent(char[] mimeType, void[][] data...)
 	{
+		assert(writeState_ == WriteState.Status);
 		auto res = new TcpResponse;
 		setStatus(HttpResponses.OK);
 		setContentType(mimeType);
@@ -126,7 +158,8 @@ class HttpResponder : OutputStream
 		finishHeaders;
 		res.data ~= headerBuf_;
 		res.data ~= data;
-		return res;
+		syncResponse_ = res;
+		writeState_ = WriteState.Done;		
 	}
 	
 	TcpResponse getSyncResponse()

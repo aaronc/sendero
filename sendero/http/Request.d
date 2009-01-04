@@ -8,7 +8,6 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
-public import sendero.http.Response;
 
 import sendero.server.model.IHttpRequestHandler;
 import sendero.server.http.HttpResponder;
@@ -77,26 +76,18 @@ class Request : HttpResponder, IHttpRequestHandler
 		res ~= "</table>";
 		res ~= "</body></html>";
 		
-		return sendContent("text/html",res);
+		setCookie("Test","1");
+		//setCookie(new Cookie("Test2","2"));
+		
+		sendContent("text/html",res);
+		
+		return getSyncResponse;
 	}
 	
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
 	{
 		this.method = method;
 		this.path = UrlStack.parseUrl(url);
-		/+
-		if(method == HttpMethod.Get) {
-			debug log.trace("Req.parse url:{}, getParams:{}", url, getParams);
-			this.params = parseParams(getParams);
-		}
-		else if(method == HttpMethod.Post) {
-			debug log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
-
-			this.params = parseParams(postParams);
-			auto _get_ = parseParams(getParams);
-			Var _get_Var; set(_get_Var, _get_);
-			this.params["@get"] = _get_Var;
-		}+/
 		params = parseParams(getParams, params);
 		params = parseParams(postParams, params);
 	}
@@ -124,15 +115,11 @@ class Request : HttpResponder, IHttpRequestHandler
 	char[] ip;
 	char[][char[]] headers;
 	
-	void setResponder(IResponder responder)
-	{
-		responder_ = responder;
-	}
-	
 	void delegate(void[]) getConsumer()
 	{
 		//assert(responder_, "responder_ is null");
-		return &responder_.write;
+		//return &responder_.write;
+		return cast(void delegate(void[]))&this.write;
 	}
 	
 	/+void setContentType(char[] contentType)
@@ -143,42 +130,30 @@ class Request : HttpResponder, IHttpRequestHandler
 	
 	void respond(IRenderable r)
 	{
-		responder_.setContentType(r.contentType);
-		r.render(&responder_.write);
+		setContentType(r.contentType);
+		r.render(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(IStream s, char[] contentType)
 	{
-		responder_.setContentType(contentType);
-		s.render(&responder_.write);
+		setContentType(contentType);
+		s.render(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(void delegate(void delegate(void[])) stream, char[] contentType = ContentType.TextHtml)
 	{
-		responder_.setContentType(contentType);
-		stream(&responder_.write);
+		setContentType(contentType);
+		stream(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(char[] content, char[] contentType = ContentType.TextHtml)
 	{
-		responder_.setContentType(contentType);
-		responder_.write(content);
-	}
-	
-	void setCookie(char[] name, char[] value)
-	{
-		responder_.setCookie(name, value);
-	}
-	
-	void setCookie(Cookie cookie)
-	{
-		responder_.setCookie(cookie);
+		/+responder_.setContentType(contentType);
+		responder_.write(content);+/
+		sendContent(contentType,content);
 	}
 	
 	alias respond render;
-	
-	private:
-		IResponder responder_;
 }
 
 alias Request Req;
