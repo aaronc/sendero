@@ -12,13 +12,15 @@ public import sendero.http.IRenderable;
 import sendero.server.model.IHttpRequestHandler;
 import sendero.server.http.HttpResponder;
 
+public import tango.net.http.HttpCookies : Cookie;
+
 debug {
 	import sendero.Debug;
 	
 	Logger log;
 	static this()
 	{
-		log = Log.lookup("debug.SenderoRouting");
+		log = Log.lookup("sendero.http.Request");
 	}
 }
 
@@ -28,11 +30,11 @@ alias void delegate(Request) SenderoRequestHandler;
 
 class Request : HttpResponder, IHttpRequestHandler
 {
-	/+this(RequestHandler handler)
+	this(SenderoRequestHandler handler)
 	{
 		handler_ = handler;
 	}
-	private RequestHandler handler_;+/
+	private SenderoRequestHandler handler_;
 	
 	void handleRequestLine(HttpRequestLineData reqLine)
 	{
@@ -64,34 +66,10 @@ class Request : HttpResponder, IHttpRequestHandler
 
 	SyncTcpResponse processRequest(IHttpRequestData data, ITcpCompletionPort completionPort)
 	{
-		//completionPort.sendResponseData("Hello world")
-		//return null;
-		char[] res = "<html><head><title>Sendero Server Test</title></head><body>";
-		res ~= "<h1>Hello Sendero HTTP Server World</h1>";
-		res ~= "<p>";
-		res ~= "URI:" ~ uri;
-		res ~= "</p><p>";
-		res ~= "Path:" ~ path.origUrl;
-		res ~= "</p>";
-		res ~= "<table>";
-		foreach(key,val;headers)
-		{
-			res ~= "<tr>";
-			res ~= "<td>" ~ key ~ "</td>";
-			res ~= "<td>" ~ val ~ "</td>";
-			res ~= "</tr>";
-		}
-		res ~= "</table>";
-		res ~= "</body></html>";
-		
-		setCookie("Test","1");
-		setCookie(new Cookie("Test2","2"));
-		
-		/+debug assert(handler_ !is null);
-		handler_(this);+/
-		
-		sendContent("text/html",res);
-		
+		setCompletionPort(completionPort);
+		debug assert(handler_ !is null);
+		handler_(this);
+
 		return getSyncResponse;
 	}
 	

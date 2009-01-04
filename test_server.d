@@ -37,7 +37,8 @@ class TestProvider : ITcpServiceProvider
 	ITcpRequestHandler getRequestHandler()
 	{
 		//return new TestRequestHandler;
-		return new Http11Handler(new TestRequest);
+		auto handler = &(new TestSenderoRequestHandler).handle;
+		return new Http11Handler(new Request(handler));
 	}
 	
 	void cleanup(ITcpRequestHandler handler)
@@ -63,9 +64,33 @@ class TestRequestHandler : ITcpRequestHandler
 	}
 }
 
-class TestRequest : Request
+class TestSenderoRequestHandler
 {
-	
+	void handle(Request req)
+	{
+		char[] res = "<html><head><title>Sendero Server Test</title></head><body>";
+		res ~= "<h1>Hello Sendero HTTP Server World</h1>";
+		res ~= "<p>";
+		res ~= "URI:" ~ req.uri;
+		res ~= "</p><p>";
+		res ~= "Path:" ~ req.path.origUrl;
+		res ~= "</p>";
+		res ~= "<table>";
+		foreach(key,val;req.headers)
+		{
+			res ~= "<tr>";
+			res ~= "<td>" ~ key ~ "</td>";
+			res ~= "<td>" ~ val ~ "</td>";
+			res ~= "</tr>";
+		}
+		res ~= "</table>";
+		res ~= "</body></html>";
+		
+		req.setCookie("Test","1");
+		req.setCookie(new Cookie("Test2","2"));
+		
+		req.sendContent("text/html",res);
+	}
 }
 
 import tango.io.Stdout;
