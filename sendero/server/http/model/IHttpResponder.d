@@ -1,4 +1,4 @@
-module sendero.server.model.IHttpResponder;
+module sendero.server.http.model.IHttpResponder;
 
 public import tango.io.model.IConduit;
 

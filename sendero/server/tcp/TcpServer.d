@@ -1,6 +1,6 @@
-module sendero.server.responder.TcpServer;
+module sendero.server.tcp.TcpServer;
 
-public import sendero.server.model.ITcpServiceProvider;
+public import sendero.server.tcp.model.ITcpServiceProvider;
 
 import sendero.server.model.IEventDispatcher;
 import sendero.util.BufferProvider;

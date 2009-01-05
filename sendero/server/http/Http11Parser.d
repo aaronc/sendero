@@ -11,8 +11,8 @@ import Text = tango.text.Util;
 version (Win32) extern (C) int memicmp (char *, char *, uint);
 version (Posix) extern (C) int strncasecmp (char *, char*, uint);
 
-import sendero.server.model.IHttpServiceProvider;
-import sendero.server.model.ITcpServiceProvider;
+import sendero.server.http.model.IHttpServiceProvider;
+import sendero.server.tcp.model.ITcpServiceProvider;
 
 void snake_upcase_char(char* c)
 {

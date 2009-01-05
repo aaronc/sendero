@@ -1,4 +1,4 @@
-module sendero.server.model.IHttpRequest;
+module sendero.server.http.model.IHttpRequest;
 
 interface IHttpRequest
 {

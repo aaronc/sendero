@@ -1,4 +1,4 @@
-module sendero.server.provider.WorkerPoolTcpServiceProvider;
+module sendero.server.tcp.WorkerPoolTcpServiceProvider;
 
 import sendero.server.model.ITcpServiceProvider;
 import sendero.server.WorkerPool;

@@ -13,7 +13,7 @@ public import tango.net.http.HttpCookies;
 import tango.net.http.HttpHeaders;
 import tango.io.Buffer;
 
-import sendero.server.model.ITcpServiceProvider;
+import sendero.server.tcp.model.ITcpServiceProvider;
 import sendero.server.io.CachedBuffer;
 import sendero.server.io.GzipStream;
 
@@ -47,8 +47,6 @@ class HttpResponder : OutputStream
 	private ITcpCompletionPort completionPort_;
 	private TcpResponse syncResponse_;
 	
-	
-	
 	private CachedBuffer buffer_;
 	private size_t idx_;
 	
@@ -60,7 +58,6 @@ class HttpResponder : OutputStream
 	private State state_;
 	private WriteState writeState_;
 	private TransferState transferState_;
-
 	
 	private int flags_;
 	private enum Flags { KeepAlive = 0x1 };

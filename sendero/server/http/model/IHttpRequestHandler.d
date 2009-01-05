@@ -1,6 +1,6 @@
-module sendero.server.model.IHttpRequestHandler;
+module sendero.server.http.model.IHttpRequestHandler;
 
-public import sendero.server.model.ITcpServiceProvider;
+public import sendero.server.tcp.model.ITcpServiceProvider;
 
 struct HttpRequestLineData
 {

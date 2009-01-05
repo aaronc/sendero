@@ -9,7 +9,7 @@ public import sendero.http.Params;
 public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
 
-import sendero.server.model.IHttpRequestHandler;
+import sendero.server.http.model.IHttpRequestHandler;
 import sendero.server.http.HttpResponder;
 
 public import tango.net.http.HttpCookies : Cookie;

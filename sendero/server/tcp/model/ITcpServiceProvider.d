@@ -1,4 +1,4 @@
-module sendero.server.model.ITcpServiceProvider;
+module sendero.server.tcp.model.ITcpServiceProvider;
 
 public import sendero.server.io.StagedReadBuffer;
 public import sendero.server.io.model.ICachedBuffer;
