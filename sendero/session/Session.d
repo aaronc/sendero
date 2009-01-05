@@ -15,6 +15,12 @@ version(SenderoSessionGC)
 	public import sendero.session.GC;
 }
 
+interface ISessionData 
+{
+	void reset();
+	void sleep();
+}
+
 class BasicSessionData
 {
 	this()
@@ -52,6 +58,11 @@ class BasicSessionData
 		reset;
 		this.req = req;
 	}
+	
+	void sleep()
+	{
+		
+	}
 }
 
 class SessionGlobal(SessionImpT)
@@ -75,6 +86,16 @@ class SessionGlobal(SessionImpT)
 	}
 	alias cur get;
 	alias cur opCall;
+	
+	static BasicSessionData swap(BasicSessionData session)
+	{
+		
+	}
+	
+	static BasicSessionData newSession()
+	{
+		
+	}
 }
 
 version(Unittest)

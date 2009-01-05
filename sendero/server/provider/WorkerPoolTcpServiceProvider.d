@@ -42,11 +42,11 @@ class WorkerPoolTcpRequestHandler : ITcpRequestHandler
 	
 	private void jobFunc()
 	{
-			auto res = wrappedHandler_.handleRequest(data_, completionPort);
-			if(res !is null) {
-				completionPort.sendResponseData(res.data);
-				completionPort.endResponse(res.keepAlive);
-			}
+		auto res = wrappedHandler_.handleRequest(data_, completionPort);
+		if(res !is null) {
+			completionPort.sendResponseData(res.data);
+			completionPort.endResponse(res.keepAlive);
+		}
 	}
 
 	SyncTcpResponse handleRequest(StagedReadBuffer data, ITcpCompletionPort completionPort)

@@ -49,7 +49,7 @@ class HttpResponder : OutputStream
 	
 	
 	
-	private WriteBuffer buffer_;
+	private CachedBuffer buffer_;
 	private size_t idx_;
 	
 	private enum WriteState { Headers, Data, Done };
@@ -153,23 +153,12 @@ class HttpResponder : OutputStream
 	{
 		assert(writeState_ == WriteState.Headers);
 		cookies_.add(new Cookie(name, value));
-		/+headerBuf_ ~= "Set-Cookie: ";
-		headerBuf_ ~= name;
-		headerBuf_ ~= "=";
-		headerBuf_ ~= value;
-		headerBuf_ ~= "\r\n";+/
-		//responder_.setCookie(name, value);
 	}
 	
 	void setCookie(Cookie cookie)
 	{
 		assert(writeState_ == WriteState.Headers);
 		cookies_.add(cookie);
-		/+headerBuf_ ~= "Set-Cookie: ";
-		cookie.produce((void[] val){headerBuf_ ~= val;});
-		headerBuf_ ~= "\r\n";
-		//responder_.setCookie(cookie);+/
-		
 	}
 	
 	private void finishHeaders()

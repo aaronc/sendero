@@ -1,4 +1,4 @@
-module sendero.server.buffer.SingleThreadBufferPool;
+module sendero.server.io.SingleThreadBufferPool;
 
 class BufferProvider
 {
