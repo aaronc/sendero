@@ -2,25 +2,25 @@ module sendero.server.io.CachedBuffer;
 
 public import sendero.server.io.model.ICachedBuffer;
 
-/+
-class WriteBuffer
-{
-	enum State { Open, Closed, Cached };
-	private State state_;
-	
-	void[] buffer;
-}
-+/
-
 abstract class CachedBuffer : ICachedBuffer
 {
+	this(void[] buffer)
+	{
+		this.buffer = buffer;
+	}
+	
 	abstract void release();
-	void[] getBuffer()
+	final void[] getBuffer()
 	{
 		return buffer;
 	}
 	
+	final ICachedBuffer getNext() { return next; }
+	final void setNext(ICachedBuffer buf) { next = buf; }
+	
 	void[] buffer;
+	
+	ICachedBuffer next;
 }
 
 class NotCachedBuffer : CachedBuffer
@@ -30,7 +30,7 @@ class NotCachedBuffer : CachedBuffer
 		this.buffer = buf;
 	}
 	
-	void release()
+	final void release()
 	{
 		
 	}

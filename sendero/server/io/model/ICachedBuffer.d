@@ -4,9 +4,6 @@ interface ICachedBuffer
 {
 	void release();
 	void[] getBuffer();
-}
-
-interface ICachedBufferProvider
-{
-	ICachedBuffer get();
+	ICachedBuffer getNext();
+	void setNext(ICachedBuffer);
 }

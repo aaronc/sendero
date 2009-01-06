@@ -3,6 +3,7 @@ module sendero.server.tcp.model.ITcpServiceProvider;
 public import sendero.server.io.StagedReadBuffer;
 public import sendero.server.io.model.ICachedBuffer;
 
+/+
 interface ITcpServiceProvider
 {
 	ITcpRequestHandler getRequestHandler();
@@ -46,8 +47,7 @@ interface ITcpCompletionPort
 	void endResponse(bool keepAlive = true);
 	//void sendResponseData(TcpResponse type, TcpBufferCleanupDgT cleanupDg, void[][] data...);
 }
-
-/+
++/
 
 interface ITcpRequestHandler
 {
@@ -60,53 +60,80 @@ interface ITcpRequestHandler
 	 * response data for synchronous handling, or null to indicate that
 	 * response will be sent asynchonously
 	 */
-	TcpResponse handleRequest(StagedReadBuffer buffer, ITcpCompletionPort completionPort);
+	SyncTcpResponse handleRequest(IAsyncTcpConduit connection);
 }
 
-interface ITcpCompletionPort
+interface IAsyncTcpConduit
 {
 	void keepReading();
+	void keepReading(ITcpRequestHandler handler);
 	void sendResponseData(TcpResponse.Type type, void[][] data...);
-	void sendResponseData(TcpResponse.Type type, ICachedBuffer[][] data...);
-
+	void sendResponseData(TcpResponse.Type type, ICachedBuffer data);
+	StagedReadBuffer requestData();
+	CachedBuffer responseBuffer();
 }
 
-abstract class TcpResponse
+class SyncTcpResponse
 {
-	enum Type { Continue, FinishKeepAlive, FinishClose };
-	Type type;
+	this(TcpResponse.Type type, ICachedBuffer data)
+	{
+		this.type = type;
+		this.data = data;
+	}
 	
-	abstract void[] getNextBuffer();
-	absract void release();
+	enum Type { Continue, FinishKeepAlive, FinishClose };
+	
+	Type type;	
+	ICachedBuffer data;
 
 	static TcpResponse create(TcpResponse.Type type, void[][] data...)
 	{
-		return new UnmanagedTcpResponse(type,data);
+		ICachedBuffer wrapper;
+		if(data.length) {
+			wrapper = new NotCachedBuffer(data);
+			for(size_t i = 1; i < data.length; ++i)
+			{
+				
+			}
+		}
+		else wrapper = null;
+		
+		return new SyncTcpResponse(type,wrapper);
 	}
 
-	static TcpResponse create(TcpResponse.Type type, ICachedBuffer[][] data...)
+	static TcpResponse create(TcpResponse.Type type, ICachedBuffer data)
 	{
-		return new ManagedTcpResponse(type,data);
+		return new SyncTcpResponse(type,data);
 	}
 }
 
 private class UnmanagedTcpResponse : TcpResponse
 {
-	this(void[][]... data)
+	this(TcpResponse.Type type, void[][] data...)
 	{
-		this.data_ = data;
+		this.type = type;
+		this.data = data;
 	}
-	void[][] data_;
-
-	void release()
-	{
+	void[][] data;
 	
+	ICachedBuffer getData()
+	{
+		
 	}
 }
 
 private class ManagedTcpResponse : TcpResponse
 {
+	this(TcpResponse.Type type, ICachedBuffer data)
+	{
+		this.type = type;
+		this.data_ = data;
+	}
+	ICachedBuffer data;
 	
+	ICachedBuffer getData()
+	{
+		return data;
+	}
 }
 
-+/

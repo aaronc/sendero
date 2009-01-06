@@ -28,9 +28,9 @@ class HttpResponder : OutputStream
 {
 	this()
 	{
-		headers_ = new HttpHeaders(new Buffer(1024));
+		headers_ = new HttpHeaders(new GrowBuffer(1024));
 		cookies_ = new HttpCookies(headers_);
-		requestHeaders_ = new HttpHeaders(new Buffer(4096));
+		requestHeaders_ = new HttpHeaders(new GrowBuffer(4096));
 	}
 	
 	private HttpHeaders headers_;

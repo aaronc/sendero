@@ -6,6 +6,7 @@ interface IHttpRequest
 	// params
 	// uri
 	IParamsView params();
+	IHttpResponder response();
 }
 
 interface IParamsView

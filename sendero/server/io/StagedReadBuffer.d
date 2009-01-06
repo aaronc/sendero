@@ -1,58 +1,74 @@
 module sendero.server.io.StagedReadBuffer;
 
-class StagedReadBuffer
+import sendero.server.io.SingleThreadCachedBuffer;
+
+class StagedReadBuffer : SingleThreadCachedBuffer
 {
 	this(void[] buffer)
 	{
-		buffer_ = buffer;
+		super(buffer);
 		index_ = 0;
 		released_ = false;
 	}
 	
-	private void[] buffer_;
 	private size_t index_;
-	private bool released_;
 	private StagedReadBuffer next_; 
 	
-	size_t writeable() {
-		return buffer_.length - index_;
+	final size_t writeable() {
+		return buffer.length - index_;
 	}
 	
-	size_t readable() {
+	final size_t readable() {
 		return index_;
 	}
 	
-	void[] getWritable()
+	final void[] getWritable()
 	{
 		assert(!released_);
-		return buffer_[index_ .. $];
+		return buffer[index_ .. $];
 	}
 	
-	void[] getReadable() {
+	final void[] getReadable() {
 		assert(!released_);
-		return buffer_[0 .. index_];
+		return buffer[0 .. index_];
 	}
 	
-	void[] getContent() {
-		return buffer_;
+	final void[] getBuffer() {
+		return buffer;
 	}
 	
-	void setNextBuffer(StagedReadBuffer buf) {
+	final void setNext(StagedReadBuffer buf) {
 		next_ = buf;
 	}
 	
-	StagedReadBuffer next() {
+	final StagedReadBuffer getNext() {
 		return next_;
 	}
 	
-	void advanceWritten(size_t n)
+	final void advanceWritten(size_t n)
 	{
 		assert(!released_);
 		index_ += n;
 	}
-	
-	void release()
-	{
-		released_ = true;
-	}
 }
+
+alias AbstractSingleThreadBufferPool!(StagedReadBuffer) StagedReadBufferPool;
+
+/+
+class StagedReadBufferPool : SingleThreadObjectPool!(StagedReadBuffer)
+{
+	static const size_t DefaultBufferSize = 32768;
+	
+	this(size_t bufferSize = DefaultBufferSize, uint maxCacheSize = 100, uint preAllocSize = 10)
+	{
+		bufferSize_ = bufferSize;
+		super(maxCacheSize,preAllocSize);
+	}
+	
+	override protected StagedReadBuffer create()
+	{
+		return new StagedReadBuffer(new void[bufferSize_]);
+	}
+private:
+	size_t bufferSize_;
+}+/
