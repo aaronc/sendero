@@ -7,7 +7,8 @@ module sendero.msg.Msg;
 
 import tango.core.Thread;
 
-import sender_base.util.collection.Hash;
+import sendero_base.Core;
+import sendero_base.util.collection.Hash;
 
 import sendero.core.Memory;
 import sendero.vm.Bind;
@@ -24,19 +25,22 @@ class Msg : SessionObject
 		else this.head_ = this;
 	}
 	
-	char[] msgId() { return msgId; }
+	final char[] msgId() { return msgId_; }
 	private char[] msgId_;
 	
-	Var[] params() { return params_; }
+	final Var[] params() { return params_; }
 	private Var[] params_;
 	
-	protected Msg append(Var[] p)
+	private Msg append(Var[] p)
 	{
 		next_ = new Msg(this.msgId, p, this);
 		return next_;
 	}
 	
-	private Msg next_ = null
+	final Msg next() { return next_; }
+	private Msg next_ = null;
+	
+	final Msg head() { return head_; }
 	private Msg head_ = null;
 	
 	static MsgSignature[] signatures;
@@ -45,12 +49,12 @@ class Msg : SessionObject
 	{
 		static void opCall(ParamsT...)(ParamsT params)
 		{
-			debug MsgSignatureCollector!(id,ParamsT) sig;
+			debug MsgSignatureCollector!(msgId,ParamsT) sig;
 			Var[] vParams;
 			vParams.length = ParamsT.length;
-			foreach(idx,param; params)
+			foreach(idx,ParamT; ParamsT)
 			{
-				bind(vParams[idx],param);
+				bind(vParams[idx],params[idx]);
 			}
 			MsgMap.post(msgId,vParams);
 		}
@@ -68,7 +72,7 @@ class MsgMap : SenderoMap!(Msg)
 	
 	protected static MsgMap getInst()
 	out(result) {
-		assert(res !is null);
+		assert(result !is null);
 	}
 	body {
 		auto map = msgMaps.val;
@@ -84,23 +88,24 @@ class MsgMap : SenderoMap!(Msg)
 		auto inst = getInst;
 		auto pMsg = msgId in inst;
 		if(pMsg) {
-			*pMsg = pMsg.append(params);
+			*pMsg = (*pMsg).append(params);
 		}
-		else inst.add(new Msg(msgId,param));
+		else inst.add(msgId, new Msg(msgId,params));
 	}
 	
-	static Msg take(char[] msgId)
+	static Msg retrieve(char[] msgId)
 	{
 		Msg res;
 		if(getInst.take(msgId,res)) {
-			return res;
+			return res.head;
 		}
 		else return null;
 	}
 	
 	static void clear()
 	{
-		getInst.clear;
+		auto inst = getInst;
+		if(!inst.isEmpty) inst.clear;
 	}
 }
 
@@ -120,9 +125,35 @@ struct MsgSignatureCollector(char[] msgId, ParamsT...)
 
 debug(SenderoUnittest)
 {
+	//import tango.io.Stdout;
 	
 	unittest
 	{
-
+		// Test posting and retrieval
+		MsgMap.clear;
+		Msg.post!("TestMsg")(5);
+		Msg.post!("TestMsg")(7,"hello");
+		auto msg = MsgMap.retrieve("TestMsg");
+		assert(msg !is null);
+		assert(msg.params.length == 1);
+		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 5);
+		msg = msg.next;
+		assert(msg !is null);
+		assert(msg.params.length == 2);
+		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 7);
+		assert(msg.params[1].type == VarT.String && msg.params[1].string_ == "hello", msg.params[1].string_);
+		assert(msg.next is null);
+		
+		// Test signatures
+		int found = 0;
+		foreach(sig; Msg.signatures)
+		{
+			//Stdout.formatln("{}:{}",sig.id,sig.params);
+			if(sig.id == "TestMsg") {
+				if(sig.params == "(int)") ++found;
+				if(sig.params == "(int, char[5u])") ++found;
+			}
+		}
+		assert(found == 2);
 	}
 }
