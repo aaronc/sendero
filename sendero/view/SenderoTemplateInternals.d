@@ -123,6 +123,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(engine));
+		engine.addElementProcessor("d", "renderMsgs", new SenderoRenderMsgsNodeProcessor!(TemplateCtxt, Template)());
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
@@ -222,46 +223,6 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 				defaultMsgs[id] = msg;*/
 			defaultMsgDef = t.msgDef;
 		}
-		
-		//static ITemplateNode!(TemplateCtxt)[uint] defaultMsgs;
-		//ITemplateNode!(TemplateCtxt)[uint] msgs;
-		static MsgDef!(TemplateCtxt) defaultMsgDef;
-		MsgDef!(TemplateCtxt) msgDef;
-		//ITemplateNode!(TemplateCtxt)[uint] msgs;
-		
-		//ISenderoMsgsNode!(TemplateCtxt)[char[]] msgScopes;
-/+		NestedMap!(ISenderoMsgsNode) msgScopes;
-		
-		void routeMsgs(MsgMap msgMap)
-		{
-			auto sItr = msgScopes.getIterator;
-			auto mItr =  msgMap.getIterator;
-			
-			while(sItr() && mItr()) {
-				auto res = strcmp(sItr.key, mItr.key);
-				if(res == 0) {
-					sItr++;
-					mItr++;				
-					continue;
-				}
-				while(sItr()) {
-					sItr++;
-					res = strcmp(sItr.key, mItr.key);
-					if(res == 0) {
-						break;
-					}
-					else if(res > 0) {
-						assert(false, "Handle");
-						mItr++;
-						break;
-					}
-				}
-			}
-			while(mItr()) {
-				assert(false, "Handle");
-				mItr++;
-			}
-		}+/
 	}
 }
 
