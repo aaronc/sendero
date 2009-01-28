@@ -92,6 +92,45 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode
 	private char[][] params_;
 }
 
+class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
+{
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
+	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
+	in {
+		assert(node.type == XmlNodeType.Element);
+	}
+	body {
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNodeProcessor.process"));
+		
+		char[] msgId;
+		if(!getAttr(node, "id", msgId))
+			return null;
+		
+		
+		char[] proto;
+		char[][] params;
+		if(getAttr(node, "params", proto))
+		{
+			 params = split(proto[i .. j], ",");
+			 for(size_t i = 0; i < params.length; ++i)
+			 {
+				 params[i] = trim(params[i]);
+			 }
+		}
+		
+		char[] cls;
+		getAttr(node, "class", cls);
+		
+		auto msgNode = new SenderoMsgNode!(TemplateCtxt, Template)
+			(msgId,cls,params,node,tmpl,childProcessor);
+		
+		tmpl.msgHandlers_[msgId] = msgNode;
+		
+		return null;
+	}
+}
+
 class SenderoMsgDefProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
 {
 	static void init(INodeProcessor!(TemplateCtxt, Template) childProcessor)
@@ -149,39 +188,5 @@ class SenderoMsgDefProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateC
 			tmpl.msgDef = def;
 			return new TemplateDataNode!(TemplateCtxt)(null);
 		}
-	}
-}
-
-class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
-{	
-	this(INodeProcessor!(TemplateCtxt, Template) childProcessor, char[] cls = null)
-	{
-		this.childProcessor = childProcessor;
-		this.cls = cls;
-	}
-	private char[] cls;
-	
-	protected INodeProcessor!(TemplateCtxt, Template) childProcessor;
-	
-	mixin NestedProcessorCtr!(TemplateCtxt, Template);
-	
-	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
-	{
-		if(!cls.length) {
-			if(!getAttr(node, "class", cls)) {
-				cls = "msg";
-			}
-		}
-		
-		char[] name;
-		if(!getAttr(node, "name", name))
-			name = "Error";
-		
-		auto container = new SenderoMsgNode!(TemplateCtxt)(name, cls);
-		foreach(child; node.children)
-		{
-			container.children ~= childProcessor(child, tmpl);
-		}
-		return container;
 	}
 }

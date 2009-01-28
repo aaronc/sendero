@@ -122,11 +122,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "if", new SenderoIfNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
-		version(SenderoTemplateMsgs)
-		{
-			//engine.addElementProcessor("d", "msgs", new SenderoMsgsNodeProcessor!(TemplateCtxt, Template)(engine));
-			engine.addElementProcessor("d", "msgdef", new SenderoMsgDefProcessor!(TemplateCtxt, Template)(engine));
-		}
+		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(engine));
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
@@ -209,7 +205,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
-	private SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
+	package SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
 	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
 		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
