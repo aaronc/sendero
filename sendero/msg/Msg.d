@@ -7,241 +7,122 @@ module sendero.msg.Msg;
 
 import tango.core.Thread;
 
-public import sendero.util.collection.NestedMap;
-public import sendero.util.collection.SimpleList;
+import sender_base.util.collection.Hash;
+
 import sendero.core.Memory;
+import sendero.vm.Bind;
 
-public alias NestedMap!(Msg, SessionAllocator) MsgMap;
-public alias SimpleList!(Msg, SessionAllocator) MsgList;
-
-abstract class Msg
-{
-	static uint registerClass(char[] classname)
+class Msg : SessionObject
+{	
+	private this(char[] msgId, Var[] params, Msg parent = null)
 	{
-		synchronized
+		msgId_ = msgId;
+		params_ = params;
+		if(parent !is null) {
+			this.head_ = parent.head_;
+		}
+		else this.head_ = this;
+	}
+	
+	char[] msgId() { return msgId; }
+	private char[] msgId_;
+	
+	Var[] params() { return params_; }
+	private Var[] params_;
+	
+	protected Msg append(Var[] p)
+	{
+		next_ = new Msg(this.msgId, p, this);
+		return next_;
+	}
+	
+	private Msg next_ = null
+	private Msg head_ = null;
+	
+	static MsgSignature[] signatures;
+	
+	static struct post(char[] msgId)
+	{
+		static void opCall(ParamsT...)(ParamsT params)
 		{
-			auto pCl = classname in registeredClasses;
-			if(!pCl) {
-					auto reg = new ClassRegistration;
-					reg.id = registeredClasses.length + 1;
-					reg.cls = classname;
-					registeredClasses[classname] = reg;
-					registeredClassesByID[reg.id] = reg;
-					return reg.id;
+			debug MsgSignatureCollector!(id,ParamsT) sig;
+			Var[] vParams;
+			vParams.length = ParamsT.length;
+			foreach(idx,param; params)
+			{
+				bind(vParams[idx],param);
 			}
-			return pCl.id;
+			MsgMap.post(msgId,vParams);
 		}
 	}
-	
-	void register(char[] classname)
-	{
-		auto pCl = classname in registeredClasses;
-		if(pCl) {
-			id = pCl.id;
-			return;
-		}
-		auto x = registerClass(classname);
-		if(id) {
-			pCl = classname in registeredClasses;
-			if(!pCl) throw new Exception("Unable to find classname after registering");
-			pCl.parent = id;
-		}
-		id = x;
-	}
-	
-	char[][char[]] getProperties()
-	{
-		return null;
-	}
-	
-	static uint getClassID(char[] classname)
-	{
-		auto pCl = classname in registeredClasses;
-		if(!pCl) return 0;
-		return pCl.id;
-	}
-	
-	static uint getParentID(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) return pCl.parent;
-		return 0;
-	}
-	
-	static char[] getClassName(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) return pCl.cls;
-		return null;
-	}
-	
-	static ClassRegistration getClassReg(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) {
-			return *pCl;
-		}
-		return null;
-	}
-	
-	static class ClassRegistration
-	{
-		uint id;
-		uint parent = 0;
-		char[] cls;
-	}
-	
-	static ClassRegistration[char[]] registeredClasses;
-	static ClassRegistration[uint] registeredClassesByID;
-	
-	uint id = 0;
-	
-	debug uint[] idTree()
-	{
-		auto pCl = id in registeredClassesByID;
-		assert(pCl);
-		uint[] res;
-		assert(pCl.id == id);
-		res ~= pCl.id;
-		auto cr = getClassReg(pCl.parent);
-		while(cr) {
-			res ~= cr.id;
-			cr = getClassReg(cr.parent);
-		}
-		return res;
-	}
-	
-	debug char[][] clsTree()
-	{
-		auto ids = idTree;
-		char[][] res;
-		foreach(id; ids)
-			res ~= getClassName(id);
-		return res;
-	}
-	
-	private static ThreadLocal!(MsgMap) msgMaps;
+}
+alias Msg Error;
+
+class MsgMap : SenderoMap!(Msg)
+{
 	static this()
 	{
 		msgMaps = new ThreadLocal!(MsgMap);
 	}
+	private static ThreadLocal!(MsgMap) msgMaps;
 	
-	static void set(Msg msg)
-	{
+	protected static MsgMap getInst()
+	out(result) {
+		assert(res !is null);
+	}
+	body {
 		auto map = msgMaps.val;
-		map.add(msg);
-		msgMaps.val = map;
+		if(map is null) {
+			map = new MsgMap;
+			msgMaps.val = map;
+		}
+		return map;
 	}
 	
-	static void set(MsgList msgList)
+	protected static void post(char[] msgId, Var[] params)
 	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(msgList);
-		msgMaps.val = map;
+		auto inst = getInst;
+		auto pMsg = msgId in inst;
+		if(pMsg) {
+			*pMsg = pMsg.append(params);
+		}
+		else inst.add(new Msg(msgId,param));
 	}
 	
-	static void set(MsgMap msgMap)
+	static Msg take(char[] msgId)
 	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(msgMap);
-		msgMaps.val = map;
-	}
-	
-	static void set(char[] scope_, Msg msg)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.add(scope_, msg);
-		msgMaps.val = map;
-	}
-	
-	static void set(char[] scope_, MsgList msgList)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(scope_, msgList);
-		msgMaps.val = map;
-	}
-	
-	static void set(char[] scope_, MsgMap msgMap)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(scope_, msgMap);
-		msgMaps.val = map;
-	}
-	
-	alias set post;
-	
-	static MsgMap read()
-	{
-		return msgMaps.val;
+		Msg res;
+		if(getInst.take(msgId,res)) {
+			return res;
+		}
+		else return null;
 	}
 	
 	static void clear()
 	{
-		msgMaps.val.reset;
+		getInst.clear;
 	}
 }
 
-
-interface IMsgSource
+struct MsgSignature
 {
-	MsgMap getMsgs();
-	alias getMsgs getErrors;
+	char[] id;
+	char[] params;
 }
 
-
-class Success : Msg
+struct MsgSignatureCollector(char[] msgId, ParamsT...)
 {
-	this()
+	static this()
 	{
-		register("Success");
+		Msg.signatures ~= MsgSignature(msgId,ParamsT.stringof);
 	}
-}
-
-class CreateSuccess : Success
-{
-	this()
-	{
-		register("CreateSuccess");
-	}
-}
-
-class SaveSuccess : Success
-{
-	this()
-	{
-		register("SaveSuccess");
-	}
-}
-
-class FieldMsgs : Msg
-{
-	this(char[] field, Msg[] msgs)
-	{
-		register("FieldMsgs");
-		this.field = field;
-		this.msgs = msgs;
-	}
-	char[] field;
-	Msg[] msgs;
 }
 
 debug(SenderoUnittest)
 {
-	import tango.util.Convert;
-	import tango.io.Stdout;
 	
 	unittest
 	{
-		Msg.clear;
-		Stdout("before post").newline;
-		Msg.set(new Success);
-		Stdout("after post").newline;
-		auto map = Msg.read;
-		Msg[] res;
-		foreach(msg; map) {
-			Stdout(msg.toString);
-			res ~= msg;
-		}
-		assert(res.length == 1, to!(char[])(res.length));
+
 	}
 }
