@@ -7,9 +7,19 @@ module sendero.view.TemplateMsgs;
 
 import sendero.view.TemplateEngine;
 import sendero.view.ExecContext;
-public import sendero.msg.Msg;
+import sendero.msg.Msg;
 
 import Text = tango.text.Util;
+
+debug {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("sendero.view.TemplateMsgs");
+	}
+}
 
 interface ISenderoMsgNode
 {
@@ -94,7 +104,15 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode
 
 class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
 {
-	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	this(char[] defaultCls, INodeProcessor!(TemplateCtxt, Template) childProcessor)
+	{
+		defaultCls_ = defaultCls;
+		this.childProcessor = childProcessor;
+	}
+	
+	private INodeProcessor!(TemplateCtxt, Template) childProcessor;
+	private char[] defaultCls_ = "msg";
+	
 	
 	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
 	in {
@@ -102,6 +120,7 @@ class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 	}
 	body {
 		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNodeProcessor.process"));
+		debug log.trace("Processing msg node");
 		
 		char[] msgId;
 		if(!getAttr(node, "id", msgId))
@@ -120,7 +139,8 @@ class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 		}
 		
 		char[] cls;
-		getAttr(node, "class", cls);
+		if(!getAttr(node, "class", cls))
+			cls = defaultCls_;
 		
 		auto msgNode = new SenderoMsgNode!(TemplateCtxt, Template)
 			(msgId,cls,params,node,tmpl,childProcessor);

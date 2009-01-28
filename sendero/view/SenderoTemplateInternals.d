@@ -10,26 +10,25 @@ import sendero_base.xml.XmlNode;
 import sendero_base.Set;
 import sendero.vm.Bind;
 import sendero.vm.Expression;
-public import sendero.view.LocalText;
 import sendero.xml.XPath;
 import sendero_base.util.StringCharIterator;
 import sendero_base.util.ArrayWriter;
 import sendero.util.collection.NestedMap;
 import sendero.Exception;
+public import sendero.view.LocalText;
+public import sendero.msg.Msg;
 
 import tango.io.File;
 import tango.io.FilePath;
 import tango.text.Util;
 import Integer = tango.text.convert.Integer;
-debug import tango.io.Stdout;
-
-debug(SenderoViewDebug) {
+debug {
 	import sendero.Debug;
 	
 	Logger log;
 	static this()
 	{
-		log = Log.lookup("debug.SenderoView");
+		log = Log.lookup("sendero.view.SenderoTemplateInternals");
 	}
 }
 
@@ -122,7 +121,9 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "if", new SenderoIfNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
-		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(engine));
+		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("msg", engine));
+		engine.addElementProcessor("d", "error", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("error", engine));
+		engine.addElementProcessor("d", "success", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("success", engine));
 		engine.addElementProcessor("d", "renderMsgs", new SenderoRenderMsgsNodeProcessor!(TemplateCtxt, Template)());
 	}
 	
@@ -214,14 +215,13 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		rootNode.render(templCtxt, consumer);
 	}
 	
-	version(SenderoTemplateMsgs)
+	static void importGlobalMsgs(char[] filepath, Locale locale)
 	{
-		static void importGlobalMsgs(char[] filepath, Locale locale)
+		auto t = getTemplate(filepath, locale);
+		foreach(handler;t.msgHandlers_)
 		{
-			auto t = getTemplate(filepath, locale);
-			/*foreach(id, msg; t.msgs)
-				defaultMsgs[id] = msg;*/
-			defaultMsgDef = t.msgDef;
+			debug log.trace("Adding msg handler for {} from {}", handler.msgId, filepath);
+			defaultMsgHandlers_[handler.msgId] = handler;
 		}
 	}
 }

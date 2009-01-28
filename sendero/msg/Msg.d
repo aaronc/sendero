@@ -138,7 +138,8 @@ class MsgMap : SenderoMap!(Msg)
 	static void clear()
 	{
 		auto inst = getInst;
-		if(!inst.isEmpty) inst.clear;
+		//TODO this should be inst.clear - but that hangs
+		if(!inst.isEmpty) inst.reset;
 	}
 }
 

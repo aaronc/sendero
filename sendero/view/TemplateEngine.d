@@ -7,7 +7,15 @@ module sendero.view.TemplateEngine;
 
 public import sendero_base.xml.XmlNode;
 
-debug import tango.io.Stdout;
+debug {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("sendero.view.TemplateEngine");
+	}
+}
 
 alias void delegate(void[][] strs...) Consumer;
 
@@ -251,9 +259,13 @@ class TemplateCompiler(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, T
 			auto procs = node.prefix in elemProcessors;
 			if(procs) {
 				auto proc = node.localName in *procs;
-				if(proc) return proc.process(node, tmpl);
-				proc = "" in *procs;
-				if(proc) return proc.process(node, tmpl);
+				if(proc) {
+					debug(SenderoViewDebug)
+					log.trace("Calling element processor for {}:{}",node.prefix,node.localName);
+					return proc.process(node, tmpl);
+				}
+				/+proc = "" in *procs;
+				if(proc) return proc.process(node, tmpl);+/
 			}
 			
 			

@@ -106,6 +106,14 @@ unittest
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
 	
+	SenderoTemplate.setSearchPath("test/template/");
+	SenderoTemplate.importGlobalMsgs("messages.xml","en-US");
+	
+	Msg.post!("Required")("test");
+	
+	auto renderMsgs = SenderoTemplate.get("renderMsgs.html", null);
+	r.regress("renderMsgs_output.html", renderMsgs.render);
+	
 	/+SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
