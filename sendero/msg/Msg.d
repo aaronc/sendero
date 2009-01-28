@@ -31,6 +31,12 @@ class Msg : SessionObject
 	final Var[] params() { return params_; }
 	private Var[] params_;
 	
+	final char[] classname() { return classname_; }
+	private char[] classname_;
+	
+	final char[] fieldname() { return fieldname_; }
+	private char[] fieldname_;
+	
 	private Msg append(Var[] p)
 	{
 		next_ = new Msg(this.msgId, p, this);
@@ -73,6 +79,21 @@ class Msg : SessionObject
 }
 alias Msg Error;
 
+static struct ClassFieldPost(char[] msgId, char[] classname, char[] fieldname)
+{
+	static void opCall(ParamsT...)(ParamsT params)
+	{
+		debug MsgClassFieldSignatureCollector!(msgId,classname,fieldname,ParamsT) sig;
+		Var[] vParams;
+		vParams.length = ParamsT.length;
+		foreach(idx,ParamT; ParamsT)
+		{
+			bind(vParams[idx],params[idx]);
+		}
+		MsgMap.postFor(classname, fieldname, msgId,vParams);
+	}
+}
+
 class MsgMap : SenderoMap!(Msg)
 {
 	static this()
@@ -94,14 +115,27 @@ class MsgMap : SenderoMap!(Msg)
 		return map;
 	}
 	
-	protected static void post(char[] msgId, Var[] params)
+	protected static Msg post(char[] msgId, Var[] params)
 	{
 		auto inst = getInst;
 		auto pMsg = msgId in inst;
 		if(pMsg) {
 			*pMsg = (*pMsg).append(params);
+			return *pMsg;
 		}
-		else inst.add(msgId, new Msg(msgId,params));
+		else {
+			auto msg = new Msg(msgId,params);
+			inst.add(msgId, msg);
+			return msg;
+		}
+	}
+	
+	protected static Msg postFor(char[] classname, char[] fieldname, char[] msgId, Var[] params)
+	{
+		auto msg = post(msgId,params);
+		msg.classname_ = classname;
+		msg.fieldname_ = fieldname;
+		return msg;
 	}
 	
 	static Msg retrieve(char[] msgId)
@@ -147,6 +181,8 @@ struct MsgSignature
 {
 	char[] id;
 	char[] params;
+	char[] className;
+	char[] fieldName;
 }
 
 struct MsgSignatureCollector(char[] msgId, ParamsT...)
@@ -157,9 +193,34 @@ struct MsgSignatureCollector(char[] msgId, ParamsT...)
 	}
 }
 
+struct MsgClassFieldSignatureCollector(char[] msgId, char[] className, char[] fieldName, ParamsT...)
+{
+	static this()
+	{
+		Msg.signatures ~= MsgSignature(msgId,ParamsT.stringof,className,fieldName);
+	}
+}
+
+
 debug(SenderoUnittest)
 {
 	//import tango.io.Stdout;
+	
+	class Test
+	{
+		template postMsg(char[] msgId, char[] fieldname = null) {
+			alias ClassFieldPost!(msgId,"Test",fieldname) postMsg;
+		}
+		alias postMsg postError;
+		
+		void test()
+		{
+			postError!("TestClassError")(1);
+			postError!("TestClassFieldError","x")(1);
+		}
+
+		int x;
+	}
 	
 	unittest
 	{
@@ -178,6 +239,10 @@ debug(SenderoUnittest)
 		assert(msg.params[1].type == VarT.String && msg.params[1].string_ == "hello", msg.params[1].string_);
 		assert(msg.next is null);
 		
+//		Test class-field messages
+		auto test = new Test;
+		test.test;
+		
 		// Test signatures
 		int found = 0;
 		foreach(sig; Msg.signatures)
@@ -188,6 +253,6 @@ debug(SenderoUnittest)
 				if(sig.params == "(int, char[5u])") ++found;
 			}
 		}
-		assert(found == 2);
+		assert(found == 4);
 	}
 }
