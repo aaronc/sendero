@@ -6,144 +6,72 @@
 module sendero.view.TemplateMsgs;
 
 import sendero.view.TemplateEngine;
+import sendero.view.ExecContext;
 public import sendero.msg.Msg;
 
 import Util = tango.text.Util;
 
-interface ISenderoMsgNode(TemplateCtxt): ITemplateNode!(TemplateCtxt)
+interface ISenderoMsgNode
 {
-	uint msgid();
-	char[] cls();
+	char[] msgId();
 }
 
-interface ISenderoMsgsNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
+class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
 {
-	
-}
-
-class MsgDef(TemplateCtxt)
-{
-	ISenderoMsgNode!(TemplateCtxt)[uint] msgHandlers;
-	char[] msgsTag = "div";
-	char[] msgTag = "div";
-}
-
-class SenderoMsgsNode(TemplateCtxt) : ISenderoMsgsNode!(TemplateCtxt)
-{	
-	this(char[][] path, MsgDef!(TemplateCtxt) def)
+	void render(TemplateCtxt tCtxt, Consumer consumer)
 	{
-		this.path = path;
-		this.def = def;
+		foreach(msgId, msg; tCtxt.msgs)
+		{
+			auto handler = tCtxt.getMsgHandler(msgId);
+			if(handler !is null) {
+				if(msg.handle(handler)) msg.render(msg,tCtxt,consumer);
+			}
+		}
 	}
-	
-	char[][] path;
-	MsgDef!(TemplateCtxt) def;
-	
-	void render(TemplateCtxt ctxt, void delegate(void[]) write)
-	{
-		ISenderoMsgNode!(TemplateCtxt) getHandler(uint id)
-		{
-			auto pm = id in def.msgHandlers;
-			if(pm) {
-				return *pm;
-			}
-			
-			pm = id in ctxt.tmpl.msgDef.msgHandlers;
-			if(pm) {
-				return *pm;
-			}
-			
-			pm = id in ctxt.tmpl.defaultMsgDef.msgHandlers;
-			if(pm) {
-				return *pm;
-			}
-			
-			id = Msg.getParentID(id);
-			if(id) {
-				return getHandler(id);
-			}
-			
-			return null;
-		}
-		
-		auto msgMap = ctxt.msgMap;
-		foreach(p; path)
-		{
-			msgMap = msgMap.find(p).map;
-		}
-		
-		if(def.msgsTag)
-		{
-			write("<");
-			write(def.msgsTag);
-			write(">");
-		}
-		
-		foreach(m; msgMap)
-		{
-			auto handler = getHandler(m.id);
-			if(!handler) {
-				debug throw new Exception("Message handler not found for " ~ m.toString);
-				continue; 
-			}
-			if(def.msgTag)
-			{
-				write("<");
-				write(def.msgTag);
-				
-				auto msgCls = handler.cls;
-				if(msgCls) {
-					write(" class='");
-					write(msgCls);
-					write("'");
-				}
-				write(">");
-			}
-			
-			handler.render(ctxt, write);
-			
-			if(def.msgTag)
-			{
-				write("</");
-				write(def.msgTag);
-				write(">");
-			}
-		}
-		
-		if(def.msgsTag)
-		{
-			write("</");
-			write(def.msgsTag);
-			write(">");
-		}
-	}	
 }
 
-class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt), ISenderoMsgNode!(TemplateCtxt) 
-{
-	this(char[] msgId, char[] cls, char[][] params)
+class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode
+{	
+	private this(
+			char[] msgId, char[] cls, char[][] params,
+			XmlNode node, Template tmpl, INodeProcessor!(TemplateCtxt, Template) proc)
 	{
 		msgId_ = msgId;
 		cls_ = cls;
-		params_ params;
+		params_ = params;
+		foreach(child; node.children)
+		{
+			auto node = proc(child, tmpl);
+			if(node !is null) children ~= node; 
+		}
 	}
 	
-	void render(TemplateCtxt tCtxt, Consumer consumer)
-	{
+	void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer)
+	in {
+		assert(msg.msgId == this.msgId);
+	}
+	body {
 		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNode.render"));
 		
 		consumer(`<div class="`,cls_,`">`);
 			auto parentExecCtxt = tCtxt.execCtxt; 
 			scope execCtxt = new ExecContext(parentExecCtxt);
 			tCtxt.execCtxt = execCtxt;
-			for(int i = 0; i < paramNames.length && i < params.length; ++i)
+			size_t mLen = msg.params.length;
+			size_t pLen = params.length;
+			for(size_t i = 0; i < mLen && i < pLen; ++i)
 			{
-				execCtxt[paramNames[i]] = params[i];
+				execCtxt[params[i]] = msg.params[i];
 			}
-			super.render(ctxt,consumer);
+			foreach(child; children)
+			{
+				child.render(tCtxt, consumer);
+			}
 			tCtxt.execCtxt = parentExecCtxt;
 		consumer(`</div>`);
 	}
+	
+	ITemplateNode!(TemplateCtxt)[] children;
 	
 	final char[] msgId()
 	{
@@ -164,28 +92,6 @@ class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt), ISend
 	private char[][] params_;
 }
 
-
-class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt), ISenderoMsgNode!(TemplateCtxt) 
-{
-	this(char[] name, char[] cls)
-	{
-		msgid_ = Msg.getClassID(name);
-		cls_ = cls;
-	}
-	private uint msgid_;
-	private char[] cls_;
-	
-	uint msgid()
-	{
-		return msgid_;
-	}
-	
-	char[] cls()
-	{
-		return cls_;
-	}
-}
-
 class SenderoMsgDefProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
 {
 	static void init(INodeProcessor!(TemplateCtxt, Template) childProcessor)
@@ -195,8 +101,6 @@ class SenderoMsgDefProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateC
 			new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(childProcessor));
 		msgDefProcessor.addElementProcessor("d", "error",
 			new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(childProcessor, "error"));
-		msgDefProcessor.addElementProcessor("d", "success",
-			new SenderoMsgNodeProcessor!(TemplateCtxt, Template)(childProcessor, "success"));
 	}
 	static TemplateCompiler!(TemplateCtxt, Template) msgDefProcessor = null;
 	

@@ -33,11 +33,8 @@ debug(SenderoViewDebug) {
 	}
 }
 
-version(SenderoTemplateMsgs)
-{
-	public import sendero.msg.Msg;
-	import sendero.view.TemplateMsgs;
-}
+import sendero.msg.Msg;
+import sendero.view.TemplateMsgs;
 
 class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : DefaultTemplateContext!(TemplateCtxt, Template)
 {
@@ -45,19 +42,10 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	{
 		super(tmpl);
 		execCtxt = new ExecCtxt(locale);
-		version(SenderoTemplateMsgs)
-		{
-			msgMap = Msg.read;
-			curMsgHandler = null;
-		}
+		msgMap = MsgMap.getInst;
 	}
 	
-	version(SenderoTemplateMsgs)
-	{
-		MsgMap msgMap;
-		ITemplateNode!(TemplateCtxt) curMsgHandler;
-	}
-	
+	MsgMap msgMap;	
 	ExecCtxt execCtxt;
 	Template[] parentTemplates;
 	SenderoBlockContainer!(TemplateCtxt) curBlock;
@@ -83,6 +71,29 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	version(SenderoTemplateMsgs)
 	{
 		char[][char[]] prerenderedMsgs;
+	}
+	
+	SenderoMsgNode!(TemplateCtxt,Template) getMsgHandler(char[] msgId)
+	{
+		auto pHandler = msgId in tmpl.msgHandlers_;
+		if(pHandler !is null) {
+			return *pHandler;
+		}
+		
+		foreach(parent; parentTemplates)
+		{
+			pHandler = msgId in parent.msgHandlers_;
+			if(pHandler !is null) {
+				return *pHandler;
+			}
+		}
+		
+		pHandler = msgId in Template.defaultMsgHandlers_;
+		if(pHandler !is null) {
+			return *pHandler;
+		}
+		
+		return null;
 	}
 }
 
@@ -198,6 +209,9 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
+	private SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
+	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
+		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
 	{
 		rootNode.render(templCtxt, consumer);

@@ -50,7 +50,7 @@ class DataContext : IDecoratorContext
 	void writeImports(IDeclarationWriter wr)
 	{
 		if(touched) {
-			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.Bind, sendero.validation.Validations;\n");
+			wr.prepend("import sendero_base.Core, sendero.db.Bind, sendero.vm.Bind, sendero.msg.Msg;\n");
 			wr.prepend("import sendero.db.DBProvider;\n");
 			wr.prepend("import sendero.http.Request, sendero.routing.Convert;\n");
 			wr.prepend("import sendero.core.Memory;\n");
@@ -233,9 +233,8 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 			hasInterface.writeCallRegisters(wr);
 		}
 		
-		writeValidations(wr);  wr ~= "\n";
+		//writeValidations(wr);  wr ~= "\n";
 		writeSessionObject(wr); wr ~= "\n";
-		writeErrorSource(wr); wr ~= "\n";
 		mapper.write(wr.after);
 		obj.write(wr.after);
 	}
@@ -278,21 +277,6 @@ class DataResponder : IDecoratorResponder, IDataResponder, IInterfaceWriter
 	void writeSessionObject(IDeclarationWriter wr)
 	{
 		wr ~= "mixin SessionAllocate!();\n";
-	}
-	
-	void writeErrorSource(IDeclarationWriter wr)
-	{
-		wr ~= "ErrorMap errors()\n";
-		wr ~= "{\n";
-		wr ~= "\treturn __errors__;\n";
-		wr ~= "}\n";
-		
-		wr ~= "void clearErrors()\n";
-		wr ~= "{\n";
-		wr ~= "\t__errors__.reset;\n";
-		wr ~= "}\n";
-		
-		wr ~= "private ErrorMap __errors__;";
 	}
 }
 

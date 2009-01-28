@@ -43,6 +43,17 @@ class Msg : SessionObject
 	final Msg head() { return head_; }
 	private Msg head_ = null;
 	
+	final Object handler() { return handler_; }
+	final bool handle(Object obj) {
+		if(handler_ is null) {
+			handler_ = obj;
+			return true;
+		}
+		else if(handler_ == obj) return true;
+		else return false;
+	}
+	private Object handler_;
+	
 	static MsgSignature[] signatures;
 	
 	static struct post(char[] msgId)
@@ -96,6 +107,28 @@ class MsgMap : SenderoMap!(Msg)
 	static Msg retrieve(char[] msgId)
 	{
 		Msg res;
+		if(getInst.get(msgId,res)) {
+			return res.head;
+		}
+		else return null;
+	}
+	
+	static Msg handle(char[] msgId, Object handler)
+	{
+		Msg res;
+		auto inst = getInst;
+		if(inst.get(msgId,res)) {
+			if(res.head.handle(handler)) {
+				inst.removeKey(msgId);
+				return res.head;
+			}
+		}
+		return null;
+	}
+	
+	static Msg capture(char[] msgId)
+	{
+		Msg res;
 		if(getInst.take(msgId,res)) {
 			return res.head;
 		}
@@ -133,7 +166,7 @@ debug(SenderoUnittest)
 		MsgMap.clear;
 		Msg.post!("TestMsg")(5);
 		Msg.post!("TestMsg")(7,"hello");
-		auto msg = MsgMap.retrieve("TestMsg");
+		auto msg = MsgMap.capture("TestMsg");
 		assert(msg !is null);
 		assert(msg.params.length == 1);
 		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 5);
