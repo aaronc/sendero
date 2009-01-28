@@ -67,26 +67,26 @@ interface IAsyncTcpConduit
 {
 	void keepReading();
 	void keepReading(ITcpRequestHandler handler);
-	void sendResponseData(TcpResponse.Type type, void[][] data...);
-	void sendResponseData(TcpResponse.Type type, ICachedBuffer data);
+	void sendResponseData(TcpAction whenDone, void[][] data...);
+	void sendResponseData(TcpAction whenDone, ICachedBuffer data);
 	StagedReadBuffer requestData();
 	CachedBuffer responseBuffer();
 }
 
+enum TcpAction { None, WaitForRead, Close };
+
 class SyncTcpResponse
 {
-	this(TcpResponse.Type type, ICachedBuffer data)
+	this(TcpAction whenDone, ICachedBuffer data)
 	{
 		this.type = type;
 		this.data = data;
 	}
 	
-	enum Type { Continue, FinishKeepAlive, FinishClose };
-	
-	Type type;	
+	TcpAction whenDone;	
 	ICachedBuffer data;
 
-	static TcpResponse create(TcpResponse.Type type, void[][] data...)
+	static TcpResponse create(TcpAction whenDone, void[][] data...)
 	{
 		ICachedBuffer wrapper;
 		if(data.length) {
@@ -98,15 +98,15 @@ class SyncTcpResponse
 		}
 		else wrapper = null;
 		
-		return new SyncTcpResponse(type,wrapper);
+		return new SyncTcpResponse(whenDone,wrapper);
 	}
 
-	static TcpResponse create(TcpResponse.Type type, ICachedBuffer data)
+	static TcpResponse create(TcpAction whenDone, ICachedBuffer data)
 	{
-		return new SyncTcpResponse(type,data);
+		return new SyncTcpResponse(whenDone,data);
 	}
 }
-
+/+
 private class UnmanagedTcpResponse : TcpResponse
 {
 	this(TcpResponse.Type type, void[][] data...)
@@ -137,3 +137,4 @@ private class ManagedTcpResponse : TcpResponse
 	}
 }
 
++/

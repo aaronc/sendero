@@ -124,6 +124,7 @@ class Request : HttpResponder, IHttpRequestHandler
 	char[] uri;
 	char[] fragment;
 	char[] lastToken;
+	alias lastToken token;
 	//char[][char[]] cookies;
 	CookieStack cookies;
 	char[] ip;

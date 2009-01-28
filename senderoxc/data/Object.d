@@ -61,6 +61,13 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 	IDataResponder dataRes() { return dataRes_; }
 	private IDataResponder dataRes_;
 	
+	final IMapping[] getPrimaryKeyFields()
+	{
+		if(parent_) return parent_.getPrimaryKeyFields;
+		else return primaryKeyFields_;
+	}
+	private IMapping[] primaryKeyFields_;
+	
 	void initCtxt(IContextBinder binder)
 	{
 		debug Stdout.formatln("ObjectResponder.initCtxt");
@@ -228,7 +235,7 @@ class ObjectResponder : IObjectResponder, IObjectBuilder
 			wr.fln(`if(dst.length) {{ debug assert(dst.length >= {0}, "Must provide an array `
 				`of at least length {0} to bind items to class {1}");`, bindableFieldCount, classname);
 			wr.fln(`else if(dst.length < {0}) dst.length = {0}; }}`, bindableFieldCount);
-			wr.fln(`else dst.length = {0};`, bindableFieldCount`)
+			wr.fln(`else dst.length = {0};`, bindableFieldCount);
 			wr.fln("size_t idx = 0;");
 			wr.fln("foreach(name;fieldNames) {{");
 			wr.indent;

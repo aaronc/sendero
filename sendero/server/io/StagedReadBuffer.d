@@ -33,10 +33,6 @@ class StagedReadBuffer : SingleThreadCachedBuffer
 		return buffer[0 .. index_];
 	}
 	
-	final void[] getBuffer() {
-		return buffer;
-	}
-	
 	final void setNext(StagedReadBuffer buf) {
 		next_ = buf;
 	}

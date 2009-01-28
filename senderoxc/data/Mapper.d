@@ -91,7 +91,7 @@ class Mapper : IMapper
 			resp.write(wr);
 	}
 	
-	final char[][] getPrimaryKeyFields()
+	deprecated final char[][] getPrimaryKeyFields()
 	{
 		return schema.getPrimaryKeyCols();
 	}
@@ -109,6 +109,7 @@ class Mapper : IMapper
 	final void addMapping(IMapping mapping)
 	{
 		mappings_ ~= mapping;
+		if(mapping.isPrimaryKey) primaryKeyFields_ ~= mapping;
 	}
 	
 	final IMapping[] mappings()

@@ -1,7 +1,7 @@
 module sendero.server.io.SingleThreadCachedBuffer;
 
 public import sendero.server.io.CachedBuffer;
-import sendero.server.io.SingleThreadObjectPool;
+import sendero.server.util.SingleThreadObjectPool;
 
 class SingleThreadCachedBuffer : CachedBuffer
 {
@@ -32,6 +32,8 @@ class AbstractSingleThreadBufferPool(BufferT) : SingleThreadObjectPool!(BufferT)
 	{
 		return new BufferT(new void[bufferSize_]);
 	}
+	
+	alias BufferT BufferT;
 	
 	
 private:
