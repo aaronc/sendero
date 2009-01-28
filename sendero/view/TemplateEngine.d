@@ -9,7 +9,7 @@ public import sendero_base.xml.XmlNode;
 
 debug import tango.io.Stdout;
 
-alias void delegate(void[]) Consumer;
+alias void delegate(void[][] strs...) Consumer;
 
 interface ITemplateNode(TemplateCtxt)
 {
@@ -33,7 +33,8 @@ class TemplateContainerNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		auto container = new TemplateContainerNode!(TemplateCtxt);
 		foreach(child; node.children)
 		{
-			container.children ~= proc(child, tmpl);
+			auto node = proc(child, tmpl);
+			if(node !is null) container.children ~= node; 
 		}
 		return container;
 	}
@@ -171,7 +172,8 @@ class DefaultElemProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtx
 		
 		foreach(child; node.children)
 		{
-			elem.children ~= childProcessor(child, tmpl);
+			auto resNode = childProcessor(child, tmpl);
+			if(resNode !is null) elem.children ~= resNode;
 		}
 		
 		return elem;

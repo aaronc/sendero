@@ -121,6 +121,52 @@ class SenderoMsgsNode(TemplateCtxt) : ISenderoMsgsNode!(TemplateCtxt)
 
 class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt), ISenderoMsgNode!(TemplateCtxt) 
 {
+	this(char[] msgId, char[] cls, char[][] params)
+	{
+		msgId_ = msgId;
+		cls_ = cls;
+		params_ params;
+	}
+	
+	void render(TemplateCtxt tCtxt, Consumer consumer)
+	{
+		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNode.render"));
+		
+		consumer(`<div class="`,cls_,`">`);
+			auto parentExecCtxt = tCtxt.execCtxt; 
+			scope execCtxt = new ExecContext(parentExecCtxt);
+			tCtxt.execCtxt = execCtxt;
+			for(int i = 0; i < paramNames.length && i < params.length; ++i)
+			{
+				execCtxt[paramNames[i]] = params[i];
+			}
+			super.render(ctxt,consumer);
+			tCtxt.execCtxt = parentExecCtxt;
+		consumer(`</div>`);
+	}
+	
+	final char[] msgId()
+	{
+		return msgId_;
+	}
+	private char[] msgId_;
+	
+	final char[] cls()
+	{
+		return cls_;
+	}
+	private char[] cls_;
+	
+	final char[][] params()
+	{
+		return params_;
+	}
+	private char[][] params_;
+}
+
+
+class SenderoMsgNode(TemplateCtxt) : TemplateContainerNode!(TemplateCtxt), ISenderoMsgNode!(TemplateCtxt) 
+{
 	this(char[] name, char[] cls)
 	{
 		msgid_ = Msg.getClassID(name);

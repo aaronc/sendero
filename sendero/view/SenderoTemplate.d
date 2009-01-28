@@ -18,13 +18,20 @@ class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecContext, Send
 		super(tmpl, locale);
 	}
 	
+	void render(void delegate(void[][] strs...) consumer)
+	{
+		return tmpl.render(this, consumer);
+	}
+	
 	void render(void delegate(void[]) consumer)
 	{
 	/+	version(SenderoTemplateMsgs)
 		{
 			prerenderedMsgs = tmpl.renderMsgs(this, Msg.read);
 		}+/
-		return tmpl.render(cast(SenderoTemplateContext)this, consumer);
+		return tmpl.render(cast(SenderoTemplateContext)this, (void[][] strs...){
+			foreach(x;strs)consumer(x);
+		});
 	}
 	
 	char[] render()
@@ -45,7 +52,7 @@ debug(SenderoUnittest)
 {
 	import tango.io.Stdout;
 	import tango.group.time;
-	import sendero.msg.Error;
+	//import sendero.msg.Error;
 	
 	import tango.io.File;
 	import qcf.Regression;
@@ -62,9 +69,9 @@ unittest
 {
 	auto r = new Regression("template");
 	
-	Msg.post(new Error);
+/+	//Msg.post(new Error);
 	
-	/+auto bigtable = "<table>"
+	auto bigtable = "<table>"
 		"<tr d:for='$row in $table'>"
 		"<td d:for='$c in $row'>_{$c}</td>"
 		"</tr>"
@@ -99,7 +106,7 @@ unittest
 	auto btTime = btWatch.stop;
 	Stdout.formatln("btTime:{}", btTime);
 	
-	SenderoTemplate.setSearchPath("test/template/");
+	/+SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
@@ -111,7 +118,7 @@ unittest
 	//Stdout(derived2.render).newline;
 	r.regress("derived2_output.html", derived2.render);
 	
-	Msg.clear;
+//	Msg.clear;
 	
 	Name[] names;
 	auto n = new Name;
@@ -156,6 +163,6 @@ unittest
 	complex["person"] = n;
 	complex["names"] = names;
 	//Stdout(complex.render).newline;
-	r.regress("complex_output.html", complex.render);+/
+	r.regress("complex_output.html", complex.render);+/+/
 }
 }
