@@ -122,52 +122,6 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
 		}
 	}
 	
-	private void doRender(Msg msg, TemplateCtxt tCtxt, Consumer consumer)
-	{
-		auto execCtxt = tCtxt.execCtxt;
-		if(msg.classname.length) {
-			execCtxt.add("classname",msg.classname);
-			if(msg.fieldname.length)
-				execCtxt.add("fieldname",msg.fieldname);
-		}
-		size_t mLen = msg.params.length;
-		size_t pLen = params.length;
-		for(size_t i = 0; i < mLen && i < pLen; ++i)
-		{
-			execCtxt[params[i]] = msg.params[i];
-		}
-		foreach(child; children)
-		{
-			child.render(tCtxt, consumer);
-		}
-	}
-	
-	/**
-	 * 
-	 * Renders the msg in a generic context (such as JSON or XML)
-	 * 
-	 * Params:
-	 *     msg = 
-	 *     consumer = 
-	 *     parentCtxt =
-	 */
-	final void render(Msg msg, Consumer consumer, ExecContext parentCtxt = null)
-	{
-		scope execCtxt = new ExecContext(parentCtxt);
-		scope tCtxt = new TemplateCtxt;
-		tCtxt.execCtxt = execCtxt;
-		doRender(msg,execCtxt,consumer);
-	}
-	
-	/**
-	 * Renders the msg in a template context
-	 * 
-	 * Params:
-	 *     msg = 
-	 *     tCtxt = 
-	 *     consumer = 
-	 *     tag =
-	 */
 	final void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag = "div")
 	in {
 		assert(msg.msgId == this.msgId);
@@ -176,10 +130,24 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
 		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNode.render"));
 		
 		consumer(`<`,tag,` class="`,cls_,"\">");
-			auto parentExecCtxt = tCtxt.execCtxt;
+			auto parentExecCtxt = tCtxt.execCtxt; 
 			scope execCtxt = new ExecContext(parentExecCtxt);
 			tCtxt.execCtxt = execCtxt;
-			doRender(msg,execCtxt,consumer);
+			if(msg.classname.length) {
+				execCtxt.add("classname",msg.classname);
+				if(msg.fieldname.length)
+					execCtxt.add("fieldname",msg.fieldname);
+			}
+			size_t mLen = msg.params.length;
+			size_t pLen = params.length;
+			for(size_t i = 0; i < mLen && i < pLen; ++i)
+			{
+				execCtxt[params[i]] = msg.params[i];
+			}
+			foreach(child; children)
+			{
+				child.render(tCtxt, consumer);
+			}
 			tCtxt.execCtxt = parentExecCtxt;
 		consumer(`</`,tag,">");
 	}

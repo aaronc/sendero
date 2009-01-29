@@ -3,6 +3,10 @@
 		
 	</head>
 	<body>
-		<d:renderMsgs as="ul"/>
+		<d:msg id="AClassFieldMsg">A message occurred from _{$classname} for _{$fieldname}</d:msg>
+		<d:msg id="AClassMsg">A message occurred from _{$classname}</d:msg>
+		<d:renderMsgs />
+		<d:renderMsgs as="ul" entity="AClass" />
+		<d:renderMsgs as="div" entity="AClass" field="afield" />
 	</body>
 </html>

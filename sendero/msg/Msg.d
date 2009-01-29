@@ -311,10 +311,9 @@ class MsgMap : SenderoMap!(Msg)
 			msg = msg.list_.head;
 			do {
 				if(msg.classname == classname &&
-					(!fieldname.length || msg.fieldname == fieldname)) {
+					(!fieldname.length || msg.fieldname == fieldname))
 					msg.handle(handler);
-				}
-				else msg = msg.next_;
+				msg = msg.next_;
 			} while(msg !is null)
 		}
 	}

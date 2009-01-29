@@ -12,7 +12,7 @@ import sendero_base.util.ArrayWriter;
 //alias AbstractSenderoTemplate!(ExecContext, SenderoTemplateContext) SenderoTemplate;
 
 class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecContext, SenderoTemplateContext, SenderoTemplate)
-{
+{	
 	this(SenderoTemplate tmpl, Locale locale)
 	{
 		super(tmpl, locale);
@@ -110,6 +110,8 @@ unittest
 	SenderoTemplate.importGlobalMsgs("messages.xml","en-US");
 	
 	Msg.post!("Required")("test");
+	ClassFieldPost!("AClassMsg","AClass","")();
+	ClassFieldPost!("AClassFieldMsg","AClass","afield")();
 	
 	auto renderMsgs = SenderoTemplate.get("renderMsgs.html", null);
 	r.regress("renderMsgs_output.html", renderMsgs.render);
