@@ -89,7 +89,7 @@ class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,
 	{
 		char[] subTag = "div";
 		if(as == "ul" || as == "ol") subTag = "li";
-		consumer(`<`,as," class = \"msgs\"");
+		consumer(`<`,as," class=\"msgs\"");
 		if(id.length) consumer(` id="`,id,`">`);
 		else consumer(`>`);
 		doRender(tCtxt,consumer,subTag);
