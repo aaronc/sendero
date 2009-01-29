@@ -24,36 +24,48 @@ debug {
 abstract class ISenderoMsgNode(TemplateCtxt)
 {
 	abstract char[] msgId();
-	abstract void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer);
+	abstract void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag = "div");
 }
 
 class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
 {
-	ISenderoMsgNode!(TemplateCtxt)[char[]] localHandlers_;
-	
-	void render(TemplateCtxt tCtxt, Consumer consumer)
+	this(char[] as = "div")
 	{
-		ISenderoMsgNode!(TemplateCtxt) getMsgHandler(char[] msgId)
-		{
-			auto pHandler = msgId in localHandlers_;
-			if(pHandler) return *pHandler;
-			return tCtxt.getMsgHandler(msgId);
-		}
-		
+		this.as = as;
+	}
+	
+	char[] as;
+	
+	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
+	{
 		tCtxt.msgMap.read((char[] msgId,Msg msg){
-			auto handler = getMsgHandler(msgId);
+			auto handler = tCtxt.getMsgHandler(msgId);
 			if(handler !is null) {
 				if(msg.handle(handler)) {
-					handler.render(msg,tCtxt,consumer);
+					handler.render(msg,tCtxt,consumer,tag);
 					return true;
 				}
 			}
 		});
 	}
+	
+	final void render(TemplateCtxt tCtxt, Consumer consumer)
+	{
+		char[] subTag = "div";
+		if(as == "ul" || as == "ol") subTag = "li";
+		consumer(`<`,as," class = \"msgs\">");		
+			doRender(tCtxt,consumer,subTag);
+		consumer(`</`,as,">");
+	}
 }
 
 class SenderoFilteredRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(TemplateCtxt)
 {
+	this(char[] as)
+	{
+		super(as);
+	}
+	
 	char[] classname,fieldname;
 	
 	/+void prehandle(MsgMap map) {
@@ -63,13 +75,13 @@ class SenderoFilteredRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(Temp
 		});
 	}+/
 	
-	void render(TemplateCtxt tCtxt, Consumer consumer)
+	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
 		tCtxt.msgMap.read(classname,fieldname, (char[] msgId,Msg msg) {
 			auto handler = tCtxt.getMsgHandler(msgId);
 			if(handler !is null) {
 				if(msg.handle(this)) {
-					handler.render(msg,tCtxt,consumer);
+					handler.render(msg,tCtxt,consumer,tag);
 					return true;
 				}
 			}
@@ -95,17 +107,22 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
 		}
 	}
 	
-	void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer)
+	final void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag = "div")
 	in {
 		assert(msg.msgId == this.msgId);
 	}
 	body {
 		debug(SenderoViewDebug) mixin(FailTrace!("SenderoMsgNode.render"));
 		
-		consumer(`<div class="`,cls_,`">`);
+		consumer(`<`,tag,` class="`,cls_,"\">");
 			auto parentExecCtxt = tCtxt.execCtxt; 
 			scope execCtxt = new ExecContext(parentExecCtxt);
 			tCtxt.execCtxt = execCtxt;
+			if(msg.classname.length) {
+				execCtxt.add("classname",msg.classname);
+				if(msg.fieldname.length)
+					execCtxt.add("fieldname",msg.fieldname);
+			}
 			size_t mLen = msg.params.length;
 			size_t pLen = params.length;
 			for(size_t i = 0; i < mLen && i < pLen; ++i)
@@ -117,7 +134,7 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
 				child.render(tCtxt, consumer);
 			}
 			tCtxt.execCtxt = parentExecCtxt;
-		consumer(`</div>`);
+		consumer(`</`,tag,">");
 	}
 	
 	ITemplateNode!(TemplateCtxt)[] children;
@@ -197,6 +214,18 @@ class SenderoRenderMsgsNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(T
 		assert(node.type == XmlNodeType.Element);
 	}
 	body {
-		return new SenderoRenderMsgsNode!(TemplateCtxt);
+		char[] as;
+		if(!getAttr(node,"as",as)) as = "div";
+		char[] classname, fieldname;
+		if(getAttr(node, "entity", classname)) {
+			getAttr(node,"field",fieldname);
+			auto res = new SenderoFilteredRenderMsgsNode!(TemplateCtxt)(as);
+			res.classname = classname;
+			res.fieldname = fieldname;
+			if(fieldname.length) tmpl.preHandlers_ = res ~ tmpl.preHandlers_;
+			else tmpl.preHandlers_ ~= res;
+			return res;
+		}
+		return new SenderoRenderMsgsNode!(TemplateCtxt)(as);
 	}
 }
