@@ -10,5 +10,8 @@
 			<d:msg id="Unknown">An unknown msg was received for AClass</d:msg>
 		</d:renderMsgs>
 		<d:renderMsgs as="div" entity="AClass" field="afield" />
+		<d:renderMsgs id="xzy" as="ul" msgId="/xzy.*/">
+			<d:msg id="Unknown">A message starting with xzy named _{$msgId} was posted</d:msg>
+		</d:renderMsgs>
 	</body>
 </html>

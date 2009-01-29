@@ -9,6 +9,7 @@ import sendero.view.TemplateEngine;
 import sendero.view.ExecContext;
 import sendero.msg.Msg;
 
+import tango.text.Regex;
 import Text = tango.text.Util;
 
 debug {
@@ -34,11 +35,13 @@ interface IHandlerCtxt(TemplateCtxt,Template) : ITemplateNode!(TemplateCtxt)
 
 class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,Template)
 {
-	this(char[] as = "div")
+	this(char[] id, char[] as = "div")
 	{
+		this.id = id;
 		this.as = as;
 	}
 	
+	char[] id;
 	char[] as;
 	
 	void setMsgHandler(SenderoMsgNode!(TemplateCtxt,Template) handler)
@@ -86,8 +89,10 @@ class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,
 	{
 		char[] subTag = "div";
 		if(as == "ul" || as == "ol") subTag = "li";
-		consumer(`<`,as," class = \"msgs\">");		
-			doRender(tCtxt,consumer,subTag);
+		consumer(`<`,as," class = \"msgs\"");
+		if(id.length) consumer(` id="`,id,`">`);
+		else consumer(`>`);
+		doRender(tCtxt,consumer,subTag);
 		consumer(`</`,as,">");
 	}
 }
@@ -99,9 +104,9 @@ interface IMsgFilter
 
 class SenderoFilteredRenderMsgsNode(TemplateCtxt,Template) :  SenderoRenderMsgsNode!(TemplateCtxt,Template), IMsgFilter
 {
-	this(char[] as)
+	this(char[] id, char[] as)
 	{
-		super(as);
+		super(id, as);
 	}
 	
 	char[] classname,fieldname;
@@ -127,14 +132,14 @@ class SenderoFilteredRenderMsgsNode(TemplateCtxt,Template) :  SenderoRenderMsgsN
 	}
 }
 
-class SenderoRegexRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(TemplateCtxt)
+class SenderoRegexRenderMsgsNode(TemplateCtxt,Template) :  SenderoRenderMsgsNode!(TemplateCtxt,Template), IMsgFilter
 {
-	this(char[] as)
+	this(char[] id, char[] as)
 	{
-		super(as);
+		super(id, as);
 	}
 	
-	RegexT!(char) msgId,fieldname,classname;
+	RegExpT!(char) msgId,fieldname,classname;
 	
 	bool willHandle(Msg msg)
 	{
@@ -188,6 +193,7 @@ class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
 			auto parentExecCtxt = tCtxt.execCtxt; 
 			scope execCtxt = new ExecContext(parentExecCtxt);
 			tCtxt.execCtxt = execCtxt;
+			execCtxt.add("msgId",msg.msgId);
 			if(msg.classname.length) {
 				execCtxt.add("classname",msg.classname);
 				if(msg.fieldname.length)
@@ -286,20 +292,52 @@ class SenderoRenderMsgsNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(T
 		assert(node.type == XmlNodeType.Element);
 	}
 	body {
+		bool checkForRegex(char[] str)
+		{
+			if(str.length < 3) return false;
+			if(str[0] == '/' && str[$-1] == '/') return true;
+			return false;
+		}
+		
+		RegExpT!(char) makeRegex(char[] str)
+		{
+			debug log.trace("Making regex from {}",str);
+			if(checkForRegex(str)) {
+				str = str[1..$-1];
+				debug log.trace("Trimmed to {}",str);
+			}
+			if(!str.length) return null;
+			return new RegExpT!(char)(str);
+		}
+		
 		IHandlerCtxt!(TemplateCtxt,Template) resNode;
+		char[] id;
+		getAttr(node,"id",id);
 		char[] as;
 		if(!getAttr(node,"as",as)) as = "div";
-		char[] classname, fieldname;
-		if(getAttr(node, "entity", classname)) {
-			getAttr(node,"field",fieldname);
-			auto res = new SenderoFilteredRenderMsgsNode!(TemplateCtxt,Template)(as);
-			res.classname = classname;
-			res.fieldname = fieldname;
-			if(fieldname.length) tmpl.preHandlers_ = cast(IMsgFilter)res ~ tmpl.preHandlers_;
-			else tmpl.preHandlers_ ~= res;
-			resNode = res;
+		char[] classname, fieldname, msgId;
+		getAttr(node, "entity", classname);
+		getAttr(node,"field",fieldname);
+		getAttr(node,"msgId",msgId);
+		if(classname.length || (msgId.length && checkForRegex(msgId))) {
+			if(checkForRegex(msgId) || checkForRegex(fieldname) || checkForRegex(classname)) {
+				auto res = new SenderoRegexRenderMsgsNode!(TemplateCtxt,Template)(id,as);
+				res.msgId = makeRegex(msgId);
+				res.classname = makeRegex(classname);
+				res.fieldname = makeRegex(fieldname);
+				tmpl.preHandlers_ = cast(IMsgFilter)res ~ tmpl.preHandlers_;
+				resNode = res;
+			}
+			else {
+				auto res = new SenderoFilteredRenderMsgsNode!(TemplateCtxt,Template)(id,as);
+				res.classname = classname;
+				res.fieldname = fieldname;
+				if(fieldname.length) tmpl.preHandlers_ = cast(IMsgFilter)res ~ tmpl.preHandlers_;
+				else tmpl.preHandlers_ ~= res;
+				resNode = res;
+			}
 		}
-		else resNode = new SenderoRenderMsgsNode!(TemplateCtxt,Template)(as);
+		else resNode = new SenderoRenderMsgsNode!(TemplateCtxt,Template)(id,as);
 		
 		tmpl.setMsgHandlerCtxt(resNode);
 		
