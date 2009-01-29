@@ -20,9 +20,10 @@ class Msg : SessionObject
 		msgId_ = msgId;
 		params_ = params;
 		if(parent !is null) {
-			this.head_ = parent.head_;
+			this.list_ = parent.list_;
+			this.parent_ = parent;
 		}
-		else this.head_ = this;
+		else this.list_ = new MsgList(this);
 	}
 	
 	final char[] msgId() { return msgId_; }
@@ -43,11 +44,40 @@ class Msg : SessionObject
 		return next_;
 	}
 	
-	final Msg next() { return next_; }
+	private Msg parent_ = null;
 	private Msg next_ = null;
 	
-	final Msg head() { return head_; }
-	private Msg head_ = null;
+	static private class MsgList {
+		private this(Msg head) { this.head = head; }
+		Msg head;
+	}
+	
+	private MsgList list_;
+	
+	invariant
+	{
+		assert(list_ !is null);
+	}
+	
+	private Msg remove()
+	in {
+		assert(list_.head !is null);
+	}
+	body {
+		if(this == list_.head) {
+			debug assert(parent_ is null);
+			list_.head = next_;
+			if(next_ !is null) next_.parent_ = null;
+			return next_;
+		}
+		else {
+			debug assert(list_ !is null && this != list_.head);
+			debug assert(parent_ !is null);
+			parent_.next_ = next_;
+			if(next_ !is null) next_.parent_ = parent_;
+			return next_;
+		}
+	}
 	
 	final Object handler() { return handler_; }
 	final bool handle(Object obj) {
@@ -137,7 +167,7 @@ class MsgMap : SenderoMap!(Msg)
 		msg.fieldname_ = fieldname;
 		return msg;
 	}
-	
+	/+
 	static Msg retrieve(char[] msgId)
 	{
 		Msg res;
@@ -167,7 +197,7 @@ class MsgMap : SenderoMap!(Msg)
 			return res.head;
 		}
 		else return null;
-	}
+	}+/
 	
 	static void clear()
 	{
@@ -175,14 +205,62 @@ class MsgMap : SenderoMap!(Msg)
 		//TODO this should be inst.clear - but that hangs
 		if(!inst.isEmpty) inst.reset;
 	}
+	
+	static void read(bool delegate(char[] msgId, Msg msg) readDg)
+	{
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg pMsg;
+		while(itr.next(key,pMsg)) {
+			auto msg = pMsg.list_.head;
+			auto list = pMsg.list_;
+			do {
+				Stdout.formatln("Sending {}",msg.msgId);
+				if(readDg(key,msg)) {
+					msg = msg.remove;
+				}
+				else msg = msg.next_;
+			} while(msg !is null)
+			if(list.head is null) itr.remove;
+			else pMsg = list.head;
+		}
+	}
+	
+	static void read(char[] classname, bool delegate(char[] msgId, Msg msg) readDg)
+	{
+		read(classname, null, readDg);
+	}
+	
+	static void read(char[] classname, char[] fieldname, bool delegate(char[] msgId, Msg msg) readDg)
+	{
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg pMsg;
+		while(itr.next(key,pMsg)) {
+			auto msg = pMsg.list_.head;
+			auto list = pMsg.list_;
+			do {
+				if(msg.classname == classname &&
+					(!fieldname.length || msg.fieldname == fieldname)) {
+					if(readDg(key,msg)) {
+						msg = msg.remove;
+					}
+					else msg = msg.next_;
+				}
+				else msg = msg.next_;
+			} while(msg !is null)
+			if(list.head is null) itr.remove;
+			else pMsg = list.head;
+		}
+	}
 }
 
 struct MsgSignature
 {
 	char[] id;
 	char[] params;
-	char[] className;
-	char[] fieldName;
+	char[] classname;
+	char[] fieldname;
 }
 
 struct MsgSignatureCollector(char[] msgId, ParamsT...)
@@ -204,7 +282,7 @@ struct MsgClassFieldSignatureCollector(char[] msgId, char[] className, char[] fi
 
 debug(SenderoUnittest)
 {
-	//import tango.io.Stdout;
+	import tango.io.Stdout;
 	
 	class Test
 	{
@@ -228,7 +306,7 @@ debug(SenderoUnittest)
 		MsgMap.clear;
 		Msg.post!("TestMsg")(5);
 		Msg.post!("TestMsg")(7,"hello");
-		auto msg = MsgMap.capture("TestMsg");
+		/+auto msg = MsgMap.capture("TestMsg");
 		assert(msg !is null);
 		assert(msg.params.length == 1);
 		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 5);
@@ -237,11 +315,49 @@ debug(SenderoUnittest)
 		assert(msg.params.length == 2);
 		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 7);
 		assert(msg.params[1].type == VarT.String && msg.params[1].string_ == "hello", msg.params[1].string_);
-		assert(msg.next is null);
+		assert(msg.next is null);+/
 		
 //		Test class-field messages
 		auto test = new Test;
 		test.test;
+		
+		int count = 0;
+		MsgMap.read((char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			if(id == "TestMsg") {
+				++count;
+				return true;
+			}
+			else return false;
+		});
+		assert(count == 2);
+		
+		count = 0;
+		MsgMap.read((char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			++count;
+			return false;
+		});
+		assert(count == 2);
+		count = 0;
+		MsgMap.read("Test",(char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			++count;
+			return false;
+		});
+		assert(count == 2);
+		count = 0;
+		MsgMap.read("Test","x",(char[] id, Msg msg) {
+			++count;
+			return false;
+		});
+		assert(count == 1);
+		count = 0;
+		MsgMap.read("User","name",(char[] id, Msg msg) {
+			++count;
+			return false;
+		});
+		assert(count == 0);
 		
 		// Test signatures
 		int found = 0;
@@ -251,6 +367,18 @@ debug(SenderoUnittest)
 			if(sig.id == "TestMsg") {
 				if(sig.params == "(int)") ++found;
 				if(sig.params == "(int, char[5u])") ++found;
+			}
+			if(sig.id == "TestClassError") {
+				assert(sig.params == "(int)");
+				assert(sig.classname == "Test");
+				assert(sig.fieldname == "");
+				++found;
+			}
+			if(sig.id == "TestClassFieldError") {
+				assert(sig.params == "(int)");
+				assert(sig.classname == "Test");
+				assert(sig.fieldname == "x");
+				++found;
 			}
 		}
 		assert(found == 4);
