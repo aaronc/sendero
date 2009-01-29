@@ -317,6 +317,25 @@ class MsgMap : SenderoMap!(Msg)
 			} while(msg !is null)
 		}
 	}
+	
+	static void claim(bool delegate(Msg) filter, Object handler)
+	in {
+		assert(handler !is null);
+	}
+	body {
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg msg;
+		while(itr.next(key,msg)) {
+			debug assert(msg !is null && msg.list_ !is null);
+			msg = msg.list_.head;
+			do {
+				if(filter(msg))
+					msg.handle(handler);
+				msg = msg.next_;
+			} while(msg !is null)
+		}
+	}
 }
 
 /**

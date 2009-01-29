@@ -225,7 +225,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	
 	private IHandlerCtxt!(TemplateCtxt,Template) surrogateMsgHandlerCtxt_;
 	private SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
-	package SenderoFilteredRenderMsgsNode!(TemplateCtxt,Template)[] preHandlers_;
+	package IMsgFilter[] preHandlers_;
 	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
 		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
@@ -233,7 +233,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		// Pre-handle class-field messages
 		foreach(h; preHandlers_)
 		{
-			templCtxt.msgMap.claim(h.classname,h.fieldname,h);
+			templCtxt.msgMap.claim(&h.willHandle,cast(Object)h);
 		}
 		
 		// Render template
