@@ -230,6 +230,7 @@ class MsgMap : SenderoMap!(Msg)
 		char[] key;
 		Msg pMsg;
 		while(itr.next(key,pMsg)) {
+			debug assert(pMsg !is null && pMsg.list_ !is null);
 			auto msg = pMsg.list_.head;
 			auto list = pMsg.list_;
 			do {
@@ -271,6 +272,7 @@ class MsgMap : SenderoMap!(Msg)
 		char[] key;
 		Msg pMsg;
 		while(itr.next(key,pMsg)) {
+			debug assert(pMsg !is null && pMsg.list_ !is null);
 			auto msg = pMsg.list_.head;
 			auto list = pMsg.list_;
 			do {
@@ -285,6 +287,35 @@ class MsgMap : SenderoMap!(Msg)
 			} while(msg !is null)
 			if(list.head is null) itr.remove;
 			else pMsg = list.head;
+		}
+	}
+	
+	/**
+	 * Claims msgs for the given classname, fieldname, and handler.
+	 * 
+	 * Marks each message that matched the given criteria with the provided
+	 * handler, so that other message handlers do not process them.
+	 * 
+	 * If fieldname is null or zero-length, it is ignored.
+	 */
+	static void claim(char[] classname, char[] fieldname, Object handler)
+	in {
+		assert(handler !is null);
+	}
+	body {
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg msg;
+		while(itr.next(key,msg)) {
+			debug assert(msg !is null && msg.list_ !is null);
+			msg = msg.list_.head;
+			do {
+				if(msg.classname == classname &&
+					(!fieldname.length || msg.fieldname == fieldname)) {
+					msg.handle(handler);
+				}
+				else msg = msg.next_;
+			} while(msg !is null)
 		}
 	}
 }

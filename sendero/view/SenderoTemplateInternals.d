@@ -72,7 +72,7 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 		char[][char[]] prerenderedMsgs;
 	}
 	
-	SenderoMsgNode!(TemplateCtxt,Template) getMsgHandler(char[] msgId)
+	ISenderoMsgNode!(TemplateCtxt) getMsgHandler(char[] msgId)
 	{
 		auto pHandler = msgId in tmpl.msgHandlers_;
 		if(pHandler !is null) {
@@ -207,11 +207,19 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
-	package SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
-	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
+	package ISenderoMsgNode!(TemplateCtxt)[char[]] msgHandlers_;
+	package SenderoFilteredRenderMsgsNode!(TemplateCtxt)[] preHandlers_;
+	private static ISenderoMsgNode!(TemplateCtxt)[char[]] defaultMsgHandlers_;
 		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
 	{
+		// Pre-handle class-field messages
+		foreach(h; preHandlers_)
+		{
+			templCtxt.msgMap.claim(h.classname,h.fieldname,h);
+		}
+		
+		// Render template
 		rootNode.render(templCtxt, consumer);
 	}
 	
