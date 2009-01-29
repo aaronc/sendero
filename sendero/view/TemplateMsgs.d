@@ -64,14 +64,13 @@ class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,
 					return true;
 				}
 			}
-			else handleUnknown(msg,tCtxt,consumer,tag);
-			return false;
+			return handleUnknown(msg,tCtxt,consumer,tag);
 		});
 	}
 	
-	protected void handleUnknown(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag)
+	protected bool handleUnknown(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
-		if(!msg.handle(this)) return;
+		if(!msg.handle(this)) return false;
 		auto handler = getMsgHandler("Unknown",tCtxt);
 		if(handler !is null) {
 			handler.render(msg,tCtxt,consumer,tag);
@@ -80,6 +79,7 @@ class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,
 			debug assert(false, "Unable to handle Unknown messages");
 			else consumer(`<`,tag,` class="error">An unknown error has occurred.</`,tag,`>`);
 		}
+		return true;
 	}
 	
 	final void render(TemplateCtxt tCtxt, Consumer consumer)
@@ -122,12 +122,11 @@ class SenderoFilteredRenderMsgsNode(TemplateCtxt,Template) :  SenderoRenderMsgsN
 					return true;
 				}
 			}
-			else handleUnknown(msg,tCtxt,consumer,tag);
-			return false;
+			return handleUnknown(msg,tCtxt,consumer,tag);
 		});
 	}
 }
-/+
+
 class SenderoRegexRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(TemplateCtxt)
 {
 	this(char[] as)
@@ -137,11 +136,29 @@ class SenderoRegexRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(Templat
 	
 	RegexT!(char) msgId,fieldname,classname;
 	
+	bool willHandle(Msg msg)
+	{
+		if(msgId !is null && !msgId.test(msg.msgId)) return false;
+		if(classname !is null && !classname.test(msg.classname)) return false;
+		if(fieldname !is null && !fieldname.test(msg.fieldname)) return false;
+		return true;
+	}
+	
 	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
-		
+		tCtxt.msgMap.read((char[] msgId,Msg msg) {
+			if(!willHandle(msg)) return false;
+			auto handler = getMsgHandler(msgId,tCtxt);
+			if(handler !is null) {
+				if(msg.handle(this)) {
+					handler.render(msg,tCtxt,consumer,tag);
+					return true;
+				}
+			}
+			return handleUnknown(msg,tCtxt,consumer,tag);
+		});
 	}
-}+/
+}
 
 
 class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
