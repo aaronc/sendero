@@ -13,6 +13,9 @@ import sendero_base.util.collection.Hash;
 import sendero.core.Memory;
 import sendero.vm.Bind;
 
+/**
+ * 
+ */
 class Msg : SessionObject
 {	
 	private this(char[] msgId, Var[] params, Msg parent = null)
@@ -26,15 +29,19 @@ class Msg : SessionObject
 		else this.list_ = new MsgList(this);
 	}
 	
+	//
 	final char[] msgId() { return msgId_; }
 	private char[] msgId_;
 	
+	//
 	final Var[] params() { return params_; }
 	private Var[] params_;
 	
+	//
 	final char[] classname() { return classname_; }
 	private char[] classname_;
 	
+	//
 	final char[] fieldname() { return fieldname_; }
 	private char[] fieldname_;
 	
@@ -79,7 +86,10 @@ class Msg : SessionObject
 		}
 	}
 	
+	//
 	final Object handler() { return handler_; }
+	
+	//
 	final bool handle(Object obj) {
 		if(handler_ is null) {
 			handler_ = obj;
@@ -90,23 +100,48 @@ class Msg : SessionObject
 	}
 	private Object handler_;
 	
+	//
 	static MsgSignature[] signatures;
 	
-	static struct post(char[] msgId)
-	{
-		static void opCall(ParamsT...)(ParamsT params)
+	version(DDoc) {
+		/**
+		 * Posts a msg with id msgId and variadic arguments.
+		 * 
+		 * Example:
+		 * ---
+		 * Post.msg!("UnknownUser")("bob");
+		 * ---
+		 * 
+		 * MsgId is a template parameter so that all
+		 * known messages id's can be tracked by hidden static
+		 * constructors.
+		 *
+		 */
+		static void post(char[] msgId)(...)
 		{
-			debug MsgSignatureCollector!(msgId,ParamsT) sig;
-			Var[] vParams;
-			vParams.length = ParamsT.length;
-			foreach(idx,ParamT; ParamsT)
+			
+		}
+	}
+	else {
+		static struct post(char[] msgId)
+		{
+			static void opCall(ParamsT...)(ParamsT params)
 			{
-				bind(vParams[idx],params[idx]);
+				debug MsgSignatureCollector!(msgId,ParamsT) sig;
+				Var[] vParams;
+				vParams.length = ParamsT.length;
+				foreach(idx,ParamT; ParamsT)
+				{
+					bind(vParams[idx],params[idx]);
+				}
+				MsgMap.post(msgId,vParams);
 			}
-			MsgMap.post(msgId,vParams);
 		}
 	}
 }
+/**
+ * Alias for Msg
+ */
 alias Msg Error;
 
 static struct ClassFieldPost(char[] msgId, char[] classname, char[] fieldname)
@@ -124,6 +159,9 @@ static struct ClassFieldPost(char[] msgId, char[] classname, char[] fieldname)
 	}
 }
 
+/**
+ * 
+ */
 class MsgMap : SenderoMap!(Msg)
 {
 	static this()
@@ -167,38 +205,11 @@ class MsgMap : SenderoMap!(Msg)
 		msg.fieldname_ = fieldname;
 		return msg;
 	}
-	/+
-	static Msg retrieve(char[] msgId)
-	{
-		Msg res;
-		if(getInst.get(msgId,res)) {
-			return res.head;
-		}
-		else return null;
-	}
 	
-	static Msg handle(char[] msgId, Object handler)
-	{
-		Msg res;
-		auto inst = getInst;
-		if(inst.get(msgId,res)) {
-			if(res.head.handle(handler)) {
-				inst.removeKey(msgId);
-				return res.head;
-			}
-		}
-		return null;
-	}
-	
-	static Msg capture(char[] msgId)
-	{
-		Msg res;
-		if(getInst.take(msgId,res)) {
-			return res.head;
-		}
-		else return null;
-	}+/
-	
+	/**
+	 * Clears all messages from the message list
+	 *
+	 */
 	static void clear()
 	{
 		auto inst = getInst;
@@ -206,6 +217,13 @@ class MsgMap : SenderoMap!(Msg)
 		if(!inst.isEmpty) inst.reset;
 	}
 	
+	/**
+	 * 
+	 * Params:
+	 *     readDg = delegate to receieve messages that have been sent,
+	 *     	returns true if it has read the message and wants it deleted
+	 *     	from the list of messages
+	 */
 	static void read(bool delegate(char[] msgId, Msg msg) readDg)
 	{
 		auto itr = getInst.iterator;
@@ -226,11 +244,27 @@ class MsgMap : SenderoMap!(Msg)
 		}
 	}
 	
+	/**
+	 * Reads messages for the class specified 
+	 * 
+	 * Params:
+	 *     classname = name of the class to receive messages for
+	 *     readDg = see above
+	 */
 	static void read(char[] classname, bool delegate(char[] msgId, Msg msg) readDg)
 	{
 		read(classname, null, readDg);
 	}
 	
+	/**
+	 * /**
+	 * Reads messages for the class and field specified 
+	 * 
+	 * Params:
+	 *     classname = name of the class to receive messages for
+	 *     fieldname = name of the field to receive messages for
+	 *     readDg = see above
+	 */
 	static void read(char[] classname, char[] fieldname, bool delegate(char[] msgId, Msg msg) readDg)
 	{
 		auto itr = getInst.iterator;
@@ -255,11 +289,18 @@ class MsgMap : SenderoMap!(Msg)
 	}
 }
 
+/**
+ * 
+ */
 struct MsgSignature
 {
+	//
 	char[] id;
+	//
 	char[] params;
+	//
 	char[] classname;
+	//
 	char[] fieldname;
 }
 
