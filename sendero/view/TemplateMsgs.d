@@ -27,7 +27,12 @@ abstract class ISenderoMsgNode(TemplateCtxt)
 	abstract void render(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag = "div");
 }
 
-class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
+interface IHandlerCtxt(TemplateCtxt,Template) : ITemplateNode!(TemplateCtxt)
+{
+	void setMsgHandler(SenderoMsgNode!(TemplateCtxt,Template) handler);
+}
+
+class SenderoRenderMsgsNode(TemplateCtxt,Template) : IHandlerCtxt!(TemplateCtxt,Template)
 {
 	this(char[] as = "div")
 	{
@@ -36,10 +41,23 @@ class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
 	
 	char[] as;
 	
+	void setMsgHandler(SenderoMsgNode!(TemplateCtxt,Template) handler)
+	{
+		localHandlers_[handler.msgId] = handler;
+	}
+	SenderoMsgNode!(TemplateCtxt,Template)[char[]] localHandlers_;
+	
+	protected SenderoMsgNode!(TemplateCtxt,Template) getMsgHandler(char[] msgId, TemplateCtxt tCtxt)
+	{
+		auto pHandler = msgId in localHandlers_;
+		if(pHandler) return *pHandler;
+		return tCtxt.getMsgHandler(msgId);
+	}
+	
 	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
 		tCtxt.msgMap.read((char[] msgId,Msg msg){
-			auto handler = tCtxt.getMsgHandler(msgId);
+			auto handler = getMsgHandler(msgId,tCtxt);
 			if(handler !is null) {
 				if(msg.handle(handler)) {
 					handler.render(msg,tCtxt,consumer,tag);
@@ -53,7 +71,8 @@ class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
 	
 	protected void handleUnknown(Msg msg, TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
-		auto handler = tCtxt.getMsgHandler("Unknown");
+		if(!msg.handle(this)) return;
+		auto handler = getMsgHandler("Unknown",tCtxt);
 		if(handler !is null) {
 			handler.render(msg,tCtxt,consumer,tag);
 		}
@@ -73,7 +92,7 @@ class SenderoRenderMsgsNode(TemplateCtxt) :  ITemplateNode!(TemplateCtxt)
 	}
 }
 
-class SenderoFilteredRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(TemplateCtxt)
+class SenderoFilteredRenderMsgsNode(TemplateCtxt,Template) :  SenderoRenderMsgsNode!(TemplateCtxt,Template)
 {
 	this(char[] as)
 	{
@@ -92,7 +111,7 @@ class SenderoFilteredRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(Temp
 	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
 	{
 		tCtxt.msgMap.read(classname,fieldname, (char[] msgId,Msg msg) {
-			auto handler = tCtxt.getMsgHandler(msgId);
+			auto handler = getMsgHandler(msgId,tCtxt);
 			if(handler !is null) {
 				if(msg.handle(this)) {
 					handler.render(msg,tCtxt,consumer,tag);
@@ -104,6 +123,21 @@ class SenderoFilteredRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(Temp
 		});
 	}
 }
+/+
+class SenderoRegexRenderMsgsNode(TemplateCtxt) :  SenderoRenderMsgsNode!(TemplateCtxt)
+{
+	this(char[] as)
+	{
+		super(as);
+	}
+	
+	RegexT!(char) msgId,fieldname,classname;
+	
+	protected void doRender(TemplateCtxt tCtxt, Consumer consumer, char[] tag)
+	{
+		
+	}
+}+/
 
 
 class SenderoMsgNode(TemplateCtxt, Template) : ISenderoMsgNode!(TemplateCtxt)
@@ -216,7 +250,7 @@ class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 		auto msgNode = new SenderoMsgNode!(TemplateCtxt, Template)
 			(msgId,cls,params,node,tmpl,childProcessor);
 		
-		tmpl.msgHandlers_[msgId] = msgNode;
+		tmpl.setMsgHandler(msgNode);
 		
 		return null;
 	}
@@ -224,23 +258,37 @@ class SenderoMsgNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(Template
 
 class SenderoRenderMsgsNodeProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, Template)
 {
+	mixin NestedProcessorCtr!(TemplateCtxt, Template);
+	
 	ITemplateNode!(TemplateCtxt) process(XmlNode node, Template tmpl)
 	in {
 		assert(node.type == XmlNodeType.Element);
 	}
 	body {
+		IHandlerCtxt!(TemplateCtxt,Template) resNode;
 		char[] as;
 		if(!getAttr(node,"as",as)) as = "div";
 		char[] classname, fieldname;
 		if(getAttr(node, "entity", classname)) {
 			getAttr(node,"field",fieldname);
-			auto res = new SenderoFilteredRenderMsgsNode!(TemplateCtxt)(as);
+			auto res = new SenderoFilteredRenderMsgsNode!(TemplateCtxt,Template)(as);
 			res.classname = classname;
 			res.fieldname = fieldname;
 			if(fieldname.length) tmpl.preHandlers_ = res ~ tmpl.preHandlers_;
 			else tmpl.preHandlers_ ~= res;
-			return res;
+			resNode = res;
 		}
-		return new SenderoRenderMsgsNode!(TemplateCtxt)(as);
+		else resNode = new SenderoRenderMsgsNode!(TemplateCtxt,Template)(as);
+		
+		tmpl.setMsgHandlerCtxt(resNode);
+		
+		foreach(child; node.children)
+		{
+			childProcessor(child, tmpl); 
+		}
+		
+		tmpl.unsetMsgHandlerCtxt;
+		
+		return resNode;
 	}
 }

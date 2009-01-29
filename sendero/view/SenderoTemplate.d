@@ -112,6 +112,8 @@ unittest
 	Msg.post!("Required")("test");
 	ClassFieldPost!("AClassMsg","AClass","")();
 	ClassFieldPost!("AClassFieldMsg","AClass","afield")();
+	ClassFieldPost!("someUnknownMsg","AClass","")();
+	ClassFieldPost!("someUnknownMsg","AClass","afield")();
 	
 	auto renderMsgs = SenderoTemplate.get("renderMsgs.html", null);
 	r.regress("renderMsgs_output.html", renderMsgs.render);

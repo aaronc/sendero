@@ -124,7 +124,7 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("msg", engine));
 		engine.addElementProcessor("d", "error", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("error", engine));
 		engine.addElementProcessor("d", "success", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("success", engine));
-		engine.addElementProcessor("d", "renderMsgs", new SenderoRenderMsgsNodeProcessor!(TemplateCtxt, Template)());
+		engine.addElementProcessor("d", "renderMsgs", new SenderoRenderMsgsNodeProcessor!(TemplateCtxt, Template)(engine));
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
@@ -207,8 +207,25 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
-	package SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
-	package SenderoFilteredRenderMsgsNode!(TemplateCtxt)[] preHandlers_;
+	package void setMsgHandler(SenderoMsgNode!(TemplateCtxt,Template) handler)
+	{
+		if(surrogateMsgHandlerCtxt_ !is null) surrogateMsgHandlerCtxt_.setMsgHandler(handler);
+		else msgHandlers_[handler.msgId] = handler;
+	}
+	
+	package void setMsgHandlerCtxt(IHandlerCtxt!(TemplateCtxt,Template) ctxt)
+	{
+		surrogateMsgHandlerCtxt_ = ctxt;
+	}
+	
+	package void unsetMsgHandlerCtxt()
+	{
+		surrogateMsgHandlerCtxt_ = null;
+	}
+	
+	private IHandlerCtxt!(TemplateCtxt,Template) surrogateMsgHandlerCtxt_;
+	private SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
+	package SenderoFilteredRenderMsgsNode!(TemplateCtxt,Template)[] preHandlers_;
 	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
 		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
