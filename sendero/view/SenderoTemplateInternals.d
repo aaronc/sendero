@@ -10,34 +10,30 @@ import sendero_base.xml.XmlNode;
 import sendero_base.Set;
 import sendero.vm.Bind;
 import sendero.vm.Expression;
-public import sendero.view.LocalText;
 import sendero.xml.XPath;
 import sendero_base.util.StringCharIterator;
 import sendero_base.util.ArrayWriter;
 import sendero.util.collection.NestedMap;
 import sendero.Exception;
+public import sendero.view.LocalText;
+public import sendero.msg.Msg;
 
 import tango.io.File;
 import tango.io.FilePath;
 import tango.text.Util;
 import Integer = tango.text.convert.Integer;
-debug import tango.io.Stdout;
-
-debug(SenderoViewDebug) {
+debug {
 	import sendero.Debug;
 	
 	Logger log;
 	static this()
 	{
-		log = Log.lookup("debug.SenderoView");
+		log = Log.lookup("sendero.view.SenderoTemplateInternals");
 	}
 }
 
-version(SenderoTemplateMsgs)
-{
-	public import sendero.msg.Msg;
-	import sendero.view.TemplateMsgs;
-}
+import sendero.msg.Msg;
+import sendero.view.TemplateMsgs;
 
 class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : DefaultTemplateContext!(TemplateCtxt, Template)
 {
@@ -45,19 +41,10 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	{
 		super(tmpl);
 		execCtxt = new ExecCtxt(locale);
-		version(SenderoTemplateMsgs)
-		{
-			msgMap = Msg.read;
-			curMsgHandler = null;
-		}
+		msgMap = MsgMap.getInst;
 	}
 	
-	version(SenderoTemplateMsgs)
-	{
-		MsgMap msgMap;
-		ITemplateNode!(TemplateCtxt) curMsgHandler;
-	}
-	
+	MsgMap msgMap;	
 	ExecCtxt execCtxt;
 	Template[] parentTemplates;
 	SenderoBlockContainer!(TemplateCtxt) curBlock;
@@ -83,6 +70,29 @@ class AbstractSenderoTemplateContext(ExecCtxt, TemplateCtxt, Template) : Default
 	version(SenderoTemplateMsgs)
 	{
 		char[][char[]] prerenderedMsgs;
+	}
+	
+	SenderoMsgNode!(TemplateCtxt,Template) getMsgHandler(char[] msgId)
+	{
+		auto pHandler = msgId in tmpl.msgHandlers_;
+		if(pHandler !is null) {
+			return *pHandler;
+		}
+		
+		foreach(parent; parentTemplates)
+		{
+			pHandler = msgId in parent.msgHandlers_;
+			if(pHandler !is null) {
+				return *pHandler;
+			}
+		}
+		
+		pHandler = msgId in Template.defaultMsgHandlers_;
+		if(pHandler !is null) {
+			return *pHandler;
+		}
+		
+		return null;
 	}
 }
 
@@ -111,11 +121,10 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 		engine.addElementProcessor("d", "if", new SenderoIfNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "def", new SenderoDefNodeProcessor!(TemplateCtxt, Template)(engine));
 		engine.addElementProcessor("d", "static", new SenderoStaticNodeProcessor!(TemplateCtxt, Template)(engine));
-		version(SenderoTemplateMsgs)
-		{
-			//engine.addElementProcessor("d", "msgs", new SenderoMsgsNodeProcessor!(TemplateCtxt, Template)(engine));
-			engine.addElementProcessor("d", "msgdef", new SenderoMsgDefProcessor!(TemplateCtxt, Template)(engine));
-		}
+		engine.addElementProcessor("d", "msg", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("msg", engine));
+		engine.addElementProcessor("d", "error", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("error", engine));
+		engine.addElementProcessor("d", "success", new SenderoMsgNodeProcessor!(TemplateCtxt, Template)("success", engine));
+		engine.addElementProcessor("d", "renderMsgs", new SenderoRenderMsgsNodeProcessor!(TemplateCtxt, Template)(engine));
 	}
 	
 	protected static TemplateCompiler!(TemplateCtxt, Template) engine;
@@ -198,60 +207,47 @@ class AbstractSenderoTemplate(TemplateCtxt, Template) : DefaultTemplate!(Templat
 	SenderoBlockContainer!(TemplateCtxt)[char[]] blocks;
 	TemplateCtxt staticCtxt;
 	
+	package void setMsgHandler(SenderoMsgNode!(TemplateCtxt,Template) handler)
+	{
+		if(surrogateMsgHandlerCtxt_ !is null) surrogateMsgHandlerCtxt_.setMsgHandler(handler);
+		else msgHandlers_[handler.msgId] = handler;
+	}
+	
+	package void setMsgHandlerCtxt(IHandlerCtxt!(TemplateCtxt,Template) ctxt)
+	{
+		surrogateMsgHandlerCtxt_ = ctxt;
+	}
+	
+	package void unsetMsgHandlerCtxt()
+	{
+		surrogateMsgHandlerCtxt_ = null;
+	}
+	
+	private IHandlerCtxt!(TemplateCtxt,Template) surrogateMsgHandlerCtxt_;
+	private SenderoMsgNode!(TemplateCtxt,Template)[char[]] msgHandlers_;
+	package IMsgFilter[] preHandlers_;
+	private static SenderoMsgNode!(TemplateCtxt,Template)[char[]] defaultMsgHandlers_;
+		
 	void render(TemplateCtxt templCtxt, Consumer consumer)
 	{
+		// Pre-handle class-field messages
+		foreach(h; preHandlers_)
+		{
+			templCtxt.msgMap.claim(&h.willHandle,cast(Object)h);
+		}
+		
+		// Render template
 		rootNode.render(templCtxt, consumer);
 	}
 	
-	version(SenderoTemplateMsgs)
+	static void importGlobalMsgs(char[] filepath, Locale locale)
 	{
-		static void importGlobalMsgs(char[] filepath, Locale locale)
+		auto t = getTemplate(filepath, locale);
+		foreach(handler;t.msgHandlers_)
 		{
-			auto t = getTemplate(filepath, locale);
-			/*foreach(id, msg; t.msgs)
-				defaultMsgs[id] = msg;*/
-			defaultMsgDef = t.msgDef;
+			debug log.trace("Adding msg handler for {} from {}", handler.msgId, filepath);
+			defaultMsgHandlers_[handler.msgId] = handler;
 		}
-		
-		//static ITemplateNode!(TemplateCtxt)[uint] defaultMsgs;
-		//ITemplateNode!(TemplateCtxt)[uint] msgs;
-		static MsgDef!(TemplateCtxt) defaultMsgDef;
-		MsgDef!(TemplateCtxt) msgDef;
-		//ITemplateNode!(TemplateCtxt)[uint] msgs;
-		
-		//ISenderoMsgsNode!(TemplateCtxt)[char[]] msgScopes;
-/+		NestedMap!(ISenderoMsgsNode) msgScopes;
-		
-		void routeMsgs(MsgMap msgMap)
-		{
-			auto sItr = msgScopes.getIterator;
-			auto mItr =  msgMap.getIterator;
-			
-			while(sItr() && mItr()) {
-				auto res = strcmp(sItr.key, mItr.key);
-				if(res == 0) {
-					sItr++;
-					mItr++;				
-					continue;
-				}
-				while(sItr()) {
-					sItr++;
-					res = strcmp(sItr.key, mItr.key);
-					if(res == 0) {
-						break;
-					}
-					else if(res > 0) {
-						assert(false, "Handle");
-						mItr++;
-						break;
-					}
-				}
-			}
-			while(mItr()) {
-				assert(false, "Handle");
-				mItr++;
-			}
-		}+/
 	}
 }
 

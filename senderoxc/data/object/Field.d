@@ -35,18 +35,62 @@ class FieldCtxt : IStandaloneDecoratorContext
 				&& decorator.params[0].type == VarT.String) {
 			auto name = decorator.params[0].string_;
 			auto f = Field.createField(type, name, objBuilder, resp, decorator);
-			if(f !is null) objBuilder.addField(f, f.index_);
+			if(f !is null) {
+				objBuilder.addField(f, f.index_);
+				if(f.hasSetter) resp.mapper.addMapping(f);
+			}
 		}
 		return null;
 	}
 }
 
-class Field : IField
+class AutoPrimaryKeyCtxt : IStandaloneDecoratorContext
+{
+	this(IObjectBuilder objBuilder, IDataResponder resp)
+	{
+		this.resp = resp;
+		this.objBuilder = objBuilder;
+		this.type = FieldType("UInt","uint", BindType.UInt);
+	}
+	
+	IObjectBuilder objBuilder;
+	IDataResponder resp;
+	FieldType type;
+	
+	IDecoratorResponder init(StandaloneDecorator decorator, DeclarationInfo parentDecl, IContextBinder binder)
+	{
+		if(resp.decl == parentDecl && decorator.params.length
+				&& decorator.params[0].type == VarT.String) {
+			auto name = decorator.params[0].string_;
+			Field.Attributes attr;
+			auto col = Schema.prepColumnInfo(type);
+			col.name = name;
+			
+			char[] pname = name ~ "_";
+			attr.primaryKey = true;
+			attr.setter = false;
+			attr.getter = true;
+			col.primaryKey = true;
+			col.autoIncrement = true;
+							
+			resp.schema.addColumn(col);
+			
+			auto field = new Field(type, name, attr);
+			
+			resp.addMethod(new FunctionDeclaration(name, type.DType));
+			
+			objBuilder.addField(field, field.index_);
+		}
+		return null;
+	}
+}
+
+class Field : IField, IMapping
 {
 	static Field createField(FieldType type, char[] name, IObjectBuilder objBuilder, IDataResponder resp, StandaloneDecorator decorator)
 	{
-		bool getter = true;
-		bool setter = true;
+		Attributes attr;
+		
 		bool map = true;
 		
 		auto col = Schema.prepColumnInfo(type);
@@ -64,14 +108,18 @@ class Field : IField
 				resp.addValidation(new RequiredRes(type.DType, pname));
 				col.notNull = true;
 				break;
-			case "primaryKey": col.primaryKey = true; break;
-			case "autoIncrement": col.autoIncrement = true; setter = false; break;
+			case "primaryKey": col.primaryKey = true; attr.primaryKey = true; break;
+			case "autoIncrement": col.autoIncrement = true; attr.setter = false; break;
 			case "minLength": resp.addValidation(new InstanceValidationRes("MinLengthValidation", pname, toParamString(dec.params))); break;
 			case "maxLength": resp.addValidation(new InstanceValidationRes("MaxLengthValidation", pname, toParamString(dec.params))); break;
 			case "regex": resp.addValidation(new InstanceValidationRes("FormatValidation", pname, toParamString(dec.params))); break;// value = a string literal, class = an identifier
 			case "minValue": resp.addValidation(new InstanceValidationRes("MinValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "maxValue": resp.addValidation(new InstanceValidationRes("MaxValueValidation", pname, toParamString(dec.params), type.DType)); break;
 			case "no_map": map = false; break;
+			case "no_setter": attr.setter = false; break;
+			case "privateSetter": attr.setterProtection = Protection.Private; break;
+			case "protectedSetter": attr.setterProtection = Protection.Protected; break;
+			case "packageSetter": attr.setterProtection = Protection.Package; break;
 			default:
 				break;
 			// validations
@@ -83,12 +131,14 @@ class Field : IField
 		resp.schema.addColumn(col);
 		
 		if(map) {
-			auto field = new Field(type, name, getter, setter);
+			auto field = new Field(type, name, attr);
 			
 			resp.addMethod(new FunctionDeclaration(name, type.DType));
 			
-			if(setter) {
-				resp.addMethod(new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]));
+			if(attr.setter) {
+				auto setter = new FunctionDeclaration(name, "void", [FunctionDeclaration.Param(type.DType)]);
+				setter.setProtection(attr.setterProtection);
+				resp.addMethod(setter);
 			}
 			
 			return field;
@@ -96,12 +146,11 @@ class Field : IField
 		else return null;
 	}
 	
-	this(FieldType type, char[] name, bool getter, bool setter)
+	this(FieldType type, char[] name, Attributes attr)
 	{
 		this.type_ = type;
 		this.name_ = name;
-		this.setter_ = setter;
-		this.getter_ = getter;
+		this.attr_ = attr;
 	}
 	
 	char[] privateName()
@@ -114,43 +163,69 @@ class Field : IField
 		return type_.DType; 
 	}
 	
+	BindType bindType()
+	{
+		return type_.bindType;
+	}
+	
+	char[] fieldAccessor()
+	{
+		return privateName;
+	}
+	
 	private FieldType type_;
 	
 	char[] name() { return name_; }
 	char[] colname() { return name_; }
 	
+	struct Attributes
+	{
+		bool getter = true;
+		bool setter = true;
+		bool primaryKey = false;
+		Protection setterProtection = Protection.Public;
+	}
+	
 	private char[] name_;
-	private bool getter_;
-	private bool setter_;
 	private uint index_;
+	private Attributes attr_;
 	
 	void writeDecl(IPrint wr)
 	{
-		//if(map_) {
-			if(getter_) {
-				wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
-			}
-			
-			if(setter_) {
-				wr.f("public void {}({} val) {{", name_, type_.DType);
-				wr.f("__touched__[{}] = true; {}_ = val;", index_, name_);
-				wr.fln("}");
-			}
-			
-			wr.fln("private {} {}_;", type_.DType, name_);
+		if(attr_.getter) {
+			wr.fln("public {} {}() {{ return {}_; }", type_.DType, name_, name_);
+		}
+		
+		if(attr_.setter) {
+			wr.f("{} void {}({} _val_) {{",
+				DeclarationInfo.printProtection(attr_.setterProtection), name_, type_.DType);
+			wr.f("__touched__[{}] = true; {}_ = _val_;", index_, name_);
+			wr.fln("}");
+		}
+		
+		wr.fln("protected {} {};", type_.DType, privateName);
 
-			wr.nl;
-		//}
+		wr.nl;
 	}
 	
 	bool hasGetter()
 	{
-		return getter_;
+		return attr_.getter;
 	}
 	
 	bool hasSetter()
 	{
-		return setter_;
+		return attr_.setter;
+	}
+	
+	bool isPrimaryKey()
+	{
+		return attr_.primaryKey;
+	}
+	
+	bool httpSet()
+	{
+		return hasSetter;
 	}
 	
 	char[] isModifiedExpr()

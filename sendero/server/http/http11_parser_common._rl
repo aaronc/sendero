@@ -50,6 +50,6 @@
 
   Request = Request_Line ( message_header )* ( CRLF @done );
 
-main := Request;
+main := Request $eof(action_eof);
 
 }%%

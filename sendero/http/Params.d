@@ -100,23 +100,6 @@ IObject parseParams(char[] str, IObject existingObj = null)
 	return resParams;
 }
 
-/**
- * Parses a set of cookies sent by the client to the server into an associative array.
- */
-char[][char[]] parseCookies(char[] str)
-{
-	char[][char[]] params;
-	foreach(pair; patterns(str, "; "))
-	{
-		uint pos = locate(pair,'=');
-		if(pos >= pair.length)
-			params[ pair[ 0 .. pos] ] = "";
-		else
-			params[ pair[ 0 .. pos] ] = pair[ pos+1 .. $ ];
-	}
-	return params;
-}
-
 debug(SenderoUnittest)
 {
 
@@ -154,10 +137,6 @@ unittest
 	assert(v.type == VarT.String && v.string_ == "orange");
 	v = get2["fruit"].array_[2];
 	assert(v.type == VarT.String && v.string_ == "pineapple");
-	
-	auto cookies = parseCookies("sg=23shjgt; sgkjg=aby839");
-	assert(cookies["sg"] == "23shjgt");
-	assert(cookies["sgkjg"] == "aby839");
 }
 
 }

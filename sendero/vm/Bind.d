@@ -1,14 +1,13 @@
 module sendero.vm.Bind;
 
+import tango.core.Traits;
+import tango.time.Time;
+import tango.time.chrono.Gregorian;
+
 import sendero_base.Core;
 import sendero_base.Set;
 
 import sendero.util.Reflection;
-
-import tango.core.Traits;
-
-import tango.time.Time;
-import tango.time.Clock;
 
 void bind(T)(ref Var var, T val)
 {
@@ -17,7 +16,7 @@ void bind(T)(ref Var var, T val)
 	else static if(is(T == DateTime))
 	{
 		var.type = VarT.Time;
-		var.time_ = Clock.fromDate(val);
+		var.time_ = Gregorian.generic.toTime(val);
 	}
 	else static if(isDynamicArrayType!(T)) {
 		var.type = VarT.Array;
@@ -32,11 +31,11 @@ void bind(T)(ref Var var, T val)
 		var.type = VarT.Object;
 		var.obj_ = new ClassBinding!(T)(val);
 	}
-	else static if(is(typeof(*val) == struct))
+	/+else static if(is(typeof(*val) == struct))
 	{
 		var.type = VarT.Object;
 		var.obj_ = new ClassBinding!(T, true)(val);
-	}
+	}+/
 	else static assert(false, "Unable to bind variable of type " ~ T.stringof);
 }
 
@@ -151,11 +150,6 @@ class AssocArrayVar(T) : IObject, IClassBinding
 	}
 }
 
-interface IVarFilter
-{
-	Var filter(Var v);
-}
-
 struct VarInfo
 {
 	ClassVarT type;
@@ -165,7 +159,6 @@ struct VarInfo
 		IDynArrayBinding arrayBinding;
 	}
 	size_t offset;
-	IVarFilter filter;
 }
 
 ClassVarT getClassVarT(X)()
@@ -212,7 +205,7 @@ ClassVarT getClassVarT(X)()
 	else static if(isAssocArrayType!(X)) {
 		return ClassVarT.AssocArray;
 	}
-	else static if(is(X == DateTime))
+	else static if(is(X : DateTime))
 	{
 		return ClassVarT.DateTime;
 	}
@@ -267,9 +260,9 @@ class ClassBinding(T, bool isStruct = false) : IObject, IClassBinding
 	static void init()
 	{
 		auto v = new VarBindingVisitor;
-		T t;
-		static if(!isStruct) t = new T;
-		ReflectionOf!(T).visitTuple(t, v);
+		T inst;
+		static if(!isStruct) inst = new T;
+		ReflectionOf!(T).visitTuple(inst, v);
 		auto fields = ReflectionOf!(T).fields;
 		foreach(f; fields)
 		{
@@ -287,16 +280,26 @@ class ClassBinding(T, bool isStruct = false) : IObject, IClassBinding
 	private static VarInfo[char[]] bindInfo;
 	private static Var[char[]] validationInfo;
 	
+	
+	
+	static if(isStruct)
+	{
+		private this() { }
+	}
+	else
+	{
+		this(T t)
+		{
+			this.t = t;
+		}
+	}
+	
 	private this(void* ptr)
 	{
 		t = cast(T)ptr;
 	}
 	
 	private T t;
-	this(T t)
-	{
-		this.t = t;
-	}
 	
 	IObject createInstance(void* ptr)
 	{

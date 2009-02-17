@@ -43,7 +43,7 @@ file "test_server_client.exe" => SRC do
 end
 
 task :senderoxc => SENDEROXC_SRC do
-  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_sqlite -version=dbi_mysql -ofbin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP -g"
+  sh "rebuild senderoxc/Main.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -I../ddbi -version=dbi_mysql -ofbin/senderoxc -debug -debug=SenderoXCUnittest -L/DETAILEDMAP -g -version=Tango_0_99_7"
 end
 
 task :senderoxc_posix => SENDEROXC_SRC do
@@ -51,7 +51,7 @@ task :senderoxc_posix => SENDEROXC_SRC do
 end
 
 task :senderoimp => SENDEROXC_SRC do
-  sh "rebuild senderoxc/util/ImportPrinter.d -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -ofbin/senderoimp -version=SenderoXCImportPrinter"
+  sh "rebuild senderoxc/util/ImportPrinter.d -debug -oqrebuild_objs -I../sendero_base -I../decorated_d -I../qcf -ofbin/senderoimp -version=SenderoXCImportPrinter -version=Tango_0_99_7"
 end
 
 task :build => ["test_sendero.exe"]

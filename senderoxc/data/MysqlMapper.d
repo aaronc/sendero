@@ -5,6 +5,7 @@ import senderoxc.data.mapper.mysql.IMysqlMapper;
 import senderoxc.data.IDataResponder;
 
 import senderoxc.data.mapper.mysql.Delete;
+import senderoxc.data.mapper.mysql.Save;
 
 import sendero.core.Config;
 
@@ -23,20 +24,25 @@ class MysqlMapper : Mapper, IMysqlMapper
 	protected this(char[] className, IDataResponder res)
 	{
 		super(className, res);
-		db_ = cast(MysqlDatabase)getDatabaseForURL(SenderoConfig().dbUrl);
+		db_ = cast(Mysql)getDatabaseForURL(SenderoConfig().dbUrl);
 		assert(db_, "Database is not of type Mysql");
 	}
 	
-	MysqlDatabase db() { return db_; }
-	private MysqlDatabase db_;
+	Mysql db() { return db_; }
+	private Mysql db_;
 	
-	void writeDBAlias(IPrint wr)
+	/+void writeDBAlias(IPrint wr)
 	{
 		wr.fln("alias DefaultMysqlProvider db;");
-	}
+	}+/
 	
-	IMapperResponder getDeleteResponder()
+	/+IMapperResponder getDeleteResponder()
 	{
 		return new MysqlDeleteResponder(this);
-	}
+	}+/
+	
+	/+IMapperResponder getSaveResponder()
+	{
+		return new MysqlSaveResponder!()(this);
+	}+/
 }

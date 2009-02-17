@@ -17,6 +17,8 @@ import sendero.http.Request;
 
 import sendero.util.collection.StaticBitArray;+/
 
+import sendero.view.SenderoTemplate;
+import sendero.msg.Msg;
 import sendero.util.collection.SingleReaderQueue;
 
 import qcf.TestRunner;

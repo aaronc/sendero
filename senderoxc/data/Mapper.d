@@ -4,7 +4,7 @@ import senderoxc.data.mapper.IMapper;
 import senderoxc.data.IDataResponder;
 
 import sendero.core.Config;
-import dbi.all;
+import dbi.DBI;
 
 import senderoxc.data.mapper.Delete;
 import senderoxc.data.mapper.Save;
@@ -55,7 +55,8 @@ class Mapper : IMapper
 	
 	void writeDBAlias(IPrint wr)
 	{
-		wr.fln("alias DefaultDatabaseProvider db;");
+		//wr.fln("alias DefaultDatabaseProvider db;");
+		wr.fln("alias mainDBProvider getDb;");
 	}
 	
 	IMapperResponder getDeleteResponder()
@@ -70,19 +71,27 @@ class Mapper : IMapper
 	
 	final void init()
 	{
-		responders ~= getDeleteResponder;
-		//responders ~= getSaveResponder;
+		void add(IMapperResponder responder)
+		{
+			if(responder !is null)
+				responders ~= responder;
+		}
+		
+		add(getDeleteResponder);
+		add(getSaveResponder);
 	}
 	
 	final void write(IPrint wr)
 	{
+		wr.newline;
 		writeDBAlias(wr);
+		wr.newline;
 		
 		foreach(resp; responders)
 			resp.write(wr);
 	}
 	
-	final char[][] getPrimaryKeyFields()
+	deprecated final char[][] getPrimaryKeyFields()
 	{
 		return schema.getPrimaryKeyCols();
 	}
@@ -96,4 +105,17 @@ class Mapper : IMapper
 	{
 		iface_.addMethod(decl);
 	}
+	
+	final void addMapping(IMapping mapping)
+	{
+		mappings_ ~= mapping;
+		if(mapping.isPrimaryKey) primaryKeyFields_ ~= mapping;
+	}
+	
+	final IMapping[] mappings()
+	{
+		return mappings_;
+	}
+	
+	IMapping[] mappings_;
 }

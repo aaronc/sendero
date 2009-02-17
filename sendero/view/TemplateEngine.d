@@ -7,9 +7,17 @@ module sendero.view.TemplateEngine;
 
 public import sendero_base.xml.XmlNode;
 
-debug import tango.io.Stdout;
+debug {
+	import sendero.Debug;
+	
+	Logger log;
+	static this()
+	{
+		log = Log.lookup("sendero.view.TemplateEngine");
+	}
+}
 
-alias void delegate(void[]) Consumer;
+alias void delegate(void[][] strs...) Consumer;
 
 interface ITemplateNode(TemplateCtxt)
 {
@@ -33,7 +41,8 @@ class TemplateContainerNode(TemplateCtxt) : ITemplateNode!(TemplateCtxt)
 		auto container = new TemplateContainerNode!(TemplateCtxt);
 		foreach(child; node.children)
 		{
-			container.children ~= proc(child, tmpl);
+			auto node = proc(child, tmpl);
+			if(node !is null) container.children ~= node; 
 		}
 		return container;
 	}
@@ -171,7 +180,8 @@ class DefaultElemProcessor(TemplateCtxt, Template) : INodeProcessor!(TemplateCtx
 		
 		foreach(child; node.children)
 		{
-			elem.children ~= childProcessor(child, tmpl);
+			auto resNode = childProcessor(child, tmpl);
+			if(resNode !is null) elem.children ~= resNode;
 		}
 		
 		return elem;
@@ -249,9 +259,13 @@ class TemplateCompiler(TemplateCtxt, Template) : INodeProcessor!(TemplateCtxt, T
 			auto procs = node.prefix in elemProcessors;
 			if(procs) {
 				auto proc = node.localName in *procs;
-				if(proc) return proc.process(node, tmpl);
-				proc = "" in *procs;
-				if(proc) return proc.process(node, tmpl);
+				if(proc) {
+					debug(SenderoViewDebug)
+					log.trace("Calling element processor for {}:{}",node.prefix,node.localName);
+					return proc.process(node, tmpl);
+				}
+				/+proc = "" in *procs;
+				if(proc) return proc.process(node, tmpl);+/
 			}
 			
 			

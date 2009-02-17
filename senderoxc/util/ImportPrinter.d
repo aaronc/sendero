@@ -2,6 +2,8 @@ module senderoxc.util.ImportPrinter;
 
 import senderoxc.Compiler;
 
+import tango.util.Arguments;
+
 class ImportPrinter
 {
 	this(SenderoXCompiler mod)
@@ -55,18 +57,36 @@ version(SenderoXCImportPrinter)
 	import tango.io.Stdout;
 	import tango.io.File;
 	
-	int main(char[][] args)
+	int main(char[][] cmdLn)
 	{
-		if(args.length > 1) {
-			SenderoConfig.load(args[1]);
-			SenderoXCConfig.load(args[1]);
-			auto compiler = SenderoXCompiler.create(SenderoXCConfig().modname);
+		if(cmdLn.length > 2) {
+			SenderoXCompiler compiler;
+			if(cmdLn[1] == "config") {
+				SenderoConfig.load(cmdLn[2]);
+				SenderoXCConfig.load(cmdLn[2]);
+				compiler = SenderoXCompiler.create(SenderoXCConfig().modname);
+			}
+			else {
+				auto args = new Arguments;
+				args.define("I").callback((char[] n, char[] p) {
+					SenderoXCConfig().includeDirs ~= p;
+				});
+				args.parse(cmdLn[1..$]);
+				compiler = SenderoXCompiler.create(cmdLn[2]);
+			}
 			auto ip = new ImportPrinter(compiler);
 			char[] res;
 			ip.print((char[] val){res ~= val;});
 			Stdout(res);
 			auto f = new File("senderoimp.dump");
 			f.write(res);
+		}
+		else {
+			Stdout.formatln("Sendero Import Printer").newline;
+			Stdout.formatln("Usage: senderoimp <module name>");
+			Stdout.formatln("Example: senderoimp sendero.core.Main");
+			Stdout.formatln("Ouput is printed to stdout and saved to a file"
+					" called senderoimp.dump in graphviz format.");
 		}
 		return 0;
 	}

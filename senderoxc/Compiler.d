@@ -1,8 +1,12 @@
 module senderoxc.Compiler;
 
-import tango.io.File, tango.io.device.FileConduit, tango.io.Path, tango.io.FilePath;
+import tango.io.File, tango.io.Path, tango.io.FilePath;
+version(Tango_0_99_7) import tango.io.FileConduit;
+else import tango.io.device.FileConduit;
 import tango.io.Stdout;
-import tango.util.log.Config;
+import tango.util.log.Log;
+debug import tango.util.log.Config;
+debug import tango.io.FileSystem;
 import Util = tango.text.Util;
 import sendero_base.util.ArrayWriter;
 
@@ -10,6 +14,7 @@ import decorated_d.compiler.Main;
 
 import senderoxc.Config;
 import senderoxc.Reset;
+import senderoxc.Exception;
 
 import senderoxc.builder.Build;
 import senderoxc.builder.Linker;
@@ -59,6 +64,11 @@ class SenderXCConfigProvider
 	}
 }
 
+private Logger log;
+static this() {
+	log = Log.lookup("senderoxc.Compiler");
+}
+
 class SenderoXCompiler
 {
 	this(char[] modname, DecoratedDCompiler compiler, char[] dirname = null)
@@ -96,10 +106,11 @@ class SenderoXCompiler
 			auto sdxname = fname ~ ".sdx";
 			
 			if(exists(sdxname)) {
+				debug log.trace("Found sdx file {}", "./" ~ sdxname);
 				filename = sdxname;
 				isSDX = true;
 				return true;
-			}
+			} else debug Stdout.format("Can't find sdx file {} in {}\n", sdxname, FileSystem.getDirectory);
 			
 			foreach(includeDir; SenderoXCConfig().includeDirs)
 			{
@@ -138,6 +149,7 @@ class SenderoXCompiler
 
 		void onFindImportCallback(char[] modname)
 		{
+			debug log.trace("Found import {}", modname);
 			imports ~= modname;
 		}
 		
@@ -154,19 +166,21 @@ class SenderoXCompiler
 			assert(compiler);
 			//compiler.onImportStatement.attach((char[] modname){ imports ~= modname; });
 			compiler.onImportStatement.attach(&onFindImportCallback);
-			assert(compiler.parse);
+			if(!compiler.parse)
+				throw new SenderoXCParseException(fname);
 			compiler.build;
 			
 			return compiler;
 		}
 		
-		Stdout.formatln("Looking for module {}", modname);
+		debug log.trace("Looking for module {}", modname);
 		
 		char[] filename, dirname;
 		bool isSDX;
 		
 		if(openModule(modname, filename, isSDX, dirname))
 		{
+			debug log.trace("Found module {} in {}", modname, filename);
 			auto compiler = createDDCompiler(filename);
 			if(isSDX) {
 				auto sxcompiler = new SenderoXCompiler(modname, compiler, dirname);
@@ -183,7 +197,10 @@ class SenderoXCompiler
 				return dcompiler;
 			}
 		}
-		else return null;
+		else {
+			debug log.trace("Unable to find module {}", modname);
+			return null;
+		}
 	}
 	
 	const char[] modname, dirname;

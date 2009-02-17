@@ -7,241 +7,470 @@ module sendero.msg.Msg;
 
 import tango.core.Thread;
 
-public import sendero.util.collection.NestedMap;
-public import sendero.util.collection.SimpleList;
+import sendero_base.Core;
+import sendero_base.util.collection.Hash;
+
 import sendero.core.Memory;
+import sendero.vm.Bind;
 
-public alias NestedMap!(Msg, SessionAllocator) MsgMap;
-public alias SimpleList!(Msg, SessionAllocator) MsgList;
-
-abstract class Msg
-{
-	static uint registerClass(char[] classname)
+/**
+ * 
+ */
+class Msg : SessionObject
+{	
+	private this(char[] msgId, Var[] params, Msg parent = null)
 	{
-		synchronized
+		msgId_ = msgId;
+		params_ = params;
+		if(parent !is null) {
+			this.list_ = parent.list_;
+			this.parent_ = parent;
+		}
+		else this.list_ = new MsgList(this);
+	}
+	
+	//
+	final char[] msgId() { return msgId_; }
+	private char[] msgId_;
+	
+	//
+	final Var[] params() { return params_; }
+	private Var[] params_;
+	
+	//
+	final char[] classname() { return classname_; }
+	private char[] classname_;
+	
+	//
+	final char[] fieldname() { return fieldname_; }
+	private char[] fieldname_;
+	
+	private Msg append(Var[] p)
+	{
+		next_ = new Msg(this.msgId, p, this);
+		return next_;
+	}
+	
+	private Msg parent_ = null;
+	private Msg next_ = null;
+	
+	static private class MsgList {
+		private this(Msg head) { this.head = head; }
+		Msg head;
+	}
+	
+	private MsgList list_;
+	
+	invariant
+	{
+		assert(list_ !is null);
+	}
+	
+	private Msg remove()
+	in {
+		assert(list_.head !is null);
+	}
+	body {
+		if(this == list_.head) {
+			debug assert(parent_ is null);
+			list_.head = next_;
+			if(next_ !is null) next_.parent_ = null;
+			return next_;
+		}
+		else {
+			debug assert(list_ !is null && this != list_.head);
+			debug assert(parent_ !is null);
+			parent_.next_ = next_;
+			if(next_ !is null) next_.parent_ = parent_;
+			return next_;
+		}
+	}
+	
+	//
+	final Object handler() { return handler_; }
+	
+	//
+	final bool handle(Object obj) {
+		if(handler_ is null) {
+			handler_ = obj;
+			return true;
+		}
+		else if(handler_ == obj) return true;
+		else return false;
+	}
+	private Object handler_;
+	
+	//
+	static MsgSignature[] signatures;
+	
+	version(DDoc) {
+		/**
+		 * Posts a msg with id msgId and variadic arguments.
+		 * 
+		 * Example:
+		 * ---
+		 * Post.msg!("UnknownUser")("bob");
+		 * ---
+		 * 
+		 * MsgId is a template parameter so that all
+		 * known messages id's can be tracked by hidden static
+		 * constructors.
+		 *
+		 */
+		static void post(char[] msgId)(...)
 		{
-			auto pCl = classname in registeredClasses;
-			if(!pCl) {
-					auto reg = new ClassRegistration;
-					reg.id = registeredClasses.length + 1;
-					reg.cls = classname;
-					registeredClasses[classname] = reg;
-					registeredClassesByID[reg.id] = reg;
-					return reg.id;
+			
+		}
+	}
+	else {
+		static struct post(char[] msgId)
+		{
+			static void opCall(ParamsT...)(ParamsT params)
+			{
+				debug MsgSignatureCollector!(msgId,ParamsT) sig;
+				Var[] vParams;
+				vParams.length = ParamsT.length;
+				foreach(idx,ParamT; ParamsT)
+				{
+					bind(vParams[idx],params[idx]);
+				}
+				MsgMap.post(msgId,vParams);
 			}
-			return pCl.id;
 		}
 	}
-	
-	void register(char[] classname)
+}
+/**
+ * Alias for Msg
+ */
+alias Msg Error;
+
+static struct ClassFieldPost(char[] msgId, char[] classname, char[] fieldname)
+{
+	static void opCall(ParamsT...)(ParamsT params)
 	{
-		auto pCl = classname in registeredClasses;
-		if(pCl) {
-			id = pCl.id;
-			return;
+		debug MsgClassFieldSignatureCollector!(msgId,classname,fieldname,ParamsT) sig;
+		Var[] vParams;
+		vParams.length = ParamsT.length;
+		foreach(idx,ParamT; ParamsT)
+		{
+			bind(vParams[idx],params[idx]);
 		}
-		auto x = registerClass(classname);
-		if(id) {
-			pCl = classname in registeredClasses;
-			if(!pCl) throw new Exception("Unable to find classname after registering");
-			pCl.parent = id;
-		}
-		id = x;
+		MsgMap.postFor(classname, fieldname, msgId,vParams);
 	}
-	
-	char[][char[]] getProperties()
-	{
-		return null;
-	}
-	
-	static uint getClassID(char[] classname)
-	{
-		auto pCl = classname in registeredClasses;
-		if(!pCl) return 0;
-		return pCl.id;
-	}
-	
-	static uint getParentID(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) return pCl.parent;
-		return 0;
-	}
-	
-	static char[] getClassName(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) return pCl.cls;
-		return null;
-	}
-	
-	static ClassRegistration getClassReg(uint id)
-	{
-		auto pCl = id in registeredClassesByID;
-		if(pCl) {
-			return *pCl;
-		}
-		return null;
-	}
-	
-	static class ClassRegistration
-	{
-		uint id;
-		uint parent = 0;
-		char[] cls;
-	}
-	
-	static ClassRegistration[char[]] registeredClasses;
-	static ClassRegistration[uint] registeredClassesByID;
-	
-	uint id = 0;
-	
-	debug uint[] idTree()
-	{
-		auto pCl = id in registeredClassesByID;
-		assert(pCl);
-		uint[] res;
-		assert(pCl.id == id);
-		res ~= pCl.id;
-		auto cr = getClassReg(pCl.parent);
-		while(cr) {
-			res ~= cr.id;
-			cr = getClassReg(cr.parent);
-		}
-		return res;
-	}
-	
-	debug char[][] clsTree()
-	{
-		auto ids = idTree;
-		char[][] res;
-		foreach(id; ids)
-			res ~= getClassName(id);
-		return res;
-	}
-	
-	private static ThreadLocal!(MsgMap) msgMaps;
+}
+
+/**
+ * 
+ */
+class MsgMap : SenderoMap!(Msg)
+{
 	static this()
 	{
 		msgMaps = new ThreadLocal!(MsgMap);
 	}
+	private static ThreadLocal!(MsgMap) msgMaps;
 	
-	static void set(Msg msg)
-	{
+	protected static MsgMap getInst()
+	out(result) {
+		assert(result !is null);
+	}
+	body {
 		auto map = msgMaps.val;
-		map.add(msg);
-		msgMaps.val = map;
+		if(map is null) {
+			map = new MsgMap;
+			msgMaps.val = map;
+		}
+		return map;
 	}
 	
-	static void set(MsgList msgList)
+	protected static Msg post(char[] msgId, Var[] params)
 	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(msgList);
-		msgMaps.val = map;
+		auto inst = getInst;
+		auto pMsg = msgId in inst;
+		if(pMsg) {
+			*pMsg = (*pMsg).append(params);
+			return *pMsg;
+		}
+		else {
+			auto msg = new Msg(msgId,params);
+			inst.add(msgId, msg);
+			return msg;
+		}
 	}
 	
-	static void set(MsgMap msgMap)
+	protected static Msg postFor(char[] classname, char[] fieldname, char[] msgId, Var[] params)
 	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(msgMap);
-		msgMaps.val = map;
+		auto msg = post(msgId,params);
+		msg.classname_ = classname;
+		msg.fieldname_ = fieldname;
+		return msg;
 	}
 	
-	static void set(char[] scope_, Msg msg)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.add(scope_, msg);
-		msgMaps.val = map;
-	}
-	
-	static void set(char[] scope_, MsgList msgList)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(scope_, msgList);
-		msgMaps.val = map;
-	}
-	
-	static void set(char[] scope_, MsgMap msgMap)
-	{
-		auto map = msgMaps.val;
-		msgMaps.val.merge(scope_, msgMap);
-		msgMaps.val = map;
-	}
-	
-	alias set post;
-	
-	static MsgMap read()
-	{
-		return msgMaps.val;
-	}
-	
+	/**
+	 * Clears all messages from the message list
+	 *
+	 */
 	static void clear()
 	{
-		msgMaps.val.reset;
+		auto inst = getInst;
+		//TODO this should be inst.clear - but that hangs
+		if(!inst.isEmpty) inst.reset;
 	}
-}
-
-
-interface IMsgSource
-{
-	MsgMap getMsgs();
-	alias getMsgs getErrors;
-}
-
-
-class Success : Msg
-{
-	this()
+	
+	/**
+	 * 
+	 * Params:
+	 *     readDg = delegate to receieve messages that have been sent,
+	 *     	returns true if it has read the message and wants it deleted
+	 *     	from the list of messages
+	 */
+	static void read(bool delegate(char[] msgId, Msg msg) readDg)
 	{
-		register("Success");
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg pMsg;
+		while(itr.next(key,pMsg)) {
+			debug assert(pMsg !is null && pMsg.list_ !is null);
+			auto msg = pMsg.list_.head;
+			auto list = pMsg.list_;
+			do {
+				Stdout.formatln("Sending {}",msg.msgId);
+				if(readDg(key,msg)) {
+					msg = msg.remove;
+				}
+				else msg = msg.next_;
+			} while(msg !is null)
+			if(list.head is null) itr.remove;
+			else pMsg = list.head;
+		}
+	}
+	
+	/**
+	 * Reads messages for the class specified 
+	 * 
+	 * Params:
+	 *     classname = name of the class to receive messages for
+	 *     readDg = see above
+	 */
+	static void read(char[] classname, bool delegate(char[] msgId, Msg msg) readDg)
+	{
+		read(classname, null, readDg);
+	}
+	
+	/**
+	 * /**
+	 * Reads messages for the class and field specified 
+	 * 
+	 * Params:
+	 *     classname = name of the class to receive messages for
+	 *     fieldname = name of the field to receive messages for
+	 *     readDg = see above
+	 */
+	static void read(char[] classname, char[] fieldname, bool delegate(char[] msgId, Msg msg) readDg)
+	{
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg pMsg;
+		while(itr.next(key,pMsg)) {
+			debug assert(pMsg !is null && pMsg.list_ !is null);
+			auto msg = pMsg.list_.head;
+			auto list = pMsg.list_;
+			do {
+				if(msg.classname == classname &&
+					(!fieldname.length || msg.fieldname == fieldname)) {
+					if(readDg(key,msg)) {
+						msg = msg.remove;
+					}
+					else msg = msg.next_;
+				}
+				else msg = msg.next_;
+			} while(msg !is null)
+			if(list.head is null) itr.remove;
+			else pMsg = list.head;
+		}
+	}
+	
+	/**
+	 * Claims msgs for the given classname, fieldname, and handler.
+	 * 
+	 * Marks each message that matched the given criteria with the provided
+	 * handler, so that other message handlers do not process them.
+	 * 
+	 * If fieldname is null or zero-length, it is ignored.
+	 */
+	static void claim(char[] classname, char[] fieldname, Object handler)
+	in {
+		assert(handler !is null);
+	}
+	body {
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg msg;
+		while(itr.next(key,msg)) {
+			debug assert(msg !is null && msg.list_ !is null);
+			msg = msg.list_.head;
+			do {
+				if(msg.classname == classname &&
+					(!fieldname.length || msg.fieldname == fieldname))
+					msg.handle(handler);
+				msg = msg.next_;
+			} while(msg !is null)
+		}
+	}
+	
+	static void claim(bool delegate(Msg) filter, Object handler)
+	in {
+		assert(handler !is null);
+	}
+	body {
+		auto itr = getInst.iterator;
+		char[] key;
+		Msg msg;
+		while(itr.next(key,msg)) {
+			debug assert(msg !is null && msg.list_ !is null);
+			msg = msg.list_.head;
+			do {
+				if(filter(msg))
+					msg.handle(handler);
+				msg = msg.next_;
+			} while(msg !is null)
+		}
 	}
 }
 
-class CreateSuccess : Success
+/**
+ * 
+ */
+struct MsgSignature
 {
-	this()
+	//
+	char[] id;
+	//
+	char[] params;
+	//
+	char[] classname;
+	//
+	char[] fieldname;
+}
+
+struct MsgSignatureCollector(char[] msgId, ParamsT...)
+{
+	static this()
 	{
-		register("CreateSuccess");
+		Msg.signatures ~= MsgSignature(msgId,ParamsT.stringof);
 	}
 }
 
-class SaveSuccess : Success
+struct MsgClassFieldSignatureCollector(char[] msgId, char[] className, char[] fieldName, ParamsT...)
 {
-	this()
+	static this()
 	{
-		register("SaveSuccess");
+		Msg.signatures ~= MsgSignature(msgId,ParamsT.stringof,className,fieldName);
 	}
 }
 
-class FieldMsgs : Msg
-{
-	this(char[] field, Msg[] msgs)
-	{
-		register("FieldMsgs");
-		this.field = field;
-		this.msgs = msgs;
-	}
-	char[] field;
-	Msg[] msgs;
-}
 
 debug(SenderoUnittest)
 {
-	import tango.util.Convert;
 	import tango.io.Stdout;
+	
+	class Test
+	{
+		template postMsg(char[] msgId, char[] fieldname = null) {
+			alias ClassFieldPost!(msgId,"Test",fieldname) postMsg;
+		}
+		alias postMsg postError;
+		
+		void test()
+		{
+			postError!("TestClassError")(1);
+			postError!("TestClassFieldError","x")(1);
+		}
+
+		int x;
+	}
 	
 	unittest
 	{
-		Msg.clear;
-		Stdout("before post").newline;
-		Msg.set(new Success);
-		Stdout("after post").newline;
-		auto map = Msg.read;
-		Msg[] res;
-		foreach(msg; map) {
-			Stdout(msg.toString);
-			res ~= msg;
+		// Test posting and retrieval
+		MsgMap.clear;
+		Msg.post!("TestMsg")(5);
+		Msg.post!("TestMsg")(7,"hello");
+		/+auto msg = MsgMap.capture("TestMsg");
+		assert(msg !is null);
+		assert(msg.params.length == 1);
+		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 5);
+		msg = msg.next;
+		assert(msg !is null);
+		assert(msg.params.length == 2);
+		assert(msg.params[0].type == VarT.Number && msg.params[0].number_ == 7);
+		assert(msg.params[1].type == VarT.String && msg.params[1].string_ == "hello", msg.params[1].string_);
+		assert(msg.next is null);+/
+		
+//		Test class-field messages
+		auto test = new Test;
+		test.test;
+		
+		int count = 0;
+		MsgMap.read((char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			if(id == "TestMsg") {
+				++count;
+				return true;
+			}
+			else return false;
+		});
+		assert(count == 2);
+		
+		count = 0;
+		MsgMap.read((char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			++count;
+			return false;
+		});
+		assert(count == 2);
+		count = 0;
+		MsgMap.read("Test",(char[] id, Msg msg) {
+			Stdout.formatln("Got {}",id);
+			++count;
+			return false;
+		});
+		assert(count == 2);
+		count = 0;
+		MsgMap.read("Test","x",(char[] id, Msg msg) {
+			++count;
+			return false;
+		});
+		assert(count == 1);
+		count = 0;
+		MsgMap.read("User","name",(char[] id, Msg msg) {
+			++count;
+			return false;
+		});
+		assert(count == 0);
+		
+		// Test signatures
+		int found = 0;
+		foreach(sig; Msg.signatures)
+		{
+			//Stdout.formatln("{}:{}",sig.id,sig.params);
+			if(sig.id == "TestMsg") {
+				if(sig.params == "(int)") ++found;
+				if(sig.params == "(int, char[5u])") ++found;
+			}
+			if(sig.id == "TestClassError") {
+				assert(sig.params == "(int)");
+				assert(sig.classname == "Test");
+				assert(sig.fieldname == "");
+				++found;
+			}
+			if(sig.id == "TestClassFieldError") {
+				assert(sig.params == "(int)");
+				assert(sig.classname == "Test");
+				assert(sig.fieldname == "x");
+				++found;
+			}
 		}
-		assert(res.length == 1, to!(char[])(res.length));
+		assert(found == 4);
 	}
 }

@@ -1,40 +1,44 @@
 //import qcf.reflectioned;
 
+import sendero.server.http.Http11Parser;
+import sendero.http.Request;
 import sendero.server.EventDispatcher;
 import sendero.server.runtime.SafeRuntime;
 //import sendero.server.SimpleTest;
-import sendero.server.responder.TcpServer;
+import sendero.server.tcp.TcpServer;
 import sendero.server.WorkerPool;
-import sendero.server.http.Http11Parser;
-import sendero.server.provider.WorkerPoolTcpServiceProvider;
+//import sendero.server.provider.WorkerPoolTcpServiceProvider;
 import sendero.server.runtime.StackTrace;
 //import sendero.server.TimerDispatcher;
 import sendero.server.runtime.HeartBeat;
 
 import Int = tango.text.convert.Integer;
+//import tango.util.log.Config;
 import tango.stdc.stdlib;
-import tango.stdc.errno;
-import tango.sys.Process;
-
-debug import tango.util.log.Config;
-
 version(Windows) {}
 else {
 import tango.stdc.posix.unistd;
 }
+import tango.stdc.errno;
+import tango.sys.Process;
 
 import tango.core.Thread;
 
 static this()
 {
+version(Windows) {}
+else {
 	Symbol.loadObjDumpSymbols("test_server.symbols");
+}
 }
 
 class TestProvider : ITcpServiceProvider
 {
 	ITcpRequestHandler getRequestHandler()
 	{
-		return new TestRequestHandler;
+		//return new TestRequestHandler;
+		auto handler = &(new TestSenderoRequestHandler).handle;
+		return new Http11Handler(new Request(handler));
 	}
 	
 	void cleanup(ITcpRequestHandler handler)
@@ -45,10 +49,11 @@ class TestProvider : ITcpServiceProvider
 
 class TestRequestHandler : ITcpRequestHandler
 {
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	SyncTcpResponse handleRequest(StagedReadBuffer buffer, ITcpCompletionPort completionPort)
 	{
 		auto res = new SyncTcpResponse;
-		char[] txt = "Hello Sendero Server World!\r\n";
+		char[] txt = "Hello Sendero Server World!<br><br>";
+		txt ~= cast(char[])buffer.getReadable;
 		char[] resTxt = "HTTP/1.x 200 OK\r\n";
 		resTxt ~= "Content-Type: text/html\r\n";
 		resTxt ~= "Content-Length: " ~ Int.toString(txt.length) ~ "\r\n";
@@ -56,6 +61,43 @@ class TestRequestHandler : ITcpRequestHandler
 		resTxt ~= txt;
 		res.data ~= resTxt;
 		return res;
+	}
+}
+
+class TestSenderoRequestHandler
+{
+	void handle(Request req)
+	{
+		char[] res = "<html><head><title>Sendero Server Test</title></head><body>";
+		res ~= "<h1>Hello Sendero HTTP Server World</h1>";
+		res ~= "<p>";
+		res ~= "URI:" ~ req.uri;
+		res ~= "</p><p>";
+		res ~= "Path:" ~ req.path.origUrl;
+		res ~= "</p>";
+		res ~= "<table>";
+		foreach(header;req.headers)
+		{
+			res ~= "<tr>";
+			res ~= "<td>" ~ header.name.value ~ "</td>";
+			res ~= "<td>" ~ header.value ~ "</td>";
+			res ~= "</tr>";
+		}
+		res ~= "</table>";
+		
+		res ~= "<p>Cookies</p>";
+		foreach(cookie; req.cookies)
+		{
+			cookie.produce((void[]val){res ~= cast(char[])val;});
+			res ~= "<br>";
+		}
+		
+		res ~= "</body></html>";
+		
+		req.setCookie("Test","1");
+		req.setCookie(new Cookie("Test2","2"));
+		
+		req.sendContent("text/html",res);
 	}
 }
 
@@ -74,7 +116,8 @@ class Server
 		auto heartbeatThr = new HeartBeatThread(&heartbeat);
 		heartbeatThr.start;
 		//pool.setHeartbeat(timer);
-		auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
+		//auto server = new TcpServer(new WorkerPoolTcpServiceProvider(new TestProvider, pool));
+		auto server = new TcpServer(new TestProvider);
 		server.start(dispatcher);
 		dispatcher.run;
 	}
@@ -84,7 +127,7 @@ class Server
 	void startFork()
 	{
 version(Windows) {}
-else {
+else {		
 		pid_t pid;
 		pid = fork();
 		if(pid == 0)
@@ -120,7 +163,7 @@ int serverMain(char[][] args)
 
 int start_server(char[][] args)
 {
-version(Windows) {return serverMain(args);}
+version(Windows) {serverMain(args); return 0;}
 else {
 	//	 Daemonize
 	pid_t pid;
@@ -156,7 +199,7 @@ int stop_server(char[][] args)
 
 int main(char[][] args)
 {
-	Stdout.formatln("Server Server Version {}.{}.{}",0,0,0);
+	Stdout.formatln("Sendero Server Version {}.{}.{}",0,0,0);
 	
 	if(args.length > 1)
 	{

@@ -97,6 +97,9 @@ class InterfaceResp : IInterface, IDecoratorResponder
 		{
 			if(decl.isStatic) continue;
 			
+			if(decl.protection == Protection.Private || decl.protection == Protection.Protected)
+				continue;
+			
 			char[] params;
 			len = decl.params.length;
 			for(uint i = 0; i < len; ++i) {
@@ -110,9 +113,9 @@ class InterfaceResp : IInterface, IDecoratorResponder
 			pr.fln("{} {}({});", InterfaceCtxt.convertType(decl.retType), decl.name, params);
 		}
 		
+		pr.fln("alias Construct!({}).create create;", iname);
 		pr.dedent;
 		pr("}").nl;
-		pr.fln("alias Construct!({}).create construct{};", iname, name);
 		
 	}
 	

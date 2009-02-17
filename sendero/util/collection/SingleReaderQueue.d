@@ -99,7 +99,7 @@ debug(SenderoUnittest) {
 		t2.start;
 		t3.start;
 		
-		Thread.sleep(5);
+		Thread.sleep(0.5);
 		
 		running = false;
 	}

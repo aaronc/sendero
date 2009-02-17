@@ -21,7 +21,8 @@ int main(char[][] args)
 {
 	if(args.length > 1) {
 		init(args[1]);
-		run(SenderoXCConfig().modname);
+		if(!run(SenderoXCConfig().modname))
+			return -1;
 	}
 	else debug(SenderoXCUnittest) {
 		Stdout.formatln("Runing Sqlite tests");
@@ -41,7 +42,8 @@ int main(char[][] args)
 			
 			Stdout.formatln("Runing Mysql tests");
 			SenderoConfig.load("test_mysql");
-			run("test1", "test/senderoxc/mysql");
+			if(!run("test1", "test/senderoxc/mysql"))
+				return -1;
 			regression = new Regression("senderoxc/mysql");
 			regression.regressFile("test1.d");
 			regression.regressFile("test2.d");

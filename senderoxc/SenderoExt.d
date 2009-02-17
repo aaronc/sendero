@@ -28,6 +28,7 @@ class SenderoExtContext : IDecoratorContext
 		auto dCtxt = new DataContext;
 		binder.bindDecorator(DeclType.Class, "data", dCtxt);
 		binder.bindStandaloneDecorator("dataInterface", new InterfaceCtxt);
+		binder.bindStandaloneDecorator("initDatabase", new InitDatabaseContext);
 		
 		return new SenderoExtResponder(cCtxt, dCtxt);
 	}

@@ -67,6 +67,7 @@ int create_project(char[][] args)
 	writeFile_!("Session.d.template")(projName ~ "/Session.d", projName);
 	writeFile_!("_app.d.template")(projName ~ "_app.d", projName, projName, projName);
 	writeFile_!("Main.d.template")(projName ~ "/Main.d", projName, projName, projName);
+	//writeFile_!("DB.d.template")(projName ~ "/DB.d", projName);
 	
 	
 	return 0;

@@ -215,13 +215,39 @@ void clearErrors()
 	__errors__.reset;
 }
 private ErrorMap __errors__;
-alias DefaultDatabaseProvider db;
-private static char[] deleteSql;
+alias DefaultMysqlProvider db;
 public void destroy()
 {
-	if(!deleteSql.length) deleteSql = db.sqlGen.makeDeleteSql("User", ["id"]);
+	const char[] deleteSql = "DELETE FROM `User` WHERE `id` = ?";
 	scope st = db.prepare(deleteSql);
 	st.execute(id);
+}
+
+bool save()
+{
+	auto db = getDb;
+	char[][6] fields;
+	BindType[6] bindTypes;
+	void*[6] bindPtrs;
+	BindInfo bindInfo;
+	uint idx = 0;
+	if(__touched__[1]) {malformed format}) { fields[idx] = "email"; ++idx;}
+	if(__touched__[2]) {malformed format}) { fields[idx] = "username"; ++idx;}
+	if(__touched__[3]) {malformed format}) { fields[idx] = "firstname"; ++idx;}
+	if(__touched__[4]) {malformed format}) { fields[idx] = "lastname"; ++idx;}
+	if(__touched__[5]) {malformed format}) { fields[idx] = "last_login"; ++idx;}
+	if(id_) { fields[idx] = "id"; ++idx; }
+	bindInfo.types = setBindTypes(fields[0..idx], bindTypes);
+	bindInfo.ptrs = setBindPtrs(field[0..idx], bindPtrs);
+	if(id_) {
+		auto res = db.update("User", fields[0..idx], "WHERE id = ?", bindInfo);
+		if(db.affectedRows == 1) return true; else return false;
+	}}
+	else {
+		auto res = db.insert("User", fields[0..idx], bindInfo);
+		id_ = db.lastInsertID;
+		if(id_) return true; else return false;
+	}}
 }
 
 Var opIndex(char[] key)
@@ -255,7 +281,7 @@ Var opCall(Var[] params, IExecContext ctxt) { return Var(); }
 void toString(IExecContext ctxt, void delegate(char[]) utf8Writer, char[] flags = null) {}
 
 
-private StaticBitArray!(1,6) __touched__;
+protected StaticBitArray!(1,6) __touched__;
 
 
 void httpSet(IObject obj, Request req)
@@ -272,6 +298,64 @@ void httpSet(IObject obj, Request req)
 			default: break;
 		}
 	}
+}
+
+BindType[] setBindTypes(char[][] fieldNames, BindType[] dst)
+{
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[idx] = BindType.UInt; ++idx; break;
+		case "email": dst[idx] = BindType.String; ++idx; break;
+		case "username": dst[idx] = BindType.String; ++idx; break;
+		case "firstname": dst[idx] = BindType.String; ++idx; break;
+		case "lastname": dst[idx] = BindType.String; ++idx; break;
+		case "last_login": dst[idx] = BindType.Time; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
+		}
+	}
+	return dst[0..idx];
+}
+void*[] setBindPtrs(char[][] fieldNames, void*[] dst)
+{
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[idx] = &this.id_; ++idx; break;
+		case "email": dst[idx] = &this.email_; ++idx; break;
+		case "username": dst[idx] = &this.username_; ++idx; break;
+		case "firstname": dst[idx] = &this.firstname_; ++idx; break;
+		case "lastname": dst[idx] = &this.lastname_; ++idx; break;
+		case "last_login": dst[idx] = &this.last_login_; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
+		}
+	}
+	return dst[0..idx];
+}
+ptrdiff_t[] setBindPtrs(char[][] fieldNames, ptrdiff_t[] dst)
+{
+	assert(dst.length >= 6, "Must provide an array of at least length 6 to bind items to class User");
+	size_t idx = 0;
+	foreach(name;fieldNames) {
+		switch(name) {
+		case "id": dst[idx] = &this.id_ - &this; ++idx; break;
+		case "email": dst[idx] = &this.email_ - &this; ++idx; break;
+		case "username": dst[idx] = &this.username_ - &this; ++idx; break;
+		case "firstname": dst[idx] = &this.firstname_ - &this; ++idx; break;
+		case "lastname": dst[idx] = &this.lastname_ - &this; ++idx; break;
+		case "last_login": dst[idx] = &this.last_login_ - &this; ++idx; break;
+		default:
+			debug assert(false,"Unknown field name " ~ name ~ " in class User");
+			break;
+		}
+	}
+	return dst[0..idx];
 }
 
 public uint id() { return id_; }

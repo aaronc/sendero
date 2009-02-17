@@ -1,6 +1,8 @@
 module senderoxc.Process;
 
-import tango.io.File, tango.io.device.FileConduit, tango.io.Path;
+import tango.io.File, tango.io.Path;
+version(Tango_0_99_7) import tango.io.FileConduit;
+else import tango.io.device.FileConduit;
 import tango.io.Stdout;
 import tango.util.log.Config;
 import Util = tango.text.Util;
@@ -12,11 +14,12 @@ import senderoxc.SenderoExt;
 import senderoxc.data.Schema;
 import senderoxc.Compiler;
 import senderoxc.Config;
+import senderoxc.Exception;
 import senderoxc.builder.Linker;
 
 import sendero.core.Config;
 
-import dbi.all;
+import dbi.DBI;
 
 import tango.util.log.Log;
 Logger log;
@@ -37,14 +40,14 @@ void init(char[] configName)
 	log.trace("Initialized config {}", configName);
 }
 
-void run(char[] modname, char[] outdir = null)
+bool run(char[] modname, char[] outdir = null)
 {
 	Stdout.formatln("Running SenderoXC on module {}", modname);
 	
 	try
 	{
 		auto compiler = SenderoXCompiler.create(modname);
-		assert(compiler);
+		assert(compiler !is null, "Unable to create SenderoXC compiler");
 		compiler.process;
 		compiler.write(outdir);
 		version(SenderoXCBuild) {
@@ -57,6 +60,11 @@ void run(char[] modname, char[] outdir = null)
 				linker.commit;
 			}
 		}
+	}
+	catch(SenderoXCException ex)
+	{
+		Stdout.formatln("{}", ex.toString);
+		return false;
 	}
 	catch(Exception ex)
 	{
@@ -72,8 +80,15 @@ void run(char[] modname, char[] outdir = null)
 	{
 		Stdout.formatln("Committing db schema to {}", SenderoConfig().dbUrl);
 		auto db = getDatabaseForURL(SenderoConfig().dbUrl);
+		if(db is null) throw new Exception("Unable to connect to database " ~ SenderoConfig().dbUrl);
 		Schema.commit(db);
 		db.close;
+		debug log.trace("Done closing database");
+	}
+	catch(SenderoXCException ex)
+	{
+		Stdout.formatln("{}", ex.toString);
+		return false;
 	}
 	catch(Exception ex)
 	{
@@ -84,4 +99,6 @@ void run(char[] modname, char[] outdir = null)
 		}
 		throw ex;
 	}
+	
+	return true;
 }

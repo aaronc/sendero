@@ -6,30 +6,31 @@ module sendero.server.http.Http11Parser;
 import tango.util.log.Log;
 import tango.core.Thread;
 import Int = tango.text.convert.Integer;
+import Text = tango.text.Util;
 
 version (Win32) extern (C) int memicmp (char *, char *, uint);
 version (Posix) extern (C) int strncasecmp (char *, char*, uint);
 
-import sendero.server.model.IHttpServiceProvider;
-import sendero.server.model.ITcpServiceProvider;
+import sendero.server.http.model.IHttpServiceProvider;
+import sendero.server.tcp.model.ITcpServiceProvider;
 
 void snake_upcase_char(char* c)
 {
 	if (*c >= 'a' && *c <= 'z') *c &= ~0x20;
 }
 
-#line 88 "sendero/server/http/Http11Parser.rl"
+#line 96 "sendero/server/http/Http11Parser.rl"
 
 
 
-#line 26 "sendero/server/http/Http11Parser.d"
+#line 25 "sendero/server/http/Http11Parser.d"
 static const byte[] _http_parser_actions = [
 	0, 1, 0, 1, 2, 1, 3, 1, 
 	4, 1, 5, 1, 6, 1, 7, 1, 
 	8, 1, 9, 1, 11, 1, 12, 1, 
-	13, 2, 0, 8, 2, 1, 2, 2, 
-	4, 5, 2, 10, 7, 2, 12, 7, 
-	3, 9, 10, 7
+	13, 1, 14, 2, 0, 8, 2, 1, 
+	2, 2, 4, 5, 2, 10, 7, 2, 
+	12, 7, 3, 9, 10, 7
 ];
 
 static const short[] _http_parser_key_offsets = [
@@ -181,14 +182,25 @@ static const byte[] _http_parser_trans_targs = [
 static const byte[] _http_parser_trans_actions = [
 	1, 0, 11, 0, 1, 1, 1, 1, 
 	13, 13, 1, 0, 0, 0, 0, 0, 
-	0, 0, 19, 0, 0, 28, 23, 3, 
-	5, 7, 31, 7, 0, 9, 25, 1, 
+	0, 0, 19, 0, 0, 30, 23, 3, 
+	5, 7, 33, 7, 0, 9, 27, 1, 
 	1, 15, 0, 0, 0, 0, 0, 0, 
-	0, 37, 0, 37, 0, 21, 21, 0, 
-	0, 0, 0, 0, 40, 17, 40, 17, 
-	34, 0, 34, 0, 0, 0, 0, 0, 
+	0, 39, 0, 39, 0, 21, 21, 0, 
+	0, 0, 0, 0, 42, 17, 42, 17, 
+	36, 0, 36, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0
+];
+
+static const byte[] _http_parser_eof_actions = [
+	0, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25, 25, 25, 25, 25, 25, 25, 
+	25, 25
 ];
 
 static const int http_parser_start = 1;
@@ -197,16 +209,16 @@ static const int http_parser_error = 0;
 
 static const int http_parser_en_main = 1;
 
-#line 91 "sendero/server/http/Http11Parser.rl"
+#line 99 "sendero/server/http/Http11Parser.rl"
 
-class Http11Parser : ITcpRequestHandler
+class Http11Handler : ITcpRequestHandler, IHttpRequestData
 {
 	static this()
 	{
 		log = Log.lookup("sendero.server.http.Http11Parser");
 	}
 	static Logger log;
-	/+
+	
 	final static bool isMatch (char[] testToken, char[] match)
 	{
 	        auto length = testToken.length;
@@ -221,6 +233,8 @@ class Http11Parser : ITcpRequestHandler
 	        version (Posix)
 	                 return strncasecmp (testToken.ptr, match.ptr, length) is 0;
 	}
+	/+
+	
 	
 	final static char[] caseNormalizeHeaderName(char[] headerName)
 	{
@@ -266,7 +280,13 @@ class Http11Parser : ITcpRequestHandler
 	
 	protected IHttpRequestHandler req;
 	protected Fiber parseFiber_;
-	protected void[][] data;
+	protected StagedReadBuffer data_;
+	protected StagedReadBuffer curBuffer_;
+	protected ITcpCompletionPort completionPort_;
+	//protected void[][] response_;
+	protected SyncTcpResponse response_;
+	protected uint expectedContentLength_ = 0;
+	protected bool chunked_ = false;
 	
 	void parse()
 	{
@@ -275,25 +295,30 @@ class Http11Parser : ITcpRequestHandler
 		char* body_start = null;
 		size_t field_len;
 		
-		char[] buffer; //TODO
+		if(data_ is null) {
+				throw new Exception("Http parsing initiated before any data has been received", __FILE__, __LINE__);
+		}
 		
 		int cs = 0;
-		char* p = buffer.ptr;
-		char* pe = p + buffer.length + 1;
-		char* eof = pe;
-		
-		uint expectedContentLength = 0;
+		char* p;
+		char* pe;
+		char* eof;		
 	
 		HttpRequestLineData reqLine;
 		
-		
-#line 291 "sendero/server/http/Http11Parser.d"
+		void parseHeaders() {
+			p = cast(char*)data_.getReadable.ptr;
+			pe = p + data_.getReadable.length;
+			eof = pe;
+			
+			
+#line 312 "sendero/server/http/Http11Parser.d"
 	{
 	cs = http_parser_start;
 	}
-#line 180 "sendero/server/http/Http11Parser.rl"
-		
-#line 297 "sendero/server/http/Http11Parser.d"
+#line 201 "sendero/server/http/Http11Parser.rl"
+			
+#line 316 "sendero/server/http/Http11Parser.d"
 	{
 	int _klen;
 	uint _trans;
@@ -368,29 +393,29 @@ _match:
 		switch ( *_acts++ )
 		{
 	case 0:
-#line 24 "sendero/server/http/Http11Parser.rl"
+#line 25 "sendero/server/http/Http11Parser.rl"
 	{mark = p; }
 	break;
 	case 1:
-#line 26 "sendero/server/http/Http11Parser.rl"
+#line 27 "sendero/server/http/Http11Parser.rl"
 	{ field_start = p; }
 	break;
 	case 2:
-#line 27 "sendero/server/http/Http11Parser.rl"
+#line 28 "sendero/server/http/Http11Parser.rl"
 	{ snake_upcase_char(p);}
 	break;
 	case 3:
-#line 28 "sendero/server/http/Http11Parser.rl"
+#line 29 "sendero/server/http/Http11Parser.rl"
 	{ 
     field_len = p-field_start;
   }
 	break;
 	case 4:
-#line 32 "sendero/server/http/Http11Parser.rl"
+#line 33 "sendero/server/http/Http11Parser.rl"
 	{ mark = p; }
 	break;
 	case 5:
-#line 33 "sendero/server/http/Http11Parser.rl"
+#line 34 "sendero/server/http/Http11Parser.rl"
 	{
   	auto fieldName = field_start[0..field_len];
   	auto fieldVal = mark[0.. p - mark];
@@ -398,70 +423,73 @@ _match:
     req.handleHeader(fieldName, fieldVal); 
    	switch(fieldName)
    	{
+	case "TRANSFER-ENCODING":
+		if(isMatch(fieldVal, "chunked")) chunked_ = true;
+		break;
    	case "CONTENT-LENGTH":
-   		expectedContentLength = Int.parse(fieldVal);
-    	debug log.trace("Parsed Content-Length:{}:{}", fieldName, expectedContentLength);
+   		expectedContentLength_ = Int.parse(fieldVal);
+    	debug log.trace("Parsed Content-Length:{}:{}", fieldName, expectedContentLength_);
     	break;
     default:
     	break;
-    }    
+    }
   }
 	break;
 	case 6:
-#line 49 "sendero/server/http/Http11Parser.rl"
+#line 53 "sendero/server/http/Http11Parser.rl"
 	{ 
       debug log.trace("Parsed Http Request Method:{}", mark[0.. p - mark]);
       reqLine.method = mark[0.. p - mark];
   }
 	break;
 	case 7:
-#line 54 "sendero/server/http/Http11Parser.rl"
+#line 58 "sendero/server/http/Http11Parser.rl"
 	{ 
       debug log.trace("Parsed Http RequestURI:{}", mark[0.. p - mark]);
       reqLine.uri = mark[0.. p - mark];
   }
 	break;
 	case 8:
-#line 59 "sendero/server/http/Http11Parser.rl"
+#line 63 "sendero/server/http/Http11Parser.rl"
 	{ 
      debug log.trace("Parsed Http Request Fragment:{}", mark[0.. p - mark]);
      reqLine.fragment = mark[0.. p - mark];
   }
 	break;
 	case 9:
-#line 64 "sendero/server/http/Http11Parser.rl"
+#line 68 "sendero/server/http/Http11Parser.rl"
 	{query_start = p; }
 	break;
 	case 10:
-#line 65 "sendero/server/http/Http11Parser.rl"
+#line 69 "sendero/server/http/Http11Parser.rl"
 	{ 
       debug log.trace("Parsed Http Query String:{}", query_start[0.. p - query_start]);
       reqLine.queryString = query_start[0.. p - query_start];
   }
 	break;
 	case 11:
-#line 70 "sendero/server/http/Http11Parser.rl"
+#line 74 "sendero/server/http/Http11Parser.rl"
 	{	
       debug log.trace("Parsed Http Version:{}", mark[0.. p - mark]);
       reqLine.httpVersion = mark[0.. p - mark];
   }
 	break;
 	case 12:
-#line 75 "sendero/server/http/Http11Parser.rl"
+#line 79 "sendero/server/http/Http11Parser.rl"
 	{
       debug log.trace("Parsed Http Request Path:{}", mark[0.. p - mark]);
       reqLine.path = mark[0.. p - mark];
   }
 	break;
 	case 13:
-#line 80 "sendero/server/http/Http11Parser.rl"
+#line 84 "sendero/server/http/Http11Parser.rl"
 	{ 
     body_start = p + 1; 
       debug log.trace("Finished Parsing Http Request:{}", (p + 1)[0 .. pe - p - 1]);
     {p++; if (true) goto _out; }
   }
 	break;
-#line 465 "sendero/server/http/Http11Parser.d"
+#line 472 "sendero/server/http/Http11Parser.d"
 		default: break;
 		}
 	}
@@ -472,18 +500,214 @@ _again:
 	if ( ++p != pe )
 		goto _resume;
 	_test_eof: {}
+	if ( p == eof )
+	{
+	byte* __acts = &_http_parser_actions[_http_parser_eof_actions[cs]];
+	uint __nacts = cast(uint) *__acts++;
+	while ( __nacts-- > 0 ) {
+		switch ( *__acts++ ) {
+	case 14:
+#line 90 "sendero/server/http/Http11Parser.rl"
+	{
+		assert(false);
+	}
+	break;
+#line 493 "sendero/server/http/Http11Parser.d"
+		default: break;
+		}
+	}
+	}
+
 	_out: {}
 	}
-#line 181 "sendero/server/http/Http11Parser.rl"
+#line 202 "sendero/server/http/Http11Parser.rl"
+		}
+		
+		void badRequest() {
+			//assert(false);
+			req.signalFatalError;
+			//response_ = req.processRequest(completionPort_);
+		}
+		
+		parseHeaders;
+		if(body_start is null || cs == http_parser_error) {
+			size_t lastBufferLength;
+			size_t retryCount = 0;
+			while(retryCount < 5) {
+					lastBufferLength = data_.readable;
+					completionPort_.keepReading;
+					Fiber.yield;
+					if(data_.readable == lastBufferLength ) return badRequest;
+					parseHeaders;
+					if(body_start !is null || cs != http_parser_error) break;
+					++retryCount;
+			}
+			if(body_start is null || cs == http_parser_error) return badRequest;
+			/+if(data_.length > 1) {
+				char[8192] buffer;
+				void[] buf;
+				foreach(b; data_) buf ~= b;
+				data_ = [buf];
+				parseHeaders;
+				if(body_start is null || cs == http_parser_error) return fail;
+			}
+			else return fail;+/
+			//return fail;
+		}
+		
+		/*TODO
+			if received "Expect: 100-continue"
+				send "100" Continue response
+		*/
 		
 		req.handleRequestLine(reqLine);
+		if(chunked_) {
+			/+while(1) {
+				size_t chunkSize;
+				foreach(char c; buf)
+				{
+					if(/*in hex range*/) {
+						// check if is 0
+						// add to chunk size
+					}
+					else if(c == ';') {
+						// goto /r/n
+					}
+					else if(c == '/r') {
+						//expect /n
+					}
+					else {
+						debug assert(false, "Unexpected characted " ~ c ~ "in chunked transfer chunk-size line")
+						// goto /r/n
+					}
+				}
+				// expect chunkSize bytes of data
+			}
+			//restart ragel parser with trailing headers+/
+		}
+		else if(expectedContentLength_) {
+			size_t startIdx = pe - body_start;
 		
-		/+if(cs == http_parser_error) return false;
-		else return true;+/
-	}	
+			size_t curLen() {
+				size_t len = data_.readable - startIdx;
+				auto next = data_.next;
+				while(next !is null) {
+					len += next.readable;
+					next = data_.next;
+				}
+				return len;
+			}
+			
+			curBuffer_ = data_;
+			
+			while(curLen < expectedContentLength_) {
+				if(!curBuffer_.writeable) {
+					completionPort_.keepReading;
+					Fiber.yield;
+					auto next = curBuffer_.next;
+					if(next !is null) curBuffer_ = next;
+					else return badRequest;
+				}
+				
+				while(curLen < expectedContentLength_ && curBuffer_.writeable) {
+					completionPort_.keepReading;
+					Fiber.yield;
+				}
+				
+				if(head is null) {
+					assert(curBuffer_ == data_);
+					assert(tail is null);
+					assert(cur is null);
+					head = new DataBuffer;
+					head.data = data_.getReadable[startIdx..$];
+					head.next = null;
+					tail = head;
+					cur = head;
+				}
+				else {
+					assert(curBuffer_ != data_);
+					assert(tail.next is null);
+					tail.next = new DataBuffer;
+					tail = tail.next;
+					tail.data = curBuffer_.getReadable[startIdx..$];
+					tail.next = null;
+				}
+				
+				auto next = curBuffer_.next;
+				if(next !is null) curBuffer_ = next;
+				
+				Fiber handleFiber;
+				if(curLen >= expectedContentLength_) break;
+				handleFiber.call;				
+				if(response_ !is null) return;
+			}
+			response_ = req.processRequest(this, completionPort_);
+		}
+		else {
+			response_ = req.processRequest(this, completionPort_);
+			if(body_start != pe) debug log.warn("Unknown HTTP transfer encoding, body_start = ? and pe = ?", body_start, pe);
+		}
+	}
 	
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	SyncTcpResponse handleRequest(StagedReadBuffer data, ITcpCompletionPort completionPort)
 	{
-		return null;
+		completionPort_ = completionPort;
+		data_ = data;
+		if(parseFiber_.state != Fiber.State.TERM) {
+			// TODO check for exec state and wait
+			parseFiber_.call;
+			//return response_;
+		}
+		//else return null;
+		return response_;
+	}
+	
+	void doHandling()
+	{
+		response_ = req.processRequest(this, completionPort_);
+	}
+	
+	size_t expectedContentLength()
+	{
+		return chunked_ ? 0 : expectedContentLength_;
+	}
+	
+	bool chunked()
+	{
+		return chunked_;
+	}
+	
+	void[] nextContentBuffer()
+	{
+		if(cur.next is null) {
+			Fiber.yield;
+			if(cur.next is null) return null;
+		}
+		cur = cur.next;
+		return cur.data;
+	}
+	
+	void releaseContentBuffer(void[])
+	{
+		
+	}
+	
+	struct DataBuffer
+	{
+		void[] data;
+		DataBuffer* next;
+	}
+	
+	DataBuffer* head;
+	DataBuffer* cur;
+	DataBuffer* tail;
+}
+
+debug(SenderoUnittest)
+{
+	unittest
+	{
+		auto handler = new Http11Handler(null);
+		//handler.handleRequest(["GET /test"," HTTP/1.1\r\n\r\n"],null);
 	}
 }

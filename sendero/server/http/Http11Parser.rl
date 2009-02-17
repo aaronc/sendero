@@ -5,12 +5,13 @@ module sendero.server.http.Http11Parser;
 import tango.util.log.Log;
 import tango.core.Thread;
 import Int = tango.text.convert.Integer;
+import Text = tango.text.Util;
 
 version (Win32) extern (C) int memicmp (char *, char *, uint);
 version (Posix) extern (C) int strncasecmp (char *, char*, uint);
 
-import sendero.server.model.IHttpServiceProvider;
-import sendero.server.model.ITcpServiceProvider;
+import sendero.server.http.model.IHttpServiceProvider;
+import sendero.server.tcp.model.ITcpServiceProvider;
 
 void snake_upcase_char(char* c)
 {
@@ -37,13 +38,16 @@ void snake_upcase_char(char* c)
     req.handleHeader(fieldName, fieldVal); 
    	switch(fieldName)
    	{
+	case "TRANSFER-ENCODING":
+		if(isMatch(fieldVal, "chunked")) chunked_ = true;
+		break;
    	case "CONTENT-LENGTH":
-   		expectedContentLength = Int.parse(fieldVal);
-    	debug log.trace("Parsed Content-Length:{}:{}", fieldName, expectedContentLength);
+   		expectedContentLength_ = Int.parse(fieldVal);
+    	debug log.trace("Parsed Content-Length:{}:{}", fieldName, expectedContentLength_);
     	break;
     default:
     	break;
-    }    
+    }
   }
   
   action request_method { 
@@ -83,20 +87,24 @@ void snake_upcase_char(char* c)
     fbreak;
   }
 
-  include http_parser_common "http11_parser_common._rl";
+	action action_eof {
+		assert(false);
+	}
+
+  include http_parser_common "sendero/server/http/http11_parser_common._rl";
 
 }%%
 
 %% write data;
 
-class Http11Parser : ITcpRequestHandler
+class Http11Handler : ITcpRequestHandler, IHttpRequestData
 {
 	static this()
 	{
 		log = Log.lookup("sendero.server.http.Http11Parser");
 	}
 	static Logger log;
-	/+
+	
 	final static bool isMatch (char[] testToken, char[] match)
 	{
 	        auto length = testToken.length;
@@ -111,6 +119,8 @@ class Http11Parser : ITcpRequestHandler
 	        version (Posix)
 	                 return strncasecmp (testToken.ptr, match.ptr, length) is 0;
 	}
+	/+
+	
 	
 	final static char[] caseNormalizeHeaderName(char[] headerName)
 	{
@@ -156,7 +166,13 @@ class Http11Parser : ITcpRequestHandler
 	
 	protected IHttpRequestHandler req;
 	protected Fiber parseFiber_;
-	protected void[][] data;
+	protected StagedReadBuffer data_;
+	protected StagedReadBuffer curBuffer_;
+	protected ITcpCompletionPort completionPort_;
+	//protected void[][] response_;
+	protected SyncTcpResponse response_;
+	protected uint expectedContentLength_ = 0;
+	protected bool chunked_ = false;
 	
 	void parse()
 	{
@@ -165,28 +181,211 @@ class Http11Parser : ITcpRequestHandler
 		char* body_start = null;
 		size_t field_len;
 		
-		char[] buffer; //TODO
+		if(data_ is null) {
+				throw new Exception("Http parsing initiated before any data has been received", __FILE__, __LINE__);
+		}
 		
 		int cs = 0;
-		char* p = buffer.ptr;
-		char* pe = p + buffer.length + 1;
-		char* eof = pe;
-		
-		uint expectedContentLength = 0;
+		char* p;
+		char* pe;
+		char* eof;		
 	
 		HttpRequestLineData reqLine;
 		
-		%% write init;
-		%% write exec;
+		void parseHeaders() {
+			p = cast(char*)data_.getReadable.ptr;
+			pe = p + data_.getReadable.length;
+			eof = pe;
+			
+			%% write init;
+			%% write exec;
+		}
+		
+		void badRequest() {
+			//assert(false);
+			req.signalFatalError;
+			//response_ = req.processRequest(completionPort_);
+		}
+		
+		parseHeaders;
+		if(body_start is null || cs == http_parser_error) {
+			size_t lastBufferLength;
+			size_t retryCount = 0;
+			while(retryCount < 5) {
+					lastBufferLength = data_.readable;
+					completionPort_.keepReading;
+					Fiber.yield;
+					if(data_.readable == lastBufferLength ) return badRequest;
+					parseHeaders;
+					if(body_start !is null || cs != http_parser_error) break;
+					++retryCount;
+			}
+			if(body_start is null || cs == http_parser_error) return badRequest;
+			/+if(data_.length > 1) {
+				char[8192] buffer;
+				void[] buf;
+				foreach(b; data_) buf ~= b;
+				data_ = [buf];
+				parseHeaders;
+				if(body_start is null || cs == http_parser_error) return fail;
+			}
+			else return fail;+/
+			//return fail;
+		}
+		
+		/*TODO
+			if received "Expect: 100-continue"
+				send "100" Continue response
+		*/
 		
 		req.handleRequestLine(reqLine);
+		if(chunked_) {
+			/+while(1) {
+				size_t chunkSize;
+				foreach(char c; buf)
+				{
+					if(/*in hex range*/) {
+						// check if is 0
+						// add to chunk size
+					}
+					else if(c == ';') {
+						// goto /r/n
+					}
+					else if(c == '/r') {
+						//expect /n
+					}
+					else {
+						debug assert(false, "Unexpected characted " ~ c ~ "in chunked transfer chunk-size line")
+						// goto /r/n
+					}
+				}
+				// expect chunkSize bytes of data
+			}
+			//restart ragel parser with trailing headers+/
+		}
+		else if(expectedContentLength_) {
+			size_t startIdx = pe - body_start;
 		
-		/+if(cs == http_parser_error) return false;
-		else return true;+/
-	}	
+			size_t curLen() {
+				size_t len = data_.readable - startIdx;
+				auto next = data_.next;
+				while(next !is null) {
+					len += next.readable;
+					next = data_.next;
+				}
+				return len;
+			}
+			
+			curBuffer_ = data_;
+			
+			while(curLen < expectedContentLength_) {
+				if(!curBuffer_.writeable) {
+					completionPort_.keepReading;
+					Fiber.yield;
+					auto next = curBuffer_.next;
+					if(next !is null) curBuffer_ = next;
+					else return badRequest;
+				}
+				
+				while(curLen < expectedContentLength_ && curBuffer_.writeable) {
+					completionPort_.keepReading;
+					Fiber.yield;
+				}
+				
+				if(head is null) {
+					assert(curBuffer_ == data_);
+					assert(tail is null);
+					assert(cur is null);
+					head = new DataBuffer;
+					head.data = data_.getReadable[startIdx..$];
+					head.next = null;
+					tail = head;
+					cur = head;
+				}
+				else {
+					assert(curBuffer_ != data_);
+					assert(tail.next is null);
+					tail.next = new DataBuffer;
+					tail = tail.next;
+					tail.data = curBuffer_.getReadable[startIdx..$];
+					tail.next = null;
+				}
+				
+				auto next = curBuffer_.next;
+				if(next !is null) curBuffer_ = next;
+				
+				Fiber handleFiber;
+				if(curLen >= expectedContentLength_) break;
+				handleFiber.call;				
+				if(response_ !is null) return;
+			}
+			response_ = req.processRequest(this, completionPort_);
+		}
+		else {
+			response_ = req.processRequest(this, completionPort_);
+			if(body_start != pe) debug log.warn("Unknown HTTP transfer encoding, body_start = ? and pe = ?", body_start, pe);
+		}
+	}
 	
-	SyncTcpResponse handleRequest(void[][] data, ITcpCompletionPort completionPort)
+	SyncTcpResponse handleRequest(StagedReadBuffer data, ITcpCompletionPort completionPort)
 	{
-		return null;
+		completionPort_ = completionPort;
+		data_ = data;
+		if(parseFiber_.state != Fiber.State.TERM) {
+			// TODO check for exec state and wait
+			parseFiber_.call;
+			//return response_;
+		}
+		//else return null;
+		return response_;
+	}
+	
+	void doHandling()
+	{
+		response_ = req.processRequest(this, completionPort_);
+	}
+	
+	size_t expectedContentLength()
+	{
+		return chunked_ ? 0 : expectedContentLength_;
+	}
+	
+	bool chunked()
+	{
+		return chunked_;
+	}
+	
+	void[] nextContentBuffer()
+	{
+		if(cur.next is null) {
+			Fiber.yield;
+			if(cur.next is null) return null;
+		}
+		cur = cur.next;
+		return cur.data;
+	}
+	
+	void releaseContentBuffer(void[])
+	{
+		
+	}
+	
+	struct DataBuffer
+	{
+		void[] data;
+		DataBuffer* next;
+	}
+	
+	DataBuffer* head;
+	DataBuffer* cur;
+	DataBuffer* tail;
+}
+
+debug(SenderoUnittest)
+{
+	unittest
+	{
+		auto handler = new Http11Handler(null);
+		//handler.handleRequest(["GET /test"," HTTP/1.1\r\n\r\n"],null);
 	}
 }

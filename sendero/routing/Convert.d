@@ -43,7 +43,7 @@ T convertParam(T, Req)(Var param, Req req)
 		switch(param.type)
 		{
 		case VarT.String: val = cast(T)param.string_; break;
-		case VarT.Void: val = *cast(T*)param.void_; break;
+		case VarT.Binary: val = *cast(T*)param.data_; break;
 		default: val = T.init; break;
 		}
 	}
@@ -91,17 +91,24 @@ T convertParam(T, Req)(Var param, Req req)
 	}
 	else static if(is(typeof(val.convert)))
 	{
+		static if(is(T == class))
+			if(val is null) val = new T;
 		val.convert(param);
 	}
 	else static if(is(T : IHttpSet))
 	{
 		if(param.type == VarT.Object) {
+			if(val is null) val = new T;
 			val.httpSet(param.obj_, req);
 		}
+		else val = null;
 	}
 	else static if(is(T == IObject))
 	{
-		if(param.type == VarT.Object) val = param.obj_;
+		if(param.type == VarT.Object) {
+			if(val is null) val = new T;
+			val = param.obj_;
+		}
 		else val = null;
 	}
 	else static if(is(T == char[][]))
@@ -176,14 +183,6 @@ T convertParam(T, Req)(Var param, Req req)
 	return val;
 }
 
-void doClassConvert(T)(Param[char[]] params, inout T t, char[] name)
-{
-	static if(is(T == class))
-		t = new T;
-	auto res = t.convert(params);
-	if(!res.empty) Msg.post(name, res);
-}
-
 void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 {
 	debug(SenderoRouting) {
@@ -203,7 +202,15 @@ void convertParams(Req, ParamT...)(Req req, char[][] paramNames, inout ParamT p)
 		else {
 			if(Index < paramNames.length) {
 				debug log.trace("Converting param {}, index {}", paramNames[Index], Index);
-				auto param = params[paramNames[Index]];
+				Var param;
+				static if(is(Type : IHttpSet) || is(Type : IObject)) {
+					if(paramNames[Index] == "") {
+						param.type = VarT.Object;
+						param.obj_ = params;
+					}
+					else param = params[paramNames[Index]];
+				}
+				else param = params[paramNames[Index]];
 				debug if(param.type == VarT.Null)
 					log.info("Param {}, index {} is null", paramNames[Index], Index);
 				p[Index] = convertParam!(Type, Req)(param, req);

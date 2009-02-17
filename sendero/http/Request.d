@@ -8,9 +8,31 @@ module sendero.http.Request;
 public import sendero.http.Params;
 public import sendero.http.UrlStack;
 public import sendero.http.IRenderable;
-public import sendero.http.Response;
 
-import sendero.server.model.IHttpRequestHandler;
+import sendero.server.http.model.IHttpRequestHandler;
+import sendero.server.http.HttpResponder;
+
+public import tango.net.http.HttpCookies : Cookie;
+static import tango.net.http.HttpCookies;
+private import tango.net.http.HttpHeaders;
+
+class CookieStack : tango.net.http.HttpCookies.CookieStack
+{
+	 this (int size)
+     {
+		 super(size);
+     }
+	
+	Cookie find(char[] name)
+	{
+		foreach(cookie; this)
+		{
+			if(cookie.name == name)
+				return cookie;
+		}
+		return null;
+	}
+}
 
 debug {
 	import sendero.Debug;
@@ -18,14 +40,24 @@ debug {
 	Logger log;
 	static this()
 	{
-		log = Log.lookup("debug.SenderoRouting");
+		log = Log.lookup("sendero.http.Request");
 	}
 }
 
 enum HttpMethod { Get, Post, Put, Delete, Header, Unknown = 0 };
 
-final class Request : IHttpRequestHandler
+alias void delegate(Request) SenderoRequestHandler;
+
+class Request : HttpResponder, IHttpRequestHandler
 {
+	this(SenderoRequestHandler handler)
+	{
+		handler_ = handler;
+		cookies = new CookieStack(10);
+		cookieParser_ = new tango.net.http.HttpCookies.CookieParser(cookies);
+	}
+	private SenderoRequestHandler handler_;
+	
 	void handleRequestLine(HttpRequestLineData reqLine)
 	{
 		switch(reqLine.method)
@@ -45,37 +77,29 @@ final class Request : IHttpRequestHandler
 	
 	void handleHeader(char[] field, char[] value)
 	{
-		headers[field] = value;
-		if(field == "COOKIE") cookies = parseCookies(value);
+		//headers[field] = value;
+		super.handleHeader(field, value);
+		if(field == "COOKIE") cookieParser_.parse(value);
 	}
 	
-	void handleData(void[][] data)
+	void signalFatalError()
 	{
-		
+		assert(false, "Not implemented");
 	}
 
-	void[][] processRequest(ITcpCompletionPort completionPort)
+	SyncTcpResponse processRequest(IHttpRequestData data, ITcpCompletionPort completionPort)
 	{
-		return null;
+		setCompletionPort(completionPort);
+		debug assert(handler_ !is null);
+		handler_(this);
+
+		return getSyncResponse;
 	}
 	
 	void parse(HttpMethod method, char[] url, char[] getParams, char[] postParams = null)
 	{
 		this.method = method;
 		this.path = UrlStack.parseUrl(url);
-		/+
-		if(method == HttpMethod.Get) {
-			debug log.trace("Req.parse url:{}, getParams:{}", url, getParams);
-			this.params = parseParams(getParams);
-		}
-		else if(method == HttpMethod.Post) {
-			debug log.trace("Req.parse url:{}, getParams:{},postParams:{}", url, getParams, postParams);
-
-			this.params = parseParams(postParams);
-			auto _get_ = parseParams(getParams);
-			Var _get_Var; set(_get_Var, _get_);
-			this.params["@get"] = _get_Var;
-		}+/
 		params = parseParams(getParams, params);
 		params = parseParams(postParams, params);
 	}
@@ -87,10 +111,11 @@ final class Request : IHttpRequestHandler
 		uri = null;
 		fragment = null;
 		lastToken = null;
-		cookies = null;
+		cookies.reset;
 		ip = null;
-		headers = null;
+		//headers = null;
 		method = HttpMethod.Unknown;
+		super.reset;
 	}
 	
 	IObject params;
@@ -99,65 +124,47 @@ final class Request : IHttpRequestHandler
 	char[] uri;
 	char[] fragment;
 	char[] lastToken;
-	char[][char[]] cookies;
+	alias lastToken token;
+	//char[][char[]] cookies;
+	CookieStack cookies;
 	char[] ip;
-	char[][char[]] headers;
-	
-	void setResponder(IResponder responder)
+	//char[][char[]] headers;
+	HttpHeaders headers()
 	{
-		responder_ = responder;
+		return requestHeaders_;
 	}
+	
+	private tango.net.http.HttpCookies.CookieParser cookieParser_;
 	
 	void delegate(void[]) getConsumer()
 	{
-		assert(responder_, "responder_ is null");
-		return &responder_.write;
-	}
-	
-	void setContentType(char[] contentType)
-	{
-		assert(responder_,  "responder_ is null");
-		responder_.setContentType(contentType);
+		return cast(void delegate(void[]))&this.write;
 	}
 	
 	void respond(IRenderable r)
 	{
-		responder_.setContentType(r.contentType);
-		r.render(&responder_.write);
+		setContentType(r.contentType);
+		r.render(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(IStream s, char[] contentType)
 	{
-		responder_.setContentType(contentType);
-		s.render(&responder_.write);
+		setContentType(contentType);
+		s.render(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(void delegate(void delegate(void[])) stream, char[] contentType = ContentType.TextHtml)
 	{
-		responder_.setContentType(contentType);
-		stream(&responder_.write);
+		setContentType(contentType);
+		stream(cast(void delegate(void[]))&this.write);
 	}
 	
 	void respond(char[] content, char[] contentType = ContentType.TextHtml)
 	{
-		responder_.setContentType(contentType);
-		responder_.write(content);
-	}
-	
-	void setCookie(char[] name, char[] value)
-	{
-		responder_.setCookie(name, value);
-	}
-	
-	void setCookie(Cookie cookie)
-	{
-		responder_.setCookie(cookie);
+		sendContent(contentType,content);
 	}
 	
 	alias respond render;
-	
-	private:
-		IResponder responder_;
 }
 
 alias Request Req;

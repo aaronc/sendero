@@ -12,10 +12,15 @@ import sendero_base.util.ArrayWriter;
 //alias AbstractSenderoTemplate!(ExecContext, SenderoTemplateContext) SenderoTemplate;
 
 class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecContext, SenderoTemplateContext, SenderoTemplate)
-{
+{	
 	this(SenderoTemplate tmpl, Locale locale)
 	{
 		super(tmpl, locale);
+	}
+	
+	void render(void delegate(void[][] strs...) consumer)
+	{
+		return tmpl.render(this, consumer);
 	}
 	
 	void render(void delegate(void[]) consumer)
@@ -24,7 +29,9 @@ class SenderoTemplateContext : AbstractSenderoTemplateContext!(ExecContext, Send
 		{
 			prerenderedMsgs = tmpl.renderMsgs(this, Msg.read);
 		}+/
-		return tmpl.render(cast(SenderoTemplateContext)this, consumer);
+		return tmpl.render(cast(SenderoTemplateContext)this, (void[][] strs...){
+			foreach(x;strs)consumer(x);
+		});
 	}
 	
 	char[] render()
@@ -45,7 +52,7 @@ debug(SenderoUnittest)
 {
 	import tango.io.Stdout;
 	import tango.group.time;
-	import sendero.msg.Error;
+	//import sendero.msg.Error;
 	
 	import tango.io.File;
 	import qcf.Regression;
@@ -62,9 +69,9 @@ unittest
 {
 	auto r = new Regression("template");
 	
-	Msg.post(new Error);
+/+	//Msg.post(new Error);
 	
-	/+auto bigtable = "<table>"
+	auto bigtable = "<table>"
 		"<tr d:for='$row in $table'>"
 		"<td d:for='$c in $row'>_{$c}</td>"
 		"</tr>"
@@ -100,6 +107,19 @@ unittest
 	Stdout.formatln("btTime:{}", btTime);
 	
 	SenderoTemplate.setSearchPath("test/template/");
+	SenderoTemplate.importGlobalMsgs("messages.xml","en-US");
+	
+	Msg.post!("Required")("test");
+	ClassFieldPost!("AClassMsg","AClass","")();
+	ClassFieldPost!("AClassFieldMsg","AClass","afield")();
+	ClassFieldPost!("someUnknownMsg","AClass","")();
+	ClassFieldPost!("someUnknownMsg","AClass","afield")();
+	Msg.post!("xzypqr")();
+	
+	auto renderMsgs = SenderoTemplate.get("renderMsgs.html", null);
+	r.regress("renderMsgs_output.html", renderMsgs.render);
+	
+	/+SenderoTemplate.setSearchPath("test/template/");
 	
 	auto derived = SenderoTemplate.get("derivedtemplate.xml", null);
 	derived["name"] = "bob";
@@ -111,7 +131,7 @@ unittest
 	//Stdout(derived2.render).newline;
 	r.regress("derived2_output.html", derived2.render);
 	
-	Msg.clear;
+//	Msg.clear;
 	
 	Name[] names;
 	auto n = new Name;
@@ -156,6 +176,6 @@ unittest
 	complex["person"] = n;
 	complex["names"] = names;
 	//Stdout(complex.render).newline;
-	r.regress("complex_output.html", complex.render);+/
+	r.regress("complex_output.html", complex.render);+/+/
 }
 }

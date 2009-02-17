@@ -345,7 +345,7 @@ bool varToBool(Var var)
 		return var.array_.length > 0 ? true : false;
 	case VarT.String:
 		return var.string_.length > 0 ? true : false;
-	case VarT.Void:
+	case VarT.Binary:
 	case VarT.XmlNode:
 	case VarT.Object:
 		return true;
